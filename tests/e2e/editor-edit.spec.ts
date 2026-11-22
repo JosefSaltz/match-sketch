@@ -156,3 +156,49 @@ test('Delete during a drag stays deleted when the drag ends', async ({ page }) =
 	await page.mouse.up();
 	await expect(page.getByTestId('object')).toHaveCount(0);
 });
+
+test.describe('touch jitter', () => {
+	// Review Focus #5: real fingers wobble a few pixels during a tap.
+	test.use({ hasTouch: true, viewport: { width: 1180, height: 820 } });
+
+	test('a tap that wobbles 3 px does not move the object', async ({ page }) => {
+		await page.getByRole('combobox', { name: 'Snap' }).selectOption({ label: 'Off' });
+		const o = (await page.getByTestId('object').boundingBox())!;
+		const at = (dx: number) => ({
+			pointerType: 'touch',
+			isPrimary: true,
+			pointerId: 7,
+			bubbles: true,
+			clientX: o.x + o.width / 2 + dx,
+			clientY: o.y + o.height / 2
+		});
+		await page.getByTestId('object').dispatchEvent('pointerdown', at(0));
+		await page.getByTestId('object').dispatchEvent('pointermove', at(3));
+		await page.getByTestId('object').dispatchEvent('pointerup', at(3));
+		await expect(page.getByTestId('selection')).toHaveCount(1);
+		// Only the drop and the snap change are in the history; the tap added nothing.
+		await page.getByRole('button', { name: 'Undo' }).click();
+		await expect(page.getByRole('combobox', { name: 'Snap' })).toHaveValue('1ft');
+	});
+
+	test('a second finger landing on an object pinches instead of grabbing it', async ({ page }) => {
+		const o = (await page.getByTestId('object').boundingBox())!;
+		const empty = await bayPoint(page, 0.1, 0.1);
+		const ev = (id: number, x: number, y: number) => ({
+			pointerType: 'touch',
+			isPrimary: id === 7,
+			pointerId: id,
+			bubbles: true,
+			clientX: x,
+			clientY: y
+		});
+		const stage = page.locator('svg[data-stage]');
+		await stage.dispatchEvent('pointerdown', ev(7, empty.x, empty.y));
+		await page
+			.getByTestId('object')
+			.dispatchEvent('pointerdown', ev(8, o.x + o.width / 2, o.y + o.height / 2));
+		await stage.dispatchEvent('pointerup', ev(8, o.x + o.width / 2, o.y + o.height / 2));
+		await stage.dispatchEvent('pointerup', ev(7, empty.x, empty.y));
+		await expect(page.getByTestId('selection')).toHaveCount(0);
+	});
+});

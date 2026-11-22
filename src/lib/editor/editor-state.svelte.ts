@@ -16,6 +16,7 @@ import {
 } from '../geometry/viewport';
 import { emptyPlanDocument, type PlanDisplay, type PlanDocument } from '../model/plan';
 import { now, type PlanRecord } from '../store/records';
+import { movedBeyond, TAP_SLOP_PX } from './gestures';
 import { createHistory, type History } from './history';
 import {
 	addObject,
@@ -34,7 +35,16 @@ export type { SaveStatus };
 export type NudgeDir = 'left' | 'right' | 'up' | 'down';
 
 /** An in-progress drag of the selection, previewed until release. */
-type MoveDrag = { ids: string[]; anchorId: string; startWorld: Point; base: PlanDocument };
+type MoveDrag = {
+	ids: string[];
+	anchorId: string;
+	startWorld: Point;
+	base: PlanDocument;
+	/** Where the press started on screen; nothing moves until the pointer leaves the slop. */
+	startScreen: Point;
+	slopPx: number;
+	started: boolean;
+};
 
 /** An in-progress drag of a resize or rotate handle, previewed until release. */
 type HandleDrag =
@@ -257,14 +267,20 @@ export class EditorState {
 
 	#move: MoveDrag | null = null;
 
-	/** Starts dragging the current selection, grabbed by object `id` at a screen point. */
-	beginMove(id: string, screenPt: Point): void {
+	/**
+	 * Starts dragging the current selection, grabbed by object `id` at a screen point. Nothing
+	 * moves until the pointer travels more than `slopPx`, so a wobbly tap stays a tap.
+	 */
+	beginMove(id: string, screenPt: Point, slopPx = TAP_SLOP_PX): void {
 		const ids = this.selection.includes(id) ? this.selection : [id];
 		this.#move = {
 			ids,
 			anchorId: id,
 			startWorld: screenToWorld(screenPt, this.viewport),
-			base: this.#current
+			base: this.#current,
+			startScreen: screenPt,
+			slopPx,
+			started: false
 		};
 	}
 
@@ -272,6 +288,10 @@ export class EditorState {
 	updateMove(screenPt: Point): void {
 		const m = this.#move;
 		if (!m) return;
+		if (!m.started) {
+			if (!movedBeyond(m.startScreen, screenPt, m.slopPx)) return;
+			m.started = true;
+		}
 		const anchor = m.base.objects.find((o) => o.id === m.anchorId);
 		if (!anchor) return;
 		const w = screenToWorld(screenPt, this.viewport);

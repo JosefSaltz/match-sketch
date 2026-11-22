@@ -16,6 +16,7 @@ import {
 	type Viewport
 } from '../geometry/viewport';
 import { depthMapFor, toDrawn, toTrue, type DepthMap } from '../geometry/depth-map';
+import type { GridChoice } from '../geometry/grid';
 import {
 	emptyPlanDocument,
 	type Anchor,
@@ -486,6 +487,20 @@ export class EditorState {
 		const doc = this.#current;
 		const scaleBreaks = fromFt === null ? [] : [{ fromFt, toFt: this.canvas.depthFt }];
 		this.commit({ ...doc, scaleBreaks });
+	}
+
+	/** Turns the grid off, back to the fine grid, or to guide lines every `choice` feet. */
+	setGrid(choice: GridChoice): void {
+		const doc = this.#current;
+		const rest: PlanDisplay = { ...doc.display };
+		delete rest.gridFt;
+		const display: PlanDisplay =
+			choice === 'off'
+				? { ...rest, showGrid: false }
+				: choice === 'fine'
+					? { ...rest, showGrid: true }
+					: { ...rest, showGrid: true, gridFt: choice };
+		this.commit({ ...doc, display });
 	}
 
 	setDisplay(patch: Partial<PlanDisplay>): void {

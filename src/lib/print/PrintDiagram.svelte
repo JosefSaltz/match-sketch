@@ -6,7 +6,7 @@
 	import { measureFt, resolveAnchor } from '#lib/editor/annotations.js';
 	import { localBox, rotatedBounds } from '#lib/editor/object-geometry.js';
 	import { toDrawn, type DepthMap } from '#lib/geometry/depth-map.js';
-	import { scaleBar } from '#lib/geometry/grid.js';
+	import { gridChoice, scaleBar } from '#lib/geometry/grid.js';
 	import type { CanvasSize, Point } from '#lib/geometry/types.js';
 	import { formatLength, formatNumber, toFeet, type LengthUnit } from '#lib/geometry/units.js';
 	import { worldToScreen, type Viewport } from '#lib/geometry/viewport.js';
@@ -59,7 +59,7 @@
 	const pad = $derived({
 		top: symbolPx + 34,
 		bottom: Math.max(36, symbolPx / 2 + 20),
-		left: symbolPx / 2 + 14 + (depth ? 46 : 0),
+		left: symbolPx / 2 + 14 + (depth || doc.display.gridFt ? 46 : 0),
 		right: symbolPx / 2 + 48
 	});
 	const inner = $derived(
@@ -87,15 +87,21 @@
 		return { x: top.x, y: top.y, width: canvas.widthFt * scale, height: bottom - top.y };
 	});
 
-	/** Light grid every 5 yd (or 10 ft), coarser when it would be denser than 10 px. */
+	/**
+	 * The plan's grid choice: off; a light grid every 5 yd (or 10 ft), coarser when it would be
+	 * denser than 10 px; or guide lines every N ft, darker, with distance labels on the left.
+	 */
+	const choice = $derived(gridChoice(doc.display));
+	const guides = $derived(typeof choice === 'number' ? choice : null);
 	const grid = $derived.by(() => {
-		let step = unit === 'yd' ? 15 : 10;
-		while (step * scale < 10) step *= 2;
 		const xs: number[] = [];
-		const ys: number[] = [];
+		const ys: { y: number; sy: number }[] = [];
+		if (choice === 'off') return { xs, ys };
+		let step = guides ?? (unit === 'yd' ? 15 : 10);
+		if (guides === null) while (step * scale < 10) step *= 2;
 		for (let x = step; x < canvas.widthFt - 1e-9; x += step) xs.push(at({ x, y: 0 }).x);
 		for (let y = step; y < canvas.depthFt - 1e-9; y += step) {
-			if (!depth || y < depth.fromFt) ys.push(at({ x: 0, y }).y);
+			if (!depth || y < depth.fromFt) ys.push({ y, sy: at({ x: 0, y }).y });
 		}
 		return { xs, ys };
 	});
@@ -203,14 +209,29 @@
 </defs>
 <g clip-path="url(#{uid}-clip)">
 	<rect x={bay.x} y={bay.y} width={bay.width} height={bay.height} fill="#fff" stroke="none" />
-	<g stroke="#d9d9d6" stroke-width="0.6">
+	<g stroke={guides ? '#9ca3af' : '#d9d9d6'} stroke-width={guides ? 1 : 0.6}>
 		{#each grid.xs as x (x)}
 			<line x1={x} x2={x} y1={bay.y} y2={bay.y + bay.height} />
 		{/each}
-		{#each grid.ys as y (y)}
-			<line x1={bay.x} x2={bay.x + bay.width} y1={y} y2={y} />
+		{#each grid.ys as g (g.y)}
+			<line x1={bay.x} x2={bay.x + bay.width} y1={g.sy} y2={g.sy} />
 		{/each}
 	</g>
+	{#if guides && !bare}
+		{#each grid.ys as g (g.y)}
+			<text
+				x={bay.x - 6}
+				y={g.sy + 3}
+				font-family={FONT}
+				font-size="8"
+				font-weight="bold"
+				text-anchor="end"
+				fill="#555"
+			>
+				{formatLength(g.y, unit)}
+			</text>
+		{/each}
+	{/if}
 	{#if strip}
 		<g data-print-strip>
 			<rect

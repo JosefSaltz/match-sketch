@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gridSpacing, scaleBar, visibleGridLines } from './grid';
+import { gridChoice, gridSpacing, guideOptions, scaleBar, visibleGridLines } from './grid';
 
 describe('gridSpacing', () => {
 	it('keeps the base spacing when lines are far enough apart', () => {
@@ -58,5 +58,23 @@ describe('scaleBar on tiny bays (Review Focus #2)', () => {
 		const bar = scaleBar(430, 'yd');
 		expect(bar.px).toBeLessThanOrEqual(120);
 		expect(bar.label).toBe('0.05 yd');
+	});
+});
+
+describe('grid choice', () => {
+	it('reads off, fine and guide spacings from the display settings', () => {
+		expect(gridChoice({ showGrid: false })).toBe('off');
+		expect(gridChoice({ showGrid: true })).toBe('fine');
+		expect(gridChoice({ showGrid: true, gridFt: 75 })).toBe(75);
+	});
+
+	it('offers guides every 5, 10, 25 and 50 of the plan unit', () => {
+		expect(guideOptions('yd')).toEqual([
+			{ ft: 15, label: 'Every 5 yd' },
+			{ ft: 30, label: 'Every 10 yd' },
+			{ ft: 75, label: 'Every 25 yd' },
+			{ ft: 150, label: 'Every 50 yd' }
+		]);
+		expect(guideOptions('ft').map((o) => o.ft)).toEqual([5, 10, 25, 50]);
 	});
 });

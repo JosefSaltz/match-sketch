@@ -69,7 +69,9 @@ export type ScaleBreak = z.infer<typeof ScaleBreakSchema>;
 export const PlanDisplaySchema = z.object({
 	snap: z.enum(['off', '1ft', '1yd', '5yd']),
 	symbolSize: z.enum(SYMBOL_SIZES),
-	showGrid: z.boolean()
+	showGrid: z.boolean(),
+	/** Guide lines every this many feet, labelled with distances; absent = the fine grid. */
+	gridFt: finite.refine((v) => v > 0, 'Must be positive').optional()
 });
 export type PlanDisplay = z.infer<typeof PlanDisplaySchema>;
 

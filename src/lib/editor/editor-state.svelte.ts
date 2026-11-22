@@ -21,10 +21,12 @@ import {
 	type StageBrief
 } from '../model/plan';
 import { now, type PlanRecord } from '../store/records';
+import { addAnnotation, itemPosition, setText } from './annotations';
 import { movedBeyond, TAP_SLOP_PX } from './gestures';
 import { createHistory, type History } from './history';
 import {
 	addObject,
+	clampInside,
 	deleteItems,
 	duplicateObjects,
 	MIN_SIZE_FT,
@@ -38,6 +40,9 @@ import { SaveQueue, type SaveStatus } from './save-queue';
 export type { SaveStatus };
 
 export type NudgeDir = 'left' | 'right' | 'up' | 'down';
+
+/** Palette tools that draw annotations instead of placing symbols. */
+export type AnnotationTool = 'text' | 'arrow' | 'measure';
 
 /** An in-progress drag of the selection, previewed until release. */
 type MoveDrag = {
@@ -99,6 +104,8 @@ export class EditorState {
 	/** The selected annotations, in document order. */
 	selectedAnnotations = $derived(this.doc.annotations.filter((a) => this.selection.includes(a.id)));
 	armedSymbolId = $state<string | null>(null);
+	/** The armed annotation tool; arming one disarms the symbol and the other way round. */
+	tool = $state<AnnotationTool | null>(null);
 	saveStatus = $state<SaveStatus>('saved');
 	canUndo = $state(false);
 	canRedo = $state(false);
@@ -180,6 +187,33 @@ export class EditorState {
 	/** Arms a palette symbol so the next tap on the stage places it; `null` disarms. */
 	arm(symbolId: string | null): void {
 		this.armedSymbolId = symbolId;
+		if (symbolId) this.tool = null;
+	}
+
+	armTool(tool: AnnotationTool | null): void {
+		this.tool = tool;
+		if (tool) this.armedSymbolId = null;
+	}
+
+	/**
+	 * Places a text label reading "Text" at a screen point (snapped, inside the bay), selects it,
+	 * shows the Properties tab so it can be typed, and disarms the tool. Returns its id.
+	 */
+	placeText(screenPt: Point): string {
+		const world = screenToWorld(screenPt, this.viewport);
+		const at = clampInside(snapPoint(world, this.snapStep()), this.canvas);
+		const id = crypto.randomUUID();
+		this.commit(addAnnotation(this.#current, { id, type: 'text', ...at, text: 'Text' }));
+		this.selection = [id];
+		this.panel = 'properties';
+		this.tool = null;
+		return id;
+	}
+
+	/** Sets a text label's text; blank text keeps the old text. */
+	setText(id: string, text: string): void {
+		const next = setText(this.#current, id, text);
+		if (next !== this.#current) this.commit(next);
 	}
 
 	/**
@@ -344,7 +378,7 @@ export class EditorState {
 			if (!movedBeyond(m.startScreen, screenPt, m.slopPx)) return;
 			m.started = true;
 		}
-		const anchor = m.base.objects.find((o) => o.id === m.anchorId);
+		const anchor = itemPosition(m.base, m.anchorId);
 		if (!anchor) return;
 		const w = screenToWorld(screenPt, this.viewport);
 		const target = snapPoint(

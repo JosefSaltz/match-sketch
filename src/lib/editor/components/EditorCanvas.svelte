@@ -4,6 +4,7 @@
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import { movedBeyond, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
+	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
@@ -68,7 +69,8 @@
 			tap = null;
 			return;
 		}
-		const armed = editor.armedSymbolId;
+		// Placing: an armed symbol, or the text tool, puts something down on a tap.
+		const armed = editor.armedSymbolId !== null || editor.tool === 'text';
 		const handle = armed ? null : (e.target as Element).closest('[data-handle]');
 		const selected = editor.selection.length === 1 ? editor.selection[0] : null;
 		if (handle && selected) {
@@ -78,10 +80,12 @@
 			else editor.beginResize(selected, kind as Corner, p);
 			return;
 		}
-		const hit = armed ? null : (e.target as Element).closest('[data-object-id]');
+		const hit = armed
+			? null
+			: (e.target as Element).closest('[data-object-id], [data-annotation-id]');
 		if (hit) {
-			// Pressing an object selects it (Shift toggles) and starts moving the selection.
-			const id = hit.getAttribute('data-object-id')!;
+			// Pressing an object or annotation selects it (Shift toggles) and starts moving the selection.
+			const id = (hit.getAttribute('data-object-id') ?? hit.getAttribute('data-annotation-id'))!;
 			narrowTo = null;
 			if (e.shiftKey) editor.select([id], 'toggle');
 			else if (!editor.selection.includes(id)) editor.select([id]);
@@ -129,8 +133,9 @@
 			return;
 		}
 		const armed = editor.armedSymbolId;
-		if (armed && tap?.pointerId === e.pointerId && !movedBeyond(tap.start, local(e))) {
-			editor.placeAt(armed, local(e));
+		if (tap?.pointerId === e.pointerId && !movedBeyond(tap.start, local(e))) {
+			if (armed) editor.placeAt(armed, local(e));
+			else if (editor.tool === 'text') editor.placeText(local(e));
 		}
 		onCancel(e);
 	}
@@ -153,7 +158,7 @@
 <div class="stage" bind:clientWidth={editor.screenWidth} bind:clientHeight={editor.screenHeight}>
 	<svg
 		{@attach wheelZoom}
-		class={{ armed: editor.armedSymbolId !== null }}
+		class={{ armed: editor.armedSymbolId !== null || editor.tool !== null }}
 		data-stage
 		width={editor.screenWidth}
 		height={editor.screenHeight}
@@ -171,6 +176,7 @@
 				<ObjectView {editor} {obj} />
 			{/each}
 		</g>
+		<AnnotationLayer {editor} />
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>

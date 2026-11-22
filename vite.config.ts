@@ -3,6 +3,14 @@ import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 
+// The public Supabase variables are inlined at build time, and SvelteKit checks them whenever
+// Vite starts. Unit tests never talk to Supabase, so under Vitest placeholders stand in for any
+// that aren't set (db tests and e2e get the real ones from scripts/local-env.ts).
+if (process.env.VITEST) {
+	process.env.SUPABASE_URL ??= 'http://127.0.0.1:54321';
+	process.env.SUPABASE_PUBLISHABLE_KEY ??= 'sb_publishable_unit_tests';
+}
+
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
@@ -28,7 +36,18 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.db.test.ts']
+				}
+			},
+			{
+				// Against the local Supabase stack: `pnpm db:start`, then `pnpm test:db`.
+				extends: './vite.config.ts',
+				test: {
+					name: 'db',
+					environment: 'node',
+					include: ['src/**/*.db.test.ts'],
+					// One database: files run one at a time so their users and rows don't race.
+					fileParallelism: false
 				}
 			}
 		]

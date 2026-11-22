@@ -1,0 +1,177 @@
+import { eq } from 'drizzle-orm';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import type { WireRecord } from '../sync/wire';
+import { createDatabase } from './db/client';
+import { canvases } from './db/schema';
+import { pullChanges, pushRecords } from './sync';
+import { testAdminClient, testDatabaseUrl, uniqueEmail } from './testing/supabase';
+
+const admin = testAdminClient();
+const database = createDatabase(testDatabaseUrl());
+const db = database.db;
+const created: string[] = [];
+
+async function createOwner(): Promise<string> {
+	const { data, error } = await admin.auth.admin.createUser({
+		email: uniqueEmail('owner'),
+		password: 'longenough1',
+		email_confirm: true
+	});
+	if (error || !data.user) throw error ?? new Error('no user');
+	created.push(data.user.id);
+	return data.user.id;
+}
+
+type CanvasWire = Extract<WireRecord, { table: 'canvases' }>;
+
+function canvas(name = 'Bay', id: string = crypto.randomUUID()): CanvasWire {
+	return {
+		table: 'canvases',
+		id,
+		updatedAt: new Date().toISOString(),
+		deletedAt: null,
+		name,
+		widthFt: 90,
+		depthFt: 60,
+		unit: 'yd'
+	};
+}
+
+/** Every record the owner has, by following pull cursors from 0. */
+async function pullAll(ownerId: string, limit?: number) {
+	const records = [];
+	let cursor = 0;
+	for (;;) {
+		const page = await pullChanges(db, ownerId, cursor, limit);
+		records.push(...page.records);
+		cursor = page.cursor;
+		if (!page.more) return { records, cursor };
+	}
+}
+
+afterEach(async () => {
+	for (const id of created.splice(0)) await admin.auth.admin.deleteUser(id);
+});
+
+afterAll(async () => {
+	await database.close();
+});
+
+describe('pushRecords', () => {
+	it('accepts a new record at version 1', async () => {
+		const owner = await createOwner();
+		const record = canvas();
+		expect(await pushRecords(db, owner, [{ record, baseVersion: 0 }])).toEqual([
+			{ status: 'accepted', table: 'canvases', id: record.id, version: 1 }
+		]);
+	});
+
+	it('accepts an update based on the current version', async () => {
+		const owner = await createOwner();
+		const record = canvas('Before');
+		await pushRecords(db, owner, [{ record, baseVersion: 0 }]);
+		const [result] = await pushRecords(db, owner, [
+			{ record: { ...record, name: 'After' }, baseVersion: 1 }
+		]);
+		expect(result).toMatchObject({ status: 'accepted', version: 2 });
+		const [row] = await db.select().from(canvases).where(eq(canvases.id, record.id));
+		expect(row.name).toBe('After');
+	});
+
+	it('answers a stale base version with the server record', async () => {
+		const owner = await createOwner();
+		const record = canvas('Server');
+		await pushRecords(db, owner, [{ record, baseVersion: 0 }]);
+		await pushRecords(db, owner, [{ record: { ...record, name: 'Server 2' }, baseVersion: 1 }]);
+		const [result] = await pushRecords(db, owner, [
+			{ record: { ...record, name: 'Stale' }, baseVersion: 1 }
+		]);
+		expect(result).toMatchObject({
+			status: 'conflict',
+			server: { table: 'canvases', id: record.id, name: 'Server 2', version: 2 }
+		});
+	});
+
+	it("leaves another user's record alone and says nothing about it (Review Focus #4)", async () => {
+		const owner = await createOwner();
+		const intruder = await createOwner();
+		const record = canvas('Mine');
+		await pushRecords(db, owner, [{ record, baseVersion: 0 }]);
+		const [result] = await pushRecords(db, intruder, [
+			{ record: { ...record, name: 'Taken' }, baseVersion: 1 }
+		]);
+		expect(result).toEqual({
+			status: 'rejected',
+			table: 'canvases',
+			id: record.id,
+			reason: 'not-found'
+		});
+		const [row] = await db.select().from(canvases).where(eq(canvases.id, record.id));
+		expect(row).toMatchObject({ name: 'Mine', ownerId: owner, version: 1 });
+	});
+});
+
+describe('pullChanges', () => {
+	it("returns the owner's records in change order, deleted ones included, and nobody else's", async () => {
+		const owner = await createOwner();
+		const other = await createOwner();
+		const a = canvas('A');
+		const b = canvas('B');
+		await pushRecords(db, owner, [
+			{ record: a, baseVersion: 0 },
+			{ record: b, baseVersion: 0 }
+		]);
+		await pushRecords(db, other, [{ record: canvas('Theirs'), baseVersion: 0 }]);
+		await pushRecords(db, owner, [
+			{ record: { ...a, deletedAt: new Date().toISOString() }, baseVersion: 1 }
+		]);
+		const { records } = await pullAll(owner);
+		expect(records.map((r) => [r.id, r.deletedAt !== null])).toEqual([
+			[b.id, false],
+			[a.id, true]
+		]);
+	});
+
+	it('pages through 250 records with the cursor', async () => {
+		const owner = await createOwner();
+		const items = Array.from({ length: 250 }, (_, i) => ({
+			record: canvas(`Bay ${i}`),
+			baseVersion: 0
+		}));
+		for (let i = 0; i < items.length; i += 50) await pushRecords(db, owner, items.slice(i, i + 50));
+		const first = await pullChanges(db, owner, 0);
+		expect(first.records).toHaveLength(200);
+		expect(first.more).toBe(true);
+		const second = await pullChanges(db, owner, first.cursor);
+		expect(second.records).toHaveLength(50);
+		expect(second.more).toBe(false);
+		expect(new Set([...first.records, ...second.records].map((r) => r.id)).size).toBe(250);
+	});
+
+	it('never skips a row when pushes race each other and pulls (Review Focus #3)', async () => {
+		const owner = await createOwner();
+		const ids = Array.from({ length: 20 }, () => crypto.randomUUID());
+		const seen: string[] = [];
+		let cursor = 0;
+		let pushing = true;
+		const puller = (async () => {
+			while (pushing) {
+				const page = await pullChanges(db, owner, cursor, 3);
+				seen.push(...page.records.map((r) => r.id));
+				cursor = page.cursor;
+			}
+		})();
+		await Promise.all(
+			ids.map((id) => pushRecords(db, owner, [{ record: canvas('Race', id), baseVersion: 0 }]))
+		);
+		pushing = false;
+		await puller;
+		for (;;) {
+			const page = await pullChanges(db, owner, cursor, 3);
+			seen.push(...page.records.map((r) => r.id));
+			cursor = page.cursor;
+			if (!page.more) break;
+		}
+		expect(seen.sort()).toEqual([...ids].sort());
+	});
+});

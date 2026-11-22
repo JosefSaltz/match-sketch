@@ -29,6 +29,20 @@
       "when": 1795368186851,
       "tag": "20261122172307_sync_change_seq",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795374919595,
+      "tag": "20261122191519_ai_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795374919890,
+      "tag": "20261122191520_ai_drafts_grants",
+      "breakpoints": true
     }
   ]
 }

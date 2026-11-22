@@ -18,6 +18,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 4   | Print & PDF                                 | Not written               | —                                   |
 | 5   | Accounts & sync                             | Not written               | —                                   |
 | 6   | Draft from text                             | Not written               | —                                   |
+| 7   | Walkthrough presentation                    | Idea recorded             | spec §7.10                          |
 
 Update this table as plans are written and finished.
 
@@ -51,6 +52,8 @@ Update this table as plans are written and finished.
   - If the scale break was kept, the proper editor implementation (otherwise skip).
 - **Depends on:** Plan 1 (`EditorState`, ops, store, schema).
 - **Watch for:** the tally must count only target-category symbols; deleting a match must not delete its plans (they become unassigned); measure lines must survive undo/redo and object deletion (delete the line or detach it — decide in the plan).
+
+- **Note for Plan 7:** consider storing the stage procedure as an ordered list of steps (still shown as one text block), so walkthrough steps can link to them later.
 
 ## Plan 3 — Symbol library art
 
@@ -117,6 +120,13 @@ Update this table as plans are written and finished.
     - The button is disabled offline with a reason.
 - **Eval first:** before tuning, build an eval set from the MD's seven reference stages (bay sizes guessed until the user supplies real DRRC sizes). Judge on: right symbols, right counts, labels matching the procedure, sensible order of shooting areas and targets, nothing off-canvas, no overlapping symbols. Use the `claude-api` skill's eval guidance.
 - **Tests:** unit tests for placement validation and repair handling, with the model call stubbed; Playwright e2e with the route mocked to a fixed response (draft applied, undo restores, offline disables the button, cap reached shows a message). Real-model runs are part of the eval, not CI.
+
+## Plan 7 — Walkthrough presentation
+
+- **Spec:** §7.10 (user idea, 2026-11-21).
+- **What:** authors tie the course-of-fire steps to color-coded highlights on props and targets (e.g. shoot vs move); viewers page through the steps.
+- **Depends on:** Plan 2 only (stage brief/procedure, annotations such as movement arrows). Placed after Plan 6 by default; it can move up to right after Plan 2 if the user wants it sooner. Printing it as sequence cards builds on Plan 4; a viewer link for shooters needs sharing (after the MVP today).
+- **Brainstorm first:** settle the open questions in spec §7.10 with the user before writing the plan.
 
 ## After the MVP (spec §10)
 

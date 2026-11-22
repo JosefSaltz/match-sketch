@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import { getSupabase } from '#lib/auth/client.js';
@@ -11,6 +11,8 @@
 	import Dialog from '#lib/components/Dialog.svelte';
 	import CreditsDialog from '#lib/theme/CreditsDialog.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
+	import SyncStatus from '#lib/sync/SyncStatus.svelte';
+	import { syncState } from '#lib/sync/loop.svelte.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import Thumbnail from '#lib/print/Thumbnail.svelte';
@@ -84,6 +86,15 @@
 		void refreshPlans();
 		void refreshCanvases();
 		void refreshMatches();
+	});
+
+	$effect(() => {
+		void syncState.revision;
+		untrack(() => {
+			void refreshPlans();
+			void refreshCanvases();
+			void refreshMatches();
+		});
 	});
 
 	async function signOut() {
@@ -173,6 +184,7 @@
 				<Button href={resolve('/admin')}>Admin</Button>
 			{/if}
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
+			<SyncStatus />
 			{#if data.account.email}
 				<span class="text-sm text-muted">{data.account.email}</span>
 			{/if}
@@ -180,6 +192,19 @@
 		</div>
 	</header>
 	<ThemePicker bind:open={pickingTheme} />
+
+	{#if syncState.notice}
+		<p role="status" class="mx-auto m-0 flex max-w-6xl items-center gap-3 px-4 pt-4 text-sm">
+			<span>{syncState.notice}</span>
+			<button
+				type="button"
+				class="focus-ring cursor-pointer underline"
+				onclick={() => (syncState.notice = null)}
+			>
+				Dismiss
+			</button>
+		</p>
+	{/if}
 
 	<main class="mx-auto grid max-w-6xl gap-10 px-4 py-8">
 		<section aria-labelledby="matches-heading" class="grid gap-4">

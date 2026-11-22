@@ -91,6 +91,18 @@ describe('the sync loop', () => {
 		loop.stop();
 	});
 
+	it('shows a local edit as pending straight away', async () => {
+		const { timers } = manualTimers();
+		const { transport, calls } = fakeTransport();
+		const loop = start(transport, timers);
+		await vi.waitFor(() => expect(calls.pull).toBe(1));
+		await vi.waitFor(() => expect(state.syncing).toBe(false));
+		expect(state.pending).toBe(0);
+		await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		expect(state.pending).toBeGreaterThan(0);
+		loop.stop();
+	});
+
 	it('syncs when the device comes back online and shows it was offline', async () => {
 		const { timers } = manualTimers();
 		const { transport, calls } = fakeTransport();

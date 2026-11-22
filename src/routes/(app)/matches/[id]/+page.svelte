@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
@@ -13,6 +14,7 @@
 	} from '#lib/store/matches.js';
 	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
 	import { effectiveStageNumber, planTitle, type PlanRecord } from '#lib/store/records.js';
+	import { syncState } from '#lib/sync/loop.svelte.js';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
@@ -39,6 +41,11 @@
 		plans = await listMatchPlans(getDb(), match.id);
 		if (adding) unassigned = (await listPlans(getDb())).filter((p) => p.matchId === null);
 	}
+
+	$effect(() => {
+		void syncState.revision;
+		untrack(() => void refresh());
+	});
 
 	type FieldEvent = Event & { currentTarget: HTMLInputElement };
 

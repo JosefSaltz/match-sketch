@@ -7,6 +7,7 @@
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
+	import SyncStatus from '#lib/sync/SyncStatus.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
@@ -159,6 +160,7 @@
 		{sounds.on ? '🔊' : '🔇'}
 	</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
+	<SyncStatus />
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />

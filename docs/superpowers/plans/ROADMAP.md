@@ -11,7 +11,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | #   | Plan                                        | Status                    | File                                |
 | --- | ------------------------------------------- | ------------------------- | ----------------------------------- |
 | 1   | Local editor                                | Done (2026-11-22)         | `2026-11-21-plan-1-local-editor.md` |
-| 1b  | Visual theme (Tailwind, themes, camo tiles) | Design drafted            | spec: `2026-11-21-theme-design.md`  |
+| 1b  | Visual theme (Tailwind, themes, camo tiles) | Written, ready to execute | `2026-11-22-plan-1b-visual-theme.md` |
 | —   | Scale break spike (throwaway)               | Not started               | —                                   |
 | 2   | Brief, tally, measure, annotations, matches | Not written               | —                                   |
 | 3   | Symbol library art                          | Not written               | —                                   |

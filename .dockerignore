@@ -1,0 +1,16 @@
+.git
+node_modules
+build
+.svelte-kit
+.superpowers
+test-results
+playwright-report
+tests/e2e/.auth
+supabase/.temp
+supabase/.branches
+tools/patterns/.venv
+tools/patterns/.cache
+tools/patterns/out
+.env
+.env.*
+!.env.example

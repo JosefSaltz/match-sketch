@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { targetsTally } from '#lib/brief/tally.js';
+	import { resolve } from '$app/paths';
 	import type { StageBrief } from '#lib/model/plan.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
@@ -11,6 +12,11 @@
 	const uid = $props.id();
 	const brief = $derived(editor.doc.brief);
 	const tally = $derived(targetsTally(editor.doc.objects));
+	/** In a match, an empty stage number shows the number the match order gives. */
+	const matchOrderHint = $derived.by(() => {
+		const i = editor.match?.order.indexOf(editor.plan.id) ?? -1;
+		return i >= 0 ? `${i + 1} (match order)` : undefined;
+	});
 
 	type TextKey = Exclude<keyof StageBrief, 'targetsOverride' | 'notes'>;
 	type Row = { key: TextKey; label: string; rows?: number };
@@ -60,6 +66,7 @@
 					type="text"
 					class={controlClass}
 					value={brief[row.key]}
+					placeholder={row.key === 'stageNumber' ? matchOrderHint : undefined}
 					oninput={(e) => typeInto(row.key, e)}
 					onblur={() => editor.endTyping()}
 				/>
@@ -70,7 +77,20 @@
 
 <div class="grid gap-3">
 	{#each BEFORE_TARGETS as row (row.key)}
-		{@render textRow(row)}
+		{#if row.key === 'matchName' && editor.match}
+			<!-- A plan in a match takes the match's name; it is edited on the match screen. -->
+			<div class="grid gap-1">
+				<span class="text-sm text-muted">Match name</span>
+				<a
+					class="focus-ring inline-flex min-h-11 items-center font-semibold underline"
+					href={resolve('/(app)/matches/[id]', { id: editor.match.id })}
+				>
+					{editor.match.name}
+				</a>
+			</div>
+		{:else}
+			{@render textRow(row)}
+		{/if}
 	{/each}
 	{#if brief.targetsOverride === null}
 		<div class="grid gap-1">

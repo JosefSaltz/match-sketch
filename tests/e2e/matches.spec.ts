@@ -163,3 +163,61 @@ test('an unknown match says so', async ({ page }) => {
 	await page.goto(`/matches/${crypto.randomUUID()}`);
 	await expect(page.getByRole('heading', { name: 'Match not found' })).toBeVisible();
 });
+
+test.describe('plans in a match', () => {
+	const brief = (page: Page) => page.getByRole('tabpanel', { name: 'Brief' });
+
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });
+		await namedPlan(page, 'Alpha');
+		await page.goto('/');
+		await createMatch(page, 'DRRC November');
+		await addExisting(page, ['Alpha']);
+	});
+
+	test('new stage from a match joins it and is numbered by order', async ({ page }) => {
+		const matchUrl = page.url();
+		await page.getByRole('link', { name: 'New stage' }).click();
+		await expect(page.getByLabel('Match', { exact: true })).toHaveValue(
+			matchUrl.split('/').at(-1)!
+		);
+		await page.getByLabel('Use a saved canvas').check();
+		await page.getByRole('button', { name: 'Create plan' }).click();
+		await expect(page.getByTestId('bay')).toBeVisible();
+		await expect(page.getByRole('banner')).toContainText('Stage 2');
+		await page.getByRole('tab', { name: 'Brief' }).click();
+		await expect(brief(page).getByLabel('Stage number')).toHaveAttribute(
+			'placeholder',
+			'2 (match order)'
+		);
+		await brief(page).getByRole('link', { name: 'DRRC November' }).click();
+		await expect(page).toHaveURL(matchUrl);
+		await expect(stages(page)).toHaveCount(2);
+		await expect(stages(page).nth(1)).toContainText('Stage 2');
+	});
+
+	test('a typed stage number wins over the match order', async ({ page }) => {
+		await stages(page).getByRole('link', { name: 'Open' }).click();
+		await expect(page.getByRole('banner')).toContainText('Stage 1 — Alpha');
+		await page.getByRole('tab', { name: 'Brief' }).click();
+		await brief(page).getByLabel('Stage number').fill('5');
+		await brief(page).getByLabel('Stage number').blur();
+		await expect(page.getByRole('banner')).toContainText('Stage 5 — Alpha');
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await page.goBack();
+		await page.reload();
+		await expect(stages(page).nth(0)).toContainText('Stage 5 — Alpha');
+	});
+
+	test('the new-plan page can put a plan into a match', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: 'New plan' }).click();
+		await page.getByLabel('Match', { exact: true }).selectOption({ label: 'DRRC November' });
+		await page.getByLabel('Use a saved canvas').check();
+		await page.getByRole('button', { name: 'Create plan' }).click();
+		await expect(page.getByRole('banner')).toContainText('Stage 2');
+		await page.goto('/');
+		await expect(myMatches(page).getByRole('listitem')).toContainText('2 stages');
+	});
+});

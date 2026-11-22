@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
+import {
+	bayPoint,
+	createCanvas,
+	createMatch,
+	createPlanFromCanvas,
+	dragFromPalette
+} from './helpers';
 
 const pages = (page: Page) => page.getByTestId('print-page');
 const brief = (page: Page) => page.getByRole('tabpanel', { name: 'Brief' });
@@ -58,6 +64,23 @@ test.describe('a 50 × 25 yd bay', () => {
 		await expect(pages(page)).toHaveCount(2);
 		await expect(pages(page).nth(0)).toContainText('Stage procedure and notes on page 2');
 		await expect(pages(page).nth(1)).toContainText('40. Step 40 of the course of fire');
+	});
+
+	test('plans show a diagram thumbnail on the home page and in a match', async ({ page }) => {
+		await dragFromPalette(page, 'popper', await bayPoint(page, 0.4, 0.4));
+		await dragFromPalette(page, 'barrel', await bayPoint(page, 0.6, 0.6));
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await page.goto('/');
+		const card = page.getByRole('region', { name: 'Unassigned plans' }).getByRole('listitem');
+		const thumb = card.getByTestId('plan-thumbnail');
+		await expect(thumb).toHaveAttribute('aria-label', 'Diagram of Untitled stage');
+		await expect(thumb.locator('[data-print-object]')).toHaveCount(2);
+		await createMatch(page, 'DRRC November');
+		await page.getByRole('button', { name: 'Add existing plan' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+		const row = page.getByRole('region', { name: 'Stages' }).getByRole('listitem');
+		await expect(row.getByTestId('plan-thumbnail').locator('[data-print-object]')).toHaveCount(2);
 	});
 
 	test('landscape pages are wider than tall', async ({ page }) => {

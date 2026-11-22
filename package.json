@@ -28,6 +28,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/vite": "^4.3.5",
 		"@types/node": "^26",
+		"drizzle-kit": "^0.31.11",
 		"eslint": "^10.15.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.24.1",
@@ -45,8 +46,12 @@
 	},
 	"dependencies": {
 		"@fontsource/graduate": "^5.3.0",
+		"@supabase/ssr": "^0.12.7",
+		"@supabase/supabase-js": "^2.119.2",
 		"dexie": "^4.4.7",
+		"drizzle-orm": "^0.45.4",
 		"jspdf": "^4.2.1",
+		"postgres": "^4.1.1",
 		"svg2pdf.js": "^2.9.0",
 		"zod": "^4.6.7"
 	}

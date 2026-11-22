@@ -3,6 +3,9 @@
 	import { fromFeet, toFeet } from '#lib/geometry/units.js';
 	import type { PlanObject } from '#lib/model/plan.js';
 	import type { EditorState } from '../editor-state.svelte.js';
+	import Button from '#lib/ui/Button.svelte';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
+	import { controlClass } from '#lib/ui/styles.js';
 	import type { ObjectPatch } from '../ops.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -113,97 +116,55 @@
 	}
 </script>
 
-<aside class="properties" aria-label="Properties">
-	{#if obj}
-		{@const o = obj}
-		<h2 class="title">{entry?.name ?? o.symbolId}</h2>
-		<div class="fields">
-			<label for="{uid}-label">Label</label>
-			<input
-				id="{uid}-label"
-				type="text"
-				maxlength="24"
-				value={o.label ?? ''}
-				onchange={(e) => commitLabel(e, o.id)}
-				onkeydown={blurOnEnter}
-			/>
-			{#each fields as field (field.key)}
-				<label for="{uid}-{field.key}">{field.label}</label>
+<aside class="flex min-h-0 flex-col border-l-[3px] border-black bg-white" aria-label="Properties">
+	<PanelHeader title="Properties" />
+	<div class="flex-1 overflow-y-auto p-3">
+		{#if obj}
+			{@const o = obj}
+			<h3 class="m-0 mb-3 text-base font-semibold">{entry?.name ?? o.symbolId}</h3>
+			<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+				<label for="{uid}-label" class="text-sm text-muted">Label</label>
 				<input
-					id="{uid}-{field.key}"
-					type="number"
-					min={field.min}
-					max={field.max}
-					step={field.step ?? 'any'}
-					value={field.read(o)}
-					onchange={(e) => commitNumber(e, o.id, field)}
+					id="{uid}-label"
+					type="text"
+					maxlength="24"
+					class={controlClass}
+					value={o.label ?? ''}
+					onchange={(e) => commitLabel(e, o.id)}
 					onkeydown={blurOnEnter}
 				/>
-			{/each}
-		</div>
-		<p class="unit">Positions and sizes in {unit === 'yd' ? 'yards' : 'feet'}.</p>
-		<div class="actions">
-			<button type="button" onclick={() => editor.duplicateSelected()}>Duplicate</button>
-			<button type="button" class="danger" onclick={() => editor.deleteSelected()}>Delete</button>
-			<button type="button" onclick={() => editor.bringToFront(o.id)}>Bring to front</button>
-			<button type="button" onclick={() => editor.sendToBack(o.id)}>Send to back</button>
-		</div>
-	{:else if count > 1}
-		<h2 class="title">{count} objects selected</h2>
-		<div class="actions">
-			<button type="button" onclick={() => editor.duplicateSelected()}>Duplicate</button>
-			<button type="button" class="danger" onclick={() => editor.deleteSelected()}>Delete</button>
-		</div>
-	{:else}
-		<p class="empty">Select an object to edit it</p>
-	{/if}
+				{#each fields as field (field.key)}
+					<label for="{uid}-{field.key}" class="text-sm text-muted">{field.label}</label>
+					<input
+						id="{uid}-{field.key}"
+						type="number"
+						min={field.min}
+						max={field.max}
+						step={field.step ?? 'any'}
+						class={controlClass}
+						value={field.read(o)}
+						onchange={(e) => commitNumber(e, o.id, field)}
+						onkeydown={blurOnEnter}
+					/>
+				{/each}
+			</div>
+			<p class="mt-2 mb-0 text-xs text-muted">
+				Positions and sizes in {unit === 'yd' ? 'yards' : 'feet'}.
+			</p>
+			<div class="mt-4 grid grid-cols-2 gap-2">
+				<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+				<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+				<Button onclick={() => editor.bringToFront(o.id)}>Bring to front</Button>
+				<Button onclick={() => editor.sendToBack(o.id)}>Send to back</Button>
+			</div>
+		{:else if count > 1}
+			<h3 class="m-0 mb-3 text-base font-semibold">{count} objects selected</h3>
+			<div class="grid grid-cols-2 gap-2">
+				<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+				<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+			</div>
+		{:else}
+			<p class="m-0 text-muted">Select an object to edit it</p>
+		{/if}
+	</div>
 </aside>
-
-<style>
-	.properties {
-		border-left: 1px solid var(--color-border);
-		overflow-y: auto;
-		padding: var(--space-3);
-		background: var(--color-bg);
-	}
-	.title {
-		margin: 0 0 var(--space-3);
-		font-size: 1rem;
-	}
-	.fields {
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: var(--space-2) var(--space-3);
-		align-items: center;
-	}
-	label {
-		font-size: 0.875rem;
-		color: var(--color-muted);
-	}
-	input {
-		min-width: 0;
-		padding: var(--space-1) var(--space-2);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-	}
-	.unit {
-		margin: var(--space-2) 0 0;
-		font-size: 0.75rem;
-		color: var(--color-muted);
-	}
-	.actions {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-2);
-		margin-top: var(--space-4);
-	}
-	.actions button {
-		min-height: 36px;
-	}
-	.danger {
-		color: var(--color-danger);
-	}
-	.empty {
-		color: var(--color-muted);
-	}
-</style>

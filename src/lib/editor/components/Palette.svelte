@@ -3,11 +3,15 @@
 	import { paletteGroups, type CatalogEntry, type FootprintEntry } from '#lib/catalog/index.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
+	import PanelHeader from '#lib/ui/PanelHeader.svelte';
+	import { controlClass } from '#lib/ui/styles.js';
 	import { movedBeyond } from '../gestures.js';
 
 	let { editor }: { editor: EditorState } = $props();
 
 	const uid = $props.id();
+	const TOGGLE =
+		'focus-ring flex min-h-11 w-full cursor-pointer items-center gap-1 border-0 bg-transparent p-2 text-left';
 
 	let query = $state('');
 	const groups = $derived(paletteGroups(query));
@@ -109,7 +113,10 @@
 <svelte:window onkeydown={onKeydown} />
 
 {#snippet thumb(entry: CatalogEntry)}
-	<span class="thumb" aria-hidden="true">
+	<span
+		class="grid size-10 flex-none place-items-center rounded-md border border-border bg-white text-text [&_svg]:size-8"
+		aria-hidden="true"
+	>
 		{#if entry.kind === 'symbol'}
 			<!-- Catalog SVG is bundled with the app, never user input. -->
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
@@ -118,9 +125,20 @@
 			{@const r = footprintThumb(entry.footprint)}
 			<svg viewBox="0 0 40 40">
 				{#if entry.footprint.style === 'line'}
-					<line x1={r.x} x2={r.x + r.w} y1="20" y2="20" stroke-width={r.h} />
+					<line class="stroke-current" x1={r.x} x2={r.x + r.w} y1="20" y2="20" stroke-width={r.h} />
 				{:else}
-					<rect class={entry.footprint.style} x={r.x} y={r.y} width={r.w} height={r.h} />
+					<rect
+						class={[
+							'stroke-current',
+							entry.footprint.style === 'solid'
+								? 'fill-current stroke-1 [fill-opacity:0.75]'
+								: 'fill-none stroke-2'
+						]}
+						x={r.x}
+						y={r.y}
+						width={r.w}
+						height={r.h}
+					/>
 				{/if}
 			</svg>
 		{/if}
@@ -128,16 +146,27 @@
 {/snippet}
 
 {#snippet chevron(open: boolean)}
-	<svg class={['chevron', { open }]} viewBox="0 0 12 12" aria-hidden="true">
+	<svg
+		class={[
+			'size-3 flex-none fill-none stroke-current stroke-[1.5] transition-[rotate] duration-100',
+			{ 'rotate-90': open }
+		]}
+		viewBox="0 0 12 12"
+		aria-hidden="true"
+	>
 		<path d="M4 2.5 7.5 6 4 9.5" />
 	</svg>
 {/snippet}
 
-{#snippet item(entry: CatalogEntry)}
+{#snippet item(entry: CatalogEntry, nested: boolean)}
 	<li>
 		<button
 			type="button"
-			class="item"
+			class={[
+				'focus-ring flex w-full cursor-grab touch-pan-y items-center gap-2 rounded-md py-1 pr-2 text-left text-text select-none hover:bg-surface',
+				'aria-pressed:bg-[color-mix(in_srgb,var(--theme-accent)_18%,white)] aria-pressed:shadow-[inset_0_0_0_2px_var(--theme-accent)]',
+				nested ? 'pl-2' : 'pl-4'
+			]}
 			data-testid="palette-item-{entry.id}"
 			aria-pressed={editor.armedSymbolId === entry.id}
 			onpointerdown={(e) => onItemDown(e, entry)}
@@ -147,29 +176,31 @@
 			onclick={(e) => onItemClick(e, entry)}
 		>
 			{@render thumb(entry)}
-			<span class="name">{entry.name}</span>
+			<span>{entry.name}</span>
 		</button>
 	</li>
 {/snippet}
 
-<aside class="palette" aria-label="Symbols">
-	<div class="search">
+<aside class="flex min-h-0 flex-col border-r-[3px] border-black bg-white" aria-label="Symbols">
+	<PanelHeader title="Symbols" />
+	<div class="border-b-2 border-border p-2">
 		<input
 			type="search"
 			placeholder="Search symbols"
 			aria-label="Search symbols"
+			class={controlClass}
 			bind:value={query}
 			oninput={() => collapsedInSearch.clear()}
 		/>
 	</div>
-	<div class="list">
+	<div class="flex-1 overflow-y-auto pt-1 pb-4">
 		{#each groups as group (group.category)}
 			{@const key = `category-${group.category}`}
-			<div class="category" role="group" aria-labelledby="{uid}-{key}">
-				<h3>
+			<div role="group" aria-labelledby="{uid}-{key}">
+				<h3 class="m-0 text-base">
 					<button
 						type="button"
-						class="toggle category-toggle"
+						class={[TOGGLE, 'text-xs font-bold tracking-wider text-muted uppercase']}
 						id="{uid}-{key}"
 						aria-expanded={isOpen(key)}
 						onclick={() => toggle(key)}
@@ -178,15 +209,15 @@
 					</button>
 				</h3>
 				{#if isOpen(key)}
-					<ul class="items">
+					<ul class="m-0 list-none p-0">
 						{#each group.items as it (it.kind === 'family' ? `family-${it.family.id}` : it.entry.id)}
 							{#if it.kind === 'family'}
 								{@const fkey = `family-${it.family.id}`}
 								<li>
-									<div class="family" role="group" aria-labelledby="{uid}-{fkey}">
+									<div role="group" aria-labelledby="{uid}-{fkey}">
 										<button
 											type="button"
-											class="toggle family-toggle"
+											class={[TOGGLE, 'pl-4 font-semibold text-text']}
 											id="{uid}-{fkey}"
 											aria-expanded={isOpen(fkey)}
 											onclick={() => toggle(fkey)}
@@ -194,169 +225,32 @@
 											{@render chevron(isOpen(fkey))}{it.family.name}
 										</button>
 										{#if isOpen(fkey)}
-											<ul class="items variants">
+											<ul class="m-0 ml-4 list-none border-l border-border p-0">
 												{#each it.entries as entry (entry.id)}
-													{@render item(entry)}
+													{@render item(entry, true)}
 												{/each}
 											</ul>
 										{/if}
 									</div>
 								</li>
 							{:else}
-								{@render item(it.entry)}
+								{@render item(it.entry, false)}
 							{/if}
 						{/each}
 					</ul>
 				{/if}
 			</div>
 		{:else}
-			<p class="empty">No symbols match “{query.trim()}”.</p>
+			<p class="mx-2 my-4 text-muted">No symbols match “{query.trim()}”.</p>
 		{/each}
 	</div>
 </aside>
 
 {#if ghost}
-	<div class="ghost" style:transform="translate({ghost.x}px, {ghost.y}px) translate(-50%, -50%)">
+	<div
+		class="pointer-events-none fixed top-0 left-0 z-10 opacity-85"
+		style:transform="translate({ghost.x}px, {ghost.y}px) translate(-50%, -50%)"
+	>
 		{@render thumb(ghost.entry)}
 	</div>
 {/if}
-
-<style>
-	.palette {
-		display: flex;
-		flex-direction: column;
-		min-height: 0;
-		border-right: 1px solid var(--color-border);
-		background: var(--color-bg);
-	}
-	.search {
-		padding: var(--space-2);
-		border-bottom: 1px solid var(--color-border);
-	}
-	.search input {
-		width: 100%;
-		padding: var(--space-1) var(--space-2);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-	}
-	.list {
-		flex: 1;
-		overflow-y: auto;
-		padding: var(--space-1) 0 var(--space-4);
-	}
-	h3 {
-		margin: 0;
-		font-size: inherit;
-	}
-	.items {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.toggle {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		width: 100%;
-		padding: var(--space-2);
-		border: 0;
-		background: none;
-		color: var(--color-text);
-		text-align: left;
-		cursor: pointer;
-	}
-	.category-toggle {
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: var(--color-muted);
-	}
-	.family-toggle {
-		padding-left: var(--space-4);
-		font-weight: 600;
-	}
-	.chevron {
-		flex: none;
-		width: 12px;
-		height: 12px;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 1.5;
-		transition: rotate 120ms ease;
-	}
-	.chevron.open {
-		rotate: 90deg;
-	}
-	.variants {
-		margin-left: var(--space-4);
-		border-left: 1px solid var(--color-border);
-	}
-	.variants .item {
-		padding-left: var(--space-2);
-	}
-	.item {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		width: 100%;
-		padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
-		border: 0;
-		border-radius: var(--radius);
-		background: none;
-		color: var(--color-text);
-		text-align: left;
-		cursor: grab;
-		user-select: none;
-		touch-action: pan-y;
-	}
-	.item:hover {
-		background: var(--color-surface);
-	}
-	.item[aria-pressed='true'] {
-		background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-		box-shadow: inset 0 0 0 1.5px var(--color-accent);
-	}
-	.thumb {
-		flex: none;
-		display: grid;
-		place-items: center;
-		width: 40px;
-		height: 40px;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		background: #fff;
-		color: var(--color-text);
-	}
-	.thumb :global(svg) {
-		width: 32px;
-		height: 32px;
-	}
-	.thumb line {
-		stroke: currentColor;
-	}
-	.thumb rect {
-		stroke: currentColor;
-		stroke-width: 2;
-	}
-	.thumb rect.solid {
-		fill: currentColor;
-		fill-opacity: 0.75;
-		stroke-width: 1;
-	}
-	.thumb rect.outline {
-		fill: none;
-	}
-	.empty {
-		margin: var(--space-4) var(--space-2);
-		color: var(--color-muted);
-	}
-	.ghost {
-		position: fixed;
-		top: 0;
-		left: 0;
-		z-index: 10;
-		pointer-events: none;
-		opacity: 0.85;
-	}
-</style>

@@ -18,16 +18,8 @@
 		<EditorView plan={data.plan} />
 	{/key}
 {:else}
-	<main class="missing">
-		<h1>Plan not found</h1>
-		<p><a href={resolve('')}>Back to your plans</a></p>
+	<main class="mx-auto max-w-2xl px-4 py-8">
+		<h1 class="m-0 mb-3 font-display text-2xl tracking-wide uppercase">Plan not found</h1>
+		<p><a class="underline" href={resolve('')}>Back to your plans</a></p>
 	</main>
 {/if}
-
-<style>
-	.missing {
-		max-width: 40rem;
-		margin: 0 auto;
-		padding: var(--space-8) var(--space-4);
-	}
-</style>

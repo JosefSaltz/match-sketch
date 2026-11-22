@@ -17,13 +17,6 @@
 
 :root {
 	--radius: 6px;
-	/* Spacing tokens still used by unmigrated components; Tailwind's scale replaces them. */
-	--space-1: 0.25rem;
-	--space-2: 0.5rem;
-	--space-3: 0.75rem;
-	--space-4: 1rem;
-	--space-6: 1.5rem;
-	--space-8: 2rem;
 	/* The active theme (written by applyTheme from the registry; these are the defaults). */
 	--theme-base: #81613c;
 	--theme-accent: #81613c;

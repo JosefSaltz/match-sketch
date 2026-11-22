@@ -44,6 +44,7 @@ export function addObject(
 	return { doc: { ...doc, objects: [...doc.objects, obj] }, id };
 }
 
+/** Moves the objects by one shared delta, stopped at the bay edge so the group keeps its shape. */
 export function moveObjects(
 	doc: PlanDocument,
 	ids: string[],
@@ -51,6 +52,17 @@ export function moveObjects(
 	canvas: CanvasSize
 ): PlanDocument {
 	const selected = new Set(ids);
+	const moving = doc.objects.filter((o) => selected.has(o.id));
+	if (moving.length) {
+		const xs = moving.map((o) => o.x);
+		const ys = moving.map((o) => o.y);
+		const clampDelta = (d: number, lo: number, hi: number) =>
+			lo <= hi ? Math.min(hi, Math.max(lo, d)) : d;
+		delta = {
+			x: clampDelta(delta.x, -Math.min(...xs), canvas.widthFt - Math.max(...xs)),
+			y: clampDelta(delta.y, -Math.min(...ys), canvas.depthFt - Math.max(...ys))
+		};
+	}
 	return {
 		...doc,
 		objects: doc.objects.map((o) =>

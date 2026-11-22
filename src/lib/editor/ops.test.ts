@@ -89,3 +89,14 @@ describe('editing objects', () => {
 		expect(front.objects.find((o) => o.label === 'SA-1')!.z).toBe(2);
 	});
 });
+
+describe('moveObjects into an edge', () => {
+	it('stops the whole group at the edge, keeping its spacing', () => {
+		const canvas = { widthFt: 150, depthFt: 75 };
+		let doc = emptyPlanDocument();
+		const a = addObject(doc, getEntry('barrel')!, { x: 10, y: 10 }, canvas, null);
+		const b = addObject(a.doc, getEntry('barrel')!, { x: 20, y: 10 }, canvas, null);
+		doc = moveObjects(b.doc, [a.id, b.id], { x: 200, y: 0 }, canvas);
+		expect(doc.objects.map((o) => o.x)).toEqual([140, 150]);
+	});
+});

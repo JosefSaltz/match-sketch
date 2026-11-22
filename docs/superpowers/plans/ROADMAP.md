@@ -10,7 +10,8 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 
 | #   | Plan                                        | Status                    | File                                |
 | --- | ------------------------------------------- | ------------------------- | ----------------------------------- |
-| 1   | Local editor                                | Written, ready to execute | `2026-11-21-plan-1-local-editor.md` |
+| 1   | Local editor                                | In progress (Tasks 1–9)   | `2026-11-21-plan-1-local-editor.md` |
+| 1b  | Visual theme (Tailwind, themes, camo tiles) | Design drafted            | spec: `2026-11-21-theme-design.md`  |
 | —   | Scale break spike (throwaway)               | Not started               | —                                   |
 | 2   | Brief, tally, measure, annotations, matches | Not written               | —                                   |
 | 3   | Symbol library art                          | Not written               | —                                   |
@@ -21,6 +22,12 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 Update this table as plans are written and finished.
 
 ---
+
+## Plan 1b — Visual theme (after Plan 1, before the spike)
+
+- **Spec:** `docs/superpowers/specs/2026-11-21-theme-design.md`.
+- **Builds:** Tailwind 4 migration of every screen; the theme registry, picker and per-user setting; the varsity wordmark, buttons and panel headers; the pattern tool (`tools/patterns/`) and the cleared camo, solid and plaid tiles; the credits dialog.
+- **User checkpoints:** each camo tile is approved in a side-by-side preview before it ships; uncleared sources stay out of the repo (spec §8).
 
 ## Scale break spike (after Plan 1)
 

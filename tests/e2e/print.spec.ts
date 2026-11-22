@@ -1,0 +1,103 @@
+import { test, expect, type Page } from '@playwright/test';
+import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
+
+const pages = (page: Page) => page.getByTestId('print-page');
+const brief = (page: Page) => page.getByRole('tabpanel', { name: 'Brief' });
+const props = (page: Page) => page.getByRole('tabpanel', { name: 'Properties' });
+
+async function fillBrief(page: Page, fields: Record<string, string>) {
+	await page.getByRole('tab', { name: 'Brief' }).click();
+	for (const [label, value] of Object.entries(fields)) {
+		await brief(page).getByLabel(label).fill(value);
+	}
+	await brief(page).getByLabel(Object.keys(fields)[0]).blur();
+	await expect(page.getByTestId('save-status')).toHaveText('Saved');
+	await page.getByRole('tab', { name: 'Properties' }).click();
+}
+
+async function openPrint(page: Page) {
+	await page.getByRole('link', { name: 'Print' }).click();
+	await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}\/print$/);
+	await expect(pages(page).first()).toBeVisible();
+}
+
+test.describe('a 50 × 25 yd bay', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });
+		await createPlanFromCanvas(page, 'Bay A');
+	});
+
+	test('a short plan prints on one page in layout B', async ({ page }) => {
+		await dragFromPalette(page, 'popper', await bayPoint(page, 0.4, 0.4));
+		await dragFromPalette(page, 'barrel', await bayPoint(page, 0.6, 0.6));
+		await fillBrief(page, {
+			'Stage name': 'Bunker',
+			'Stage number': '3',
+			'Start position': 'Hands on X',
+			'Stage procedure': 'Engage T1–T4.\nMove to Box B.'
+		});
+		await openPrint(page);
+		await expect(pages(page)).toHaveCount(1);
+		const p = pages(page).first();
+		await expect(p).toContainText(/bunker/i);
+		for (const label of ['START POSITION', 'GUN READY', 'ROUND COUNT', 'TARGETS', 'PAR TIME']) {
+			await expect(p).toContainText(label);
+		}
+		await expect(p).toContainText('Hands on X');
+		await expect(p).toContainText('1. Engage T1–T4.');
+		await expect(p.locator('[data-print-object]')).toHaveCount(2);
+		await expect(p).toContainText('Page 1 of 1');
+	});
+
+	test('a long procedure moves to page 2', async ({ page }) => {
+		// Review Focus #1
+		const steps = Array.from({ length: 40 }, (_, i) => `Step ${i + 1} of the course of fire`);
+		await fillBrief(page, { 'Stage procedure': steps.join('\n') });
+		await openPrint(page);
+		await expect(pages(page)).toHaveCount(2);
+		await expect(pages(page).nth(0)).toContainText('Stage procedure and notes on page 2');
+		await expect(pages(page).nth(1)).toContainText('40. Step 40 of the course of fire');
+	});
+
+	test('landscape pages are wider than tall', async ({ page }) => {
+		await openPrint(page);
+		await page.getByLabel('Orientation').selectOption({ label: 'Landscape' });
+		const box = (await pages(page).first().boundingBox())!;
+		expect(box.width).toBeGreaterThan(box.height);
+	});
+});
+
+test.describe('a 40 × 300 yd bay', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		await createCanvas(page, { name: 'Long bay', width: '40', depth: '300', unit: 'Yards' });
+		await createPlanFromCanvas(page, 'Long bay');
+	});
+
+	test('tiling adds one page per tile after the overview', async ({ page }) => {
+		await openPrint(page);
+		await page.getByLabel('Diagram').selectOption({ label: 'Tile' });
+		await page.getByLabel('Tile scale').selectOption({ label: '1 in = 10 yd' });
+		const count = await pages(page).count();
+		expect(count).toBeGreaterThan(2);
+		const tileCount = count - 1;
+		await expect(pages(page).nth(1)).toContainText(`Tile 1 of ${tileCount}`);
+		await expect(pages(page).last()).toContainText(`Tile ${tileCount} of ${tileCount}`);
+	});
+
+	test('a plan with a scale break prints the strip and true distances', async ({ page }) => {
+		// Review Focus #5
+		await page.getByRole('combobox', { name: 'Snap' }).selectOption({ label: '1 yd' });
+		await dragFromPalette(page, 'popper', await bayPoint(page, 0.5, 0.95));
+		await props(page).getByLabel('Y').fill('150');
+		await props(page).getByLabel('Y').press('Enter');
+		await page.keyboard.press('Escape');
+		await props(page).getByLabel('Not to scale beyond').fill('30');
+		await props(page).getByLabel('Not to scale beyond').press('Enter');
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await openPrint(page);
+		await expect(pages(page).first()).toContainText('Not to scale beyond 30 yd');
+		await expect(pages(page).first()).toContainText('150 yd');
+	});
+});

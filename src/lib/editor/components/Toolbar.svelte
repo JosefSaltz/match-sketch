@@ -121,6 +121,7 @@
 		</Button>
 		<Button onclick={() => editor.fit()}>Fit</Button>
 	</div>
+	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />

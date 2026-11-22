@@ -3,6 +3,8 @@
 	import { printInput } from '#lib/print/input.js';
 	import { defaultTileScale, layoutPlan, tileArea, tileScales } from '#lib/print/layout.js';
 	import { measureText } from '#lib/print/measure.js';
+	import { downloadPdf } from '#lib/print/pdf.js';
+	import { pdfFileName } from '#lib/print/pdf-text.js';
 	import type { Orientation } from '#lib/print/page.js';
 	import PrintPage from '#lib/print/PrintPage.svelte';
 	import Button from '#lib/ui/Button.svelte';
@@ -33,6 +35,25 @@
 				)
 			: []
 	);
+	let saving = $state(false);
+	let pdfError = $state<string | null>(null);
+
+	/** The PDF is drawn from the same page SVGs the preview shows. */
+	async function savePdf() {
+		if (!base) return;
+		saving = true;
+		pdfError = null;
+		try {
+			const svgs = [...document.querySelectorAll<SVGSVGElement>('[data-testid="print-page"]')];
+			await downloadPdf(svgs, orientation, pdfFileName(base.title));
+		} catch (err) {
+			console.error(err);
+			pdfError = 'The PDF could not be made. Try Print and choose “Save as PDF” instead.';
+		} finally {
+			saving = false;
+		}
+	}
+
 	const pageCss = $derived(`<style>@page { size: letter ${orientation}; margin: 0 }</style>`);
 </script>
 
@@ -94,10 +115,16 @@
 				</Field>
 			{/if}
 			<div class="ml-auto flex gap-3">
+				<Button onclick={savePdf} disabled={saving}>
+					{saving ? 'Making PDF…' : 'Download PDF'}
+				</Button>
 				<Button variant="primary" onclick={() => window.print()}>Print</Button>
 			</div>
 		</div>
 
+		{#if pdfError}
+			<p class="mx-auto max-w-6xl px-4 text-danger print:hidden" role="alert">{pdfError}</p>
+		{/if}
 		<main class="flex flex-col items-center gap-6 px-4 pb-10 print:block print:p-0">
 			{#each pages as page, i (i)}
 				<div class="page shadow-[0_2px_12px_rgb(0_0_0/0.18)] print:shadow-none">

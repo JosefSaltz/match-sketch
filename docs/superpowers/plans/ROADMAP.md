@@ -15,7 +15,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | —   | Scale break spike (throwaway)               | Done: kept, variant C     | branch `spike/scale-break`          |
 | 2b  | Scale break in the editor (variant C)       | Not written               | —                                   |
 | 2   | Brief, tally, measure, annotations, matches | Done (2026-11-22)         | `2026-11-22-plan-2-brief-annotations-matches.md` |
-| 3   | Symbol library art                          | Not written               | —                                   |
+| 3   | Symbol library art                          | Written, in progress      | `2026-11-22-plan-3-symbol-library.md` |
 | 4   | Print & PDF                                 | Not written               | —                                   |
 | 5   | Accounts & sync                             | Not written               | —                                   |
 | 6   | Draft from text                             | Not written               | —                                   |

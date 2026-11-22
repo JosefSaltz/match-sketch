@@ -5,6 +5,7 @@
 	import type { AnnotationTool, EditorState } from '../editor-state.svelte.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
+	import FootprintShape from '#lib/ui/FootprintShape.svelte';
 	import { movedBeyond } from '../gestures.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -111,12 +112,10 @@
 		if (editor.tool) editor.armTool(null);
 	}
 
-	/** A footprint's shape fitted into the 40 × 40 thumbnail, never thinner than 3 px. */
+	/** A footprint's box fitted into the 40 × 40 thumbnail, never thinner than 3 px. */
 	function footprintThumb(f: FootprintEntry['footprint']) {
 		const k = 30 / Math.max(f.widthFt, f.depthFt);
-		const w = Math.max(f.widthFt * k, 3);
-		const h = Math.max(f.depthFt * k, 3);
-		return { x: 20 - w / 2, y: 20 - h / 2, w, h };
+		return { w: Math.max(f.widthFt * k, 3), h: Math.max(f.depthFt * k, 3) };
 	}
 </script>
 
@@ -134,22 +133,9 @@
 		{:else}
 			{@const r = footprintThumb(entry.footprint)}
 			<svg viewBox="0 0 40 40">
-				{#if entry.footprint.style === 'line'}
-					<line class="stroke-current" x1={r.x} x2={r.x + r.w} y1="20" y2="20" stroke-width={r.h} />
-				{:else}
-					<rect
-						class={[
-							'stroke-current',
-							entry.footprint.style === 'solid'
-								? 'fill-current stroke-1 [fill-opacity:0.75]'
-								: 'fill-none stroke-2'
-						]}
-						x={r.x}
-						y={r.y}
-						width={r.w}
-						height={r.h}
-					/>
-				{/if}
+				<g transform="translate(20 20)">
+					<FootprintShape style={entry.footprint.style} width={r.w} height={r.h} />
+				</g>
 			</svg>
 		{/if}
 	</span>

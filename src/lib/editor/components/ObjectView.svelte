@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getEntry } from '#lib/catalog/index.js';
+	import FootprintShape from '#lib/ui/FootprintShape.svelte';
 	import { worldToScreen } from '#lib/geometry/viewport.js';
 	import { SYMBOL_PX, type PlanObject } from '#lib/model/plan.js';
 	import type { EditorState } from '../editor-state.svelte.js';
@@ -9,7 +10,6 @@
 
 	/** Copies drawn behind the front glyph when one object stands for several targets. */
 	const CLUSTER_COPIES = 2;
-	const LINE_MIN_PX = 3;
 	const LABEL_GAP_PX = 12;
 
 	const entry = $derived(getEntry(obj.symbolId));
@@ -49,24 +49,7 @@
 >
 	<g transform="rotate({obj.rotation})">
 		{#if entry?.kind === 'footprint'}
-			{#if entry.footprint.style === 'line'}
-				<line
-					class="footprint-line"
-					x1={box.x}
-					x2={box.x + box.width}
-					y1="0"
-					y2="0"
-					stroke-width={Math.max(box.height, LINE_MIN_PX)}
-				/>
-			{:else}
-				<rect
-					class={['footprint', entry.footprint.style]}
-					x={box.x}
-					y={box.y}
-					width={box.width}
-					height={box.height}
-				/>
-			{/if}
+			<FootprintShape style={entry.footprint.style} width={box.width} height={box.height} />
 		{:else if entry}
 			{#each cluster as copy (copy.k)}
 				<svg
@@ -119,22 +102,6 @@
 	}
 	.glyph.behind {
 		opacity: 0.55;
-	}
-	.footprint {
-		stroke: currentColor;
-		stroke-width: 1.5;
-	}
-	.footprint.solid {
-		fill: currentColor;
-		fill-opacity: 0.75;
-	}
-	.footprint.outline {
-		/* Transparent, not none, so the inside of a box can be clicked to select it. */
-		fill: transparent;
-		stroke-width: 2;
-	}
-	.footprint-line {
-		stroke: currentColor;
 	}
 	.unknown {
 		fill: none;

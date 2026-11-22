@@ -1,3 +1,5 @@
+import type { FootprintStyle } from './footprint-shapes';
+
 export type Category = 'target' | 'prop' | 'structure' | 'area' | 'marker';
 
 export type AutoLabel = { prefix: string; style: 'number' | 'letter' };
@@ -22,7 +24,7 @@ export type SymbolEntry = BaseEntry & { kind: 'symbol'; svg: string; anchor: 'ba
 /** Drawn to scale; position is the center. */
 export type FootprintEntry = BaseEntry & {
 	kind: 'footprint';
-	footprint: { style: 'solid' | 'outline' | 'line'; widthFt: number; depthFt: number };
+	footprint: { style: FootprintStyle; widthFt: number; depthFt: number };
 };
 
 export type CatalogEntry = SymbolEntry | FootprintEntry;

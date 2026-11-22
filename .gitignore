@@ -29,3 +29,10 @@ coverage
 
 # superpowers execution scratch
 .superpowers/
+
+# Pattern tool scratch (downloaded sources, unreviewed tiles)
+tools/patterns/.cache/
+tools/patterns/out/
+tools/patterns/.venv/
+**/__pycache__/
+tools/patterns/.pytest_cache/

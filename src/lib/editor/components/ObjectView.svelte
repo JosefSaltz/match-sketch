@@ -115,6 +115,7 @@
 <style>
 	.object {
 		color: var(--color-text);
+		cursor: move;
 	}
 	.glyph.behind {
 		opacity: 0.55;
@@ -128,7 +129,8 @@
 		fill-opacity: 0.75;
 	}
 	.footprint.outline {
-		fill: none;
+		/* Transparent, not none, so the inside of a box can be clicked to select it. */
+		fill: transparent;
 		stroke-width: 2;
 	}
 	.footprint-line {

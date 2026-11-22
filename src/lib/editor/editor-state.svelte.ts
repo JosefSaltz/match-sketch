@@ -1,11 +1,24 @@
 import { getEntry } from '../catalog/index';
-import { snapStepFeet } from '../geometry/snap';
+import { snapPoint, snapStepFeet } from '../geometry/snap';
 import type { CanvasSize, Point, Size } from '../geometry/types';
 import { fitViewport, screenToWorld, zoomAt, type Viewport } from '../geometry/viewport';
-import { emptyPlanDocument, type PlanDocument } from '../model/plan';
+import { emptyPlanDocument, type PlanDisplay, type PlanDocument } from '../model/plan';
 import type { PlanRecord } from '../store/records';
 import { createHistory, type History } from './history';
-import { addObject } from './ops';
+import {
+	addObject,
+	deleteObjects,
+	duplicateObjects,
+	moveObjects,
+	reorder,
+	setObjectProps,
+	type ObjectPatch
+} from './ops';
+
+export type NudgeDir = 'left' | 'right' | 'up' | 'down';
+
+/** An in-progress drag of the selection, previewed until release. */
+type MoveDrag = { ids: string[]; anchorId: string; startWorld: Point; base: PlanDocument };
 
 export type SaveStatus = 'saved' | 'saving' | 'error';
 export type EditorDeps = { save: (doc: PlanDocument) => Promise<void> };
@@ -38,6 +51,8 @@ export class EditorState {
 	);
 
 	selection = $state.raw<string[]>([]);
+	/** The selected objects, in document order. */
+	selectedObjects = $derived(this.doc.objects.filter((o) => this.selection.includes(o.id)));
 	armedSymbolId = $state<string | null>(null);
 	saveStatus = $state<SaveStatus>('saved');
 
@@ -111,5 +126,112 @@ export class EditorState {
 
 	snapStep(): number | null {
 		return snapStepFeet(this.doc.display.snap);
+	}
+
+	select(ids: string[], mode: 'replace' | 'toggle' = 'replace'): void {
+		if (mode === 'replace') {
+			this.selection = [...ids];
+			return;
+		}
+		const kept = this.selection.filter((id) => !ids.includes(id));
+		const added = ids.filter((id) => !this.selection.includes(id));
+		this.selection = [...kept, ...added];
+	}
+
+	clearSelection(): void {
+		if (this.selection.length) this.selection = [];
+	}
+
+	deleteSelected(): void {
+		if (!this.selection.length) return;
+		this.commit(deleteObjects(this.#current, this.selection));
+		this.selection = [];
+	}
+
+	/** Copies the selection one snap step (or 1 ft) right and toward the shooter, then selects the copies. */
+	duplicateSelected(): void {
+		if (!this.selection.length) return;
+		const step = this.snapStep() ?? 1;
+		const { doc, ids } = duplicateObjects(
+			this.#current,
+			this.selection,
+			{ x: step, y: -step },
+			this.canvas
+		);
+		this.commit(doc);
+		this.selection = ids;
+	}
+
+	/** Moves the selection by one snap step (or 1 ft); "up" is downrange. */
+	nudge(dir: NudgeDir): void {
+		if (!this.selection.length) return;
+		const s = this.snapStep() ?? 1;
+		const delta = {
+			left: { x: -s, y: 0 },
+			right: { x: s, y: 0 },
+			up: { x: 0, y: s },
+			down: { x: 0, y: -s }
+		}[dir];
+		this.commit(moveObjects(this.#current, this.selection, delta, this.canvas));
+	}
+
+	setProps(id: string, patch: ObjectPatch): void {
+		this.commit(setObjectProps(this.#current, id, patch, this.canvas));
+	}
+
+	bringToFront(id: string): void {
+		this.commit(reorder(this.#current, id, 'front'));
+	}
+
+	sendToBack(id: string): void {
+		this.commit(reorder(this.#current, id, 'back'));
+	}
+
+	setDisplay(patch: Partial<PlanDisplay>): void {
+		const doc = this.#current;
+		this.commit({ ...doc, display: { ...doc.display, ...patch } });
+	}
+
+	#move: MoveDrag | null = null;
+
+	/** Starts dragging the current selection, grabbed by object `id` at a screen point. */
+	beginMove(id: string, screenPt: Point): void {
+		const ids = this.selection.includes(id) ? this.selection : [id];
+		this.#move = {
+			ids,
+			anchorId: id,
+			startWorld: screenToWorld(screenPt, this.viewport),
+			base: this.#current
+		};
+	}
+
+	/** Previews the move. With snap on, the grabbed object lands on the grid; the rest follow. */
+	updateMove(screenPt: Point): void {
+		const m = this.#move;
+		if (!m) return;
+		const anchor = m.base.objects.find((o) => o.id === m.anchorId);
+		if (!anchor) return;
+		const w = screenToWorld(screenPt, this.viewport);
+		const target = snapPoint(
+			{ x: anchor.x + w.x - m.startWorld.x, y: anchor.y + w.y - m.startWorld.y },
+			this.snapStep()
+		);
+		const delta = { x: target.x - anchor.x, y: target.y - anchor.y };
+		this.preview =
+			delta.x === 0 && delta.y === 0 ? null : moveObjects(m.base, m.ids, delta, this.canvas);
+	}
+
+	/** Drops an in-progress move without changing the document (e.g. the browser took the pointer). */
+	cancelMove(): void {
+		this.#move = null;
+		this.preview = null;
+	}
+
+	/** Commits the previewed move once; a press without movement changes nothing. */
+	endMove(): void {
+		const preview = this.preview;
+		this.#move = null;
+		if (preview) this.commit(preview);
+		else this.preview = null;
 	}
 }

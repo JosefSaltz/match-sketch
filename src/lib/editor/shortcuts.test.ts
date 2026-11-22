@@ -22,6 +22,10 @@ describe('commandForKey', () => {
 		expect(commandForKey(key('ArrowRight'), body)).toBe('nudge-right');
 	});
 
+	it('leaves Alt+Arrow to the browser (back/forward)', () => {
+		expect(commandForKey({ ...key('ArrowLeft'), altKey: true }, body)).toBeNull();
+	});
+
 	it('ignores plain letters and unmodified z', () => {
 		expect(commandForKey(key('z'), body)).toBeNull();
 		expect(commandForKey(key('d'), body)).toBeNull();

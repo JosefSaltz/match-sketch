@@ -3,9 +3,11 @@
 	import { getDb } from '#lib/store/index.js';
 	import { savePlanDocument } from '#lib/store/plans.js';
 	import type { PlanRecord } from '#lib/store/records.js';
-	import { EditorState } from '../editor-state.svelte.js';
+	import { EditorState, type NudgeDir } from '../editor-state.svelte.js';
+	import { commandForKey } from '../shortcuts.js';
 	import EditorCanvas from './EditorCanvas.svelte';
 	import Palette from './Palette.svelte';
+	import PropertiesPanel from './PropertiesPanel.svelte';
 	import Toolbar from './Toolbar.svelte';
 
 	let { plan }: { plan: PlanRecord } = $props();
@@ -19,14 +21,49 @@
 				}
 			})
 	);
+
+	/** Editor shortcuts; keys typed into fields are left to the field (see commandForKey). */
+	function onKeydown(e: KeyboardEvent) {
+		const active = document.activeElement as HTMLElement | null;
+		const command = commandForKey(e, {
+			tagName: active?.tagName ?? 'BODY',
+			isContentEditable: active?.isContentEditable ?? false
+		});
+		if (!command) return;
+		if (e.repeat && command === 'duplicate') {
+			e.preventDefault(); // Holding Ctrl+D makes one copy, not one per key repeat.
+			return;
+		}
+		switch (command) {
+			case 'delete':
+				if (!editor.selection.length) return;
+				editor.deleteSelected();
+				break;
+			case 'duplicate':
+				editor.duplicateSelected();
+				break;
+			case 'deselect':
+				editor.clearSelection();
+				return;
+			case 'undo':
+			case 'redo':
+				return; // Wired up with the undo/redo controls.
+			default:
+				if (!editor.selection.length) return;
+				editor.nudge(command.slice('nudge-'.length) as NudgeDir);
+		}
+		e.preventDefault();
+	}
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <div class="editor">
 	<Toolbar {editor} />
 	<div class="workspace">
 		<Palette {editor} />
 		<EditorCanvas {editor} />
-		<aside class="properties" aria-label="Properties"></aside>
+		<PropertiesPanel {editor} />
 	</div>
 </div>
 
@@ -40,9 +77,5 @@
 		display: grid;
 		grid-template-columns: 16rem 1fr 17rem;
 		min-height: 0;
-	}
-	.properties {
-		border-left: 1px solid var(--color-border);
-		overflow-y: auto;
 	}
 </style>

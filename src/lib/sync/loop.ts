@@ -122,6 +122,8 @@ export function createLoop(state: SyncState, options: LoopOptions): Loop {
 
 	function onLocalChange() {
 		if (stopped) return;
+		// A dirty write means something is pending; the exact count follows once it commits.
+		if (state.pending === 0) state.pending = 1;
 		timers.clearTimeout(debounce);
 		debounce = timers.setTimeout(() => void run(), SYNC_DELAY_MS);
 		// Hooks run inside the write's transaction; count once it has committed.

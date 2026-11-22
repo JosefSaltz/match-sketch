@@ -14,7 +14,12 @@ import {
 	zoomLimitsFor,
 	type Viewport
 } from '../geometry/viewport';
-import { emptyPlanDocument, type PlanDisplay, type PlanDocument } from '../model/plan';
+import {
+	emptyPlanDocument,
+	type PlanDisplay,
+	type PlanDocument,
+	type StageBrief
+} from '../model/plan';
 import { now, type PlanRecord } from '../store/records';
 import { movedBeyond, TAP_SLOP_PX } from './gestures';
 import { createHistory, type History } from './history';
@@ -95,6 +100,10 @@ export class EditorState {
 	saveStatus = $state<SaveStatus>('saved');
 	canUndo = $state(false);
 	canRedo = $state(false);
+	/** Which tab the right column shows. */
+	panel = $state<'properties' | 'brief'>('properties');
+	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
+	#typing: string | null = null;
 	#queue: SaveQueue<{ doc: PlanDocument; at: string }>;
 
 	constructor(plan: PlanRecord, deps: EditorDeps) {
@@ -117,6 +126,7 @@ export class EditorState {
 	}
 
 	commit(next: PlanDocument): void {
+		this.#typing = null;
 		// A change from elsewhere (e.g. a key press) ends any drag, so its release can't undo it.
 		this.#endDrags();
 		this.#history.push(next);
@@ -125,12 +135,14 @@ export class EditorState {
 
 	undo(): void {
 		if (!this.#history.canUndo) return;
+		this.#typing = null;
 		this.#endDrags();
 		this.#show(this.#history.undo());
 	}
 
 	redo(): void {
 		if (!this.#history.canRedo) return;
+		this.#typing = null;
 		this.#endDrags();
 		this.#show(this.#history.redo());
 	}
@@ -258,6 +270,42 @@ export class EditorState {
 
 	sendToBack(id: string): void {
 		this.commit(reorder(this.#current, id, 'back'));
+	}
+
+	/**
+	 * Changes brief fields. `typing` names the field being typed in: consecutive calls with the
+	 * same name replace the last undo step instead of adding one, so a field visit undoes in one
+	 * step while every keystroke is still saved. Any other edit, undo, redo or `endTyping` ends it.
+	 */
+	setBrief(patch: Partial<StageBrief>, typing?: string): void {
+		const doc = this.#current;
+		const next = { ...doc, brief: { ...doc.brief, ...patch } };
+		if (typing !== undefined && typing === this.#typing) {
+			this.#history.replace(next);
+			this.#show(next);
+			return;
+		}
+		this.commit(next);
+		this.#typing = typing ?? null;
+	}
+
+	/** Ends the current typing run (the field lost focus). */
+	endTyping(): void {
+		this.#typing = null;
+	}
+
+	addNoteSection(): void {
+		const notes = this.#current.brief.notes;
+		this.setBrief({ notes: [...notes, { id: crypto.randomUUID(), title: '', body: '' }] });
+	}
+
+	updateNoteSection(id: string, patch: { title?: string; body?: string }, typing?: string): void {
+		const notes = this.#current.brief.notes.map((n) => (n.id === id ? { ...n, ...patch } : n));
+		this.setBrief({ notes }, typing);
+	}
+
+	removeNoteSection(id: string): void {
+		this.setBrief({ notes: this.#current.brief.notes.filter((n) => n.id !== id) });
 	}
 
 	setDisplay(patch: Partial<PlanDisplay>): void {

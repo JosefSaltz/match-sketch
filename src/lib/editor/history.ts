@@ -3,6 +3,8 @@ export interface History<T> {
 	readonly canUndo: boolean;
 	readonly canRedo: boolean;
 	push(next: T): void;
+	/** Makes `next` current without adding an undo step; clears redo. */
+	replace(next: T): void;
 	undo(): T;
 	redo(): T;
 }
@@ -27,6 +29,10 @@ export function createHistory<T>(initial: T, opts: { limit?: number } = {}): His
 		push(next: T) {
 			past.push(current);
 			if (past.length > limit) past.shift();
+			current = next;
+			future = [];
+		},
+		replace(next: T) {
 			current = next;
 			future = [];
 		},

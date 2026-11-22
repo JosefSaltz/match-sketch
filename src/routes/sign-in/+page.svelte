@@ -89,7 +89,8 @@
 				{#if message}
 					<p class="m-0 text-sm text-danger" role="alert">{message}</p>
 				{/if}
-				<div class="flex justify-end">
+				<div class="flex items-center justify-between">
+					<a href={resolve('/forgot-password')} class="text-sm underline">Forgot your password?</a>
 					<Button type="submit" variant="primary" disabled={pending}>Sign in</Button>
 				</div>
 			</form>

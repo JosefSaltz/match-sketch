@@ -98,8 +98,8 @@
 					<Button type="submit" variant="primary" disabled={pending}>Send invite</Button>
 				</div>
 				<p class="m-0 text-sm text-muted">
-					They get an email with a link to choose a password. The link expires after an hour; send a
-					new invite if it does.
+					They get an email with a link to choose a password. The link expires after an hour; after
+					that they can use “Forgot your password?” on the sign-in page.
 				</p>
 			</form>
 		</section>

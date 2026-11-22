@@ -16,16 +16,16 @@ export async function messagesTo(address: string): Promise<Summary[]> {
 	return ((await res.json()) as { messages: Summary[] }).messages;
 }
 
-/** The /accept-invite link in the newest email to `address`, waiting for it to arrive. */
-export async function inviteLinkFor(address: string, timeoutMs = 10_000): Promise<string> {
+/** The /set-password link (invite or reset) in the newest email to `address`, waiting for it. */
+export async function setPasswordLinkFor(address: string, timeoutMs = 10_000): Promise<string> {
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		const [newest] = await messagesTo(address);
 		if (newest) {
 			const res = await fetch(`${mailpit()}/api/v1/message/${newest.ID}`);
 			const { HTML } = (await res.json()) as { HTML: string };
-			const href = /href="([^"]*\/accept-invite[^"]*)"/.exec(HTML)?.[1];
-			if (!href) throw new Error('The invite email has no /accept-invite link');
+			const href = /href="([^"]*\/set-password[^"]*)"/.exec(HTML)?.[1];
+			if (!href) throw new Error('The email has no /set-password link');
 			return href.replaceAll('&amp;', '&');
 		}
 		await new Promise((r) => setTimeout(r, 250));

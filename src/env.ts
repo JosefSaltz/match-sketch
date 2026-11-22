@@ -9,7 +9,7 @@ export const variables = defineEnvVars({
 		// Inlined at build so the app opens offline; Coolify passes it as a build arg.
 		static: true,
 		schema: z.url(),
-		description: 'Supabase project URL (local: `pnpm db:env`).'
+		description: 'Supabase project URL (local: from `supabase status`, see scripts/local-env.ts).'
 	},
 	SUPABASE_PUBLISHABLE_KEY: {
 		public: true,

@@ -1,10 +1,15 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createDatabase } from './db/client';
 import { getProfile } from './profiles';
-import { testAdminClient, testPublicClient, uniqueEmail } from './testing/supabase';
+import {
+	testAdminClient,
+	testDatabaseUrl,
+	testPublicClient,
+	uniqueEmail
+} from './testing/supabase';
 
 const admin = testAdminClient();
-const database = createDatabase(process.env.DATABASE_URL ?? '');
+const database = createDatabase(testDatabaseUrl());
 const db = database.db;
 const created: string[] = [];
 const PASSWORD = 'longenough1';

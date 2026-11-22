@@ -15,7 +15,8 @@ pnpm test:db         # database tests against the local stack
 pnpm test:e2e        # Playwright, against a production build on http://localhost:4173
 ```
 
-- `scripts/local-env.ts` runs `dev`, `test:db` and `test:e2e` with the stack's URLs and keys. You don't need a `.env` file. If you make one (see `.env.example`), its values win.
+- `scripts/local-env.ts` runs `dev`, `test:db` and `test:e2e` with the stack's URLs and keys, so you don't need a `.env` file. Those values override a `.env` file; only variables already exported in your shell beat them.
+- Tests refuse to run unless `SUPABASE_URL` and `DATABASE_URL` point at this machine. The test accounts have known passwords and must never reach the hosted project.
 - Invite emails land in Mailpit at http://127.0.0.1:54324. Studio is at http://127.0.0.1:54323.
 - `pnpm users:promote <email>` makes a local user an admin.
 

@@ -1,11 +1,16 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createDatabase } from './db/client';
 import { setRole } from './profiles';
-import { testAdminClient, testPublicClient, uniqueEmail } from './testing/supabase';
+import {
+	testAdminClient,
+	testDatabaseUrl,
+	testPublicClient,
+	uniqueEmail
+} from './testing/supabase';
 import { listUsers } from './users';
 
 const admin = testAdminClient();
-const database = createDatabase(process.env.DATABASE_URL ?? '');
+const database = createDatabase(testDatabaseUrl());
 const created: string[] = [];
 
 afterEach(async () => {

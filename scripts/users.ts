@@ -16,8 +16,21 @@ function env(name: string): string {
 	return value;
 }
 
+/**
+ * Dev and test users have known passwords, so this script only touches the local stack (the
+ * tests' guard is src/lib/server/testing/local-only.ts; Node can't import app modules here).
+ */
+function localUrl(name: string): string {
+	const url = env(name);
+	const { hostname } = new URL(url);
+	if (!['127.0.0.1', 'localhost', '[::1]'].includes(hostname)) {
+		throw new Error(`scripts/users.ts only runs against the local stack, not ${hostname}`);
+	}
+	return url;
+}
+
 function adminClient() {
-	return createClient(env('SUPABASE_URL'), env('SUPABASE_SECRET_KEY'), {
+	return createClient(localUrl('SUPABASE_URL'), env('SUPABASE_SECRET_KEY'), {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 }
@@ -50,7 +63,7 @@ export async function ensureUser(user: {
 	if (!id) {
 		if (created.error?.code !== 'email_exists')
 			throw created.error ?? new Error('createUser failed');
-		const sql = postgres(env('DATABASE_URL'), { max: 1 });
+		const sql = postgres(localUrl('DATABASE_URL'), { max: 1 });
 		try {
 			const [row] = await sql<
 				{ id: string }[]
@@ -62,7 +75,7 @@ export async function ensureUser(user: {
 		const { error } = await admin.auth.admin.updateUserById(id, { password: user.password });
 		if (error) throw error;
 	}
-	const sql = postgres(env('DATABASE_URL'), { max: 1 });
+	const sql = postgres(localUrl('DATABASE_URL'), { max: 1 });
 	try {
 		await setRole(sql, { id }, user.role);
 	} finally {
@@ -77,7 +90,7 @@ if (import.meta.main) {
 		console.error('Usage: node scripts/users.ts promote <email>');
 		process.exit(2);
 	}
-	const sql = postgres(env('DATABASE_URL'), { max: 1 });
+	const sql = postgres(localUrl('DATABASE_URL'), { max: 1 });
 	try {
 		await setRole(sql, { email }, 'admin');
 		console.log(`${email} is now an admin.`);

@@ -1,5 +1,9 @@
-:root {
+@import 'tailwindcss';
+@import '@fontsource/graduate';
+
+@theme {
 	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	--font-display: 'Graduate', serif;
 	--color-bg: #ffffff;
 	--color-surface: #f6f6f4;
 	--color-border: #d6d6d1;
@@ -9,33 +13,85 @@
 	--color-accent-contrast: #ffffff;
 	--color-danger: #b91c1c;
 	--color-selection: #2563eb;
+}
+
+:root {
 	--radius: 6px;
+	/* Spacing tokens still used by unmigrated components; Tailwind's scale replaces them. */
 	--space-1: 0.25rem;
 	--space-2: 0.5rem;
 	--space-3: 0.75rem;
 	--space-4: 1rem;
 	--space-6: 1.5rem;
 	--space-8: 2rem;
-}
-
-*,
-*::before,
-*::after {
-	box-sizing: border-box;
+	/* The active theme (written by applyTheme from the registry; these are the defaults). */
+	--theme-base: #81613c;
+	--theme-accent: #81613c;
+	--theme-tile: none;
+	--theme-tile-size: auto;
 }
 
 html,
 body {
-	margin: 0;
 	height: 100%;
 	font-family: var(--font-sans);
 	color: var(--color-text);
 	background: var(--color-bg);
 }
 
-button,
-input,
-select,
-textarea {
-	font: inherit;
+/* The theme's base color under its pattern tile; the color shows if the tile can't load. */
+@utility bg-theme {
+	background: var(--theme-base) var(--theme-tile) 0 0 / var(--theme-tile-size);
+}
+
+/* Varsity lettering: white fill, a ring of black shadows as the outline, and a block shadow. */
+@utility text-outline-sm {
+	color: #fff;
+	text-shadow:
+		-1.5px -1.5px 0 #000,
+		0 -1.5px 0 #000,
+		1.5px -1.5px 0 #000,
+		1.5px 0 0 #000,
+		1.5px 1.5px 0 #000,
+		0 1.5px 0 #000,
+		-1.5px 1.5px 0 #000,
+		-1.5px 0 0 #000,
+		3px 3px 0 #000;
+}
+
+@utility text-outline-md {
+	color: #fff;
+	text-shadow:
+		-2px -2px 0 #000,
+		0 -2px 0 #000,
+		2px -2px 0 #000,
+		2px 0 0 #000,
+		2px 2px 0 #000,
+		0 2px 0 #000,
+		-2px 2px 0 #000,
+		-2px 0 0 #000,
+		4px 4px 0 #000;
+}
+
+@utility text-outline-lg {
+	color: #fff;
+	text-shadow:
+		-3px -3px 0 #000,
+		0 -3px 0 #000,
+		3px -3px 0 #000,
+		3px 0 0 #000,
+		3px 3px 0 #000,
+		0 3px 0 #000,
+		-3px 3px 0 #000,
+		-3px 0 0 #000,
+		5px 5px 0 #000;
+}
+
+/* Visible on any pattern: a white ring inside a black ring. */
+@utility focus-ring {
+	&:focus-visible {
+		outline: 2px solid #fff;
+		outline-offset: 2px;
+		box-shadow: 0 0 0 6px #000;
+	}
 }

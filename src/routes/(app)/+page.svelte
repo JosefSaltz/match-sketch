@@ -4,6 +4,7 @@
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
 	import { getDb } from '#lib/store/index.js';
@@ -78,7 +79,7 @@
 </svelte:head>
 
 <main class="home">
-	<h1>{APP_NAME}</h1>
+	<h1><Wordmark /></h1>
 
 	<section aria-labelledby="plans-heading">
 		<div class="section-head">

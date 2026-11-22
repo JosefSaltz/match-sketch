@@ -262,6 +262,10 @@ To settle when Plan 7 is written (not before):
 - Real DRRC bay sizes for the eval set (§7.5).
 - Local data from before accounts: **decided 2026-11-22 — upload it.** On a device's first sign-in, plans, canvases and matches made before accounts existed join the signed-in account and sync up, with a notice saying how many.
 - Development and test database: **decided 2026-11-22 — the local Supabase stack** (`supabase start` in Docker). Tests never touch the hosted project.
+- Conflicted copies (Plan 5b, builder's calls, 2026-11-22):
+  - **A conflicted match copy** carries this device's name and date. Its stages stay with the original match, because a stage's place in a match is part of the plan record and syncs by the plan rule.
+  - **A conflicted plan copy** joins the same match after its last stage, so the MD can compare the two.
+  - **A deletion that conflicts with an edit on another device** makes no copy; the edit wins.
 
 ## 10. After the MVP
 

@@ -100,7 +100,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 - **Crowded targets:** target symbols carry a `count` (e.g. one "KD ×4" object instead of four), drawn as a compact cluster with a count badge; the Targets tally sums counts. Positions are exactly where the MD puts them — nothing auto-moves at print time. A per-plan **symbol size** setting (small / medium / large) helps dense stages. The model is told the minimum spacing that keeps symbols from overlapping at fit-to-page scale.
 - **Distances:** a **measure** annotation: the MD draws a line between two objects or points and it shows the true distance in the plan's units, updates as objects move, and prints. No automatic "which SA engages which target" links in the MVP.
 - **Offline architecture:** local-first document sync (§7.9). The editor and print routes render in the browser from local data.
-- **Hosting:** Vercel with the SvelteKit Vercel adapter. (Any Node host works; nothing depends on Vercel.)
+- **Hosting:** the operator's own Coolify server, deploying from the git repository with Coolify's Docker Compose build pack. The app is a Docker image built with SvelteKit's Node adapter (`@sveltejs/adapter-node`). Supabase stays hosted on supabase.com. (Corrected by the user 2026-11-22; this was Vercel.)
 - **Printing:** browser print of a dedicated print route (vector output). **Download PDF** is generated in the browser from the same SVG pages.
 - **Paper:** US Letter, portrait and landscape. A4 is a later addition.
 - **AI usage limit:** a per-user daily cap on drafts (configurable; start around 20/day) to bound cost.
@@ -260,6 +260,8 @@ To settle when Plan 7 is written (not before):
 - Scale break: **kept, variant C** (§7.4).
 - Symbol style: **direction A** (§7.7).
 - Real DRRC bay sizes for the eval set (§7.5).
+- Local data from before accounts: **decided 2026-11-22 — upload it.** On a device's first sign-in, plans, canvases and matches made before accounts existed join the signed-in account and sync up, with a notice saying how many.
+- Development and test database: **decided 2026-11-22 — the local Supabase stack** (`supabase start` in Docker). Tests never touch the hosted project.
 
 ## 10. After the MVP
 

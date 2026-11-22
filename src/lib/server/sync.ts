@@ -214,26 +214,32 @@ export async function pullChanges(
 ): Promise<PullResponse> {
 	// One more than the page from each table tells whether anything is left.
 	const take = limit + 1;
-	const [c, m, p] = await Promise.all([
-		db
-			.select()
-			.from(canvases)
-			.where(and(eq(canvases.ownerId, ownerId), gt(canvases.changeSeq, cursor)))
-			.orderBy(asc(canvases.changeSeq))
-			.limit(take),
-		db
-			.select()
-			.from(matches)
-			.where(and(eq(matches.ownerId, ownerId), gt(matches.changeSeq, cursor)))
-			.orderBy(asc(matches.changeSeq))
-			.limit(take),
-		db
-			.select()
-			.from(plans)
-			.where(and(eq(plans.ownerId, ownerId), gt(plans.changeSeq, cursor)))
-			.orderBy(asc(plans.changeSeq))
-			.limit(take)
-	]);
+	// All three tables are read as of one moment: in separate snapshots, a push committing
+	// between the reads could be half seen and the cursor would pass its other rows for good.
+	const [c, m, p] = await db.transaction(
+		(tx) =>
+			Promise.all([
+				tx
+					.select()
+					.from(canvases)
+					.where(and(eq(canvases.ownerId, ownerId), gt(canvases.changeSeq, cursor)))
+					.orderBy(asc(canvases.changeSeq))
+					.limit(take),
+				tx
+					.select()
+					.from(matches)
+					.where(and(eq(matches.ownerId, ownerId), gt(matches.changeSeq, cursor)))
+					.orderBy(asc(matches.changeSeq))
+					.limit(take),
+				tx
+					.select()
+					.from(plans)
+					.where(and(eq(plans.ownerId, ownerId), gt(plans.changeSeq, cursor)))
+					.orderBy(asc(plans.changeSeq))
+					.limit(take)
+			]),
+		{ isolationLevel: 'repeatable read', accessMode: 'read only' }
+	);
 	const changes = [
 		...c.map((row) => ({ seq: row.changeSeq, record: canvasRecord(row) })),
 		...m.map((row) => ({ seq: row.changeSeq, record: matchRecord(row) })),

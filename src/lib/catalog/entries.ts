@@ -183,7 +183,7 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		category: 'area',
 		countable: false,
 		kind: 'footprint',
-		footprint: { style: 'outline', widthFt: 3, depthFt: 3 }
+		footprint: { style: 'start-box', widthFt: 3, depthFt: 3 }
 	},
 	{
 		id: 'fault-line',

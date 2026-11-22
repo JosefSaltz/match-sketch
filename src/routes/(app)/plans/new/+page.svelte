@@ -2,12 +2,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import { createCanvas, listCanvases } from '#lib/store/canvases.js';
+	import { listMatches } from '#lib/store/matches.js';
 	import { getDb } from '#lib/store/index.js';
 	import { createPlan } from '#lib/store/plans.js';
-	import type { CanvasInput, CanvasRecord } from '#lib/store/records.js';
+	import type { CanvasInput, CanvasRecord, MatchRecord } from '#lib/store/records.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
@@ -17,6 +19,9 @@
 	let pickingTheme = $state(false);
 
 	let canvases = $state<CanvasRecord[]>([]);
+	let matches = $state<MatchRecord[]>([]);
+	/** The match the new plan joins ('' = none); "New stage" on a match passes `?match=<id>`. */
+	let matchId = $state('');
 	let loaded = $state(false);
 	let mode = $state<'saved' | 'new'>('new');
 	let selectedId = $state('');
@@ -24,6 +29,9 @@
 
 	onMount(async () => {
 		canvases = await listCanvases(getDb());
+		matches = await listMatches(getDb());
+		const wanted = page.url.searchParams.get('match');
+		if (wanted && matches.some((m) => m.id === wanted)) matchId = wanted;
 		if (canvases.length) {
 			mode = 'saved';
 			selectedId = canvases[0].id;
@@ -39,14 +47,22 @@
 		event.preventDefault();
 		const canvas = selected;
 		if (!canvas) return;
-		const plan = await createPlan(getDb(), { canvas, sourceCanvasId: canvas.id });
+		const plan = await createPlan(getDb(), {
+			canvas,
+			sourceCanvasId: canvas.id,
+			matchId: matchId || null
+		});
 		await open(plan.id);
 	}
 
 	async function createFromNew(input: CanvasInput, saveToLibrary: boolean) {
 		const db = getDb();
 		const saved = saveToLibrary ? await createCanvas(db, input) : null;
-		const plan = await createPlan(db, { canvas: input, sourceCanvasId: saved?.id ?? null });
+		const plan = await createPlan(db, {
+			canvas: input,
+			sourceCanvasId: saved?.id ?? null,
+			matchId: matchId || null
+		});
 		await open(plan.id);
 	}
 </script>
@@ -73,6 +89,18 @@
 			<div
 				class="grid gap-5 rounded-xl border-[3px] border-black bg-white p-4 shadow-[3px_3px_0_#000]"
 			>
+				{#if matches.length}
+					<Field label="Match" id="plan-match">
+						{#snippet children({ id })}
+							<select {id} class={controlClass} bind:value={matchId}>
+								<option value="">No match</option>
+								{#each matches as m (m.id)}
+									<option value={m.id}>{m.name}</option>
+								{/each}
+							</select>
+						{/snippet}
+					</Field>
+				{/if}
 				<fieldset class="m-0 grid gap-1 border-0 p-0">
 					<legend class="mb-1 text-sm text-muted">Canvas for this stage</legend>
 					<label class="inline-flex min-h-11 items-center gap-3">

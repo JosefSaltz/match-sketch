@@ -21,7 +21,7 @@ import {
 	type PlanDocument,
 	type StageBrief
 } from '../model/plan';
-import { now, type PlanRecord } from '../store/records';
+import { effectiveStageNumber, now, planTitle, type PlanRecord } from '../store/records';
 import {
 	addAnnotation,
 	anchorAt,
@@ -48,6 +48,9 @@ import { SaveQueue, type SaveStatus } from './save-queue';
 export type { SaveStatus };
 
 export type NudgeDir = 'left' | 'right' | 'up' | 'down';
+
+/** The match a plan belongs to: its name, and its plans' ids in stage order. */
+export type MatchContext = { id: string; name: string; order: string[] };
 
 /** Palette tools that draw annotations instead of placing symbols. */
 export type AnnotationTool = 'text' | 'arrow' | 'measure';
@@ -100,6 +103,8 @@ const FIT_PADDING_PX = 48;
  */
 export class EditorState {
 	readonly plan: PlanRecord;
+	/** The plan's match, when it belongs to one (loaded with the plan). */
+	readonly match: MatchContext | null;
 	#deps: EditorDeps;
 	#history: History<PlanDocument>;
 
@@ -136,8 +141,9 @@ export class EditorState {
 	#typing: string | null = null;
 	#queue: SaveQueue<{ doc: PlanDocument; at: string }>;
 
-	constructor(plan: PlanRecord, deps: EditorDeps) {
+	constructor(plan: PlanRecord, deps: EditorDeps, match: MatchContext | null = null) {
 		this.plan = plan;
+		this.match = match;
 		this.#deps = deps;
 		this.#history = createHistory(plan.document);
 		this.#current = plan.document;
@@ -148,6 +154,18 @@ export class EditorState {
 				if (status === 'saved') deps.journal?.clear();
 			}
 		);
+	}
+
+	/** The typed stage number, else the plan's place in its match. */
+	get stageNumber(): string {
+		return effectiveStageNumber(
+			{ id: this.plan.id, document: this.doc },
+			this.match?.order ?? null
+		);
+	}
+
+	get title(): string {
+		return planTitle({ document: this.doc }, this.stageNumber);
 	}
 
 	/** The plan's own copy of the bay dimensions. */

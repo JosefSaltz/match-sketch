@@ -64,4 +64,13 @@ describe('plan document schema', () => {
 		};
 		expect(PlanDocumentSchema.safeParse({ ...doc, annotations: [bad] }).success).toBe(false);
 	});
+
+	it('accepts an optional guide spacing and rejects a non-positive one', () => {
+		const display = { ...doc.display, gridFt: 75 };
+		expect(PlanDocumentSchema.safeParse({ ...doc, display }).success).toBe(true);
+		expect(PlanDocumentSchema.safeParse(doc).success).toBe(true);
+		expect(
+			PlanDocumentSchema.safeParse({ ...doc, display: { ...doc.display, gridFt: 0 } }).success
+		).toBe(false);
+	});
 });

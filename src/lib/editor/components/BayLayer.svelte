@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { gridSpacing, visibleGridLines } from '#lib/geometry/grid.js';
+	import { gridChoice, gridSpacing, visibleGridLines } from '#lib/geometry/grid.js';
 	import { formatLength, formatNumber, toFeet } from '#lib/geometry/units.js';
 	import { worldToScreen } from '#lib/geometry/viewport.js';
 	import type { EditorState } from '../editor-state.svelte.js';
@@ -10,9 +10,12 @@
 	const w = $derived(editor.canvas.widthFt * editor.viewport.scale);
 	/** Drawn height: with a scale break, the far zone is squeezed (spec §7.4). */
 	const h = $derived(worldToScreen({ x: 0, y: 0 }, editor.viewport).y - topLeft.y);
+	/** Off, the fine grid that follows Snap, or guide lines every N ft with distance labels. */
+	const choice = $derived(gridChoice(editor.doc.display));
 	const lines = $derived.by(() => {
-		if (!editor.doc.display.showGrid) return { xs: [], ys: [] };
-		const spacing = gridSpacing(editor.snapStep() ?? 1, editor.viewport.scale);
+		if (choice === 'off') return { xs: [], ys: [] };
+		const spacing =
+			choice === 'fine' ? gridSpacing(editor.snapStep() ?? 1, editor.viewport.scale) : choice;
 		const all = visibleGridLines(editor.canvas, editor.viewport, editor.screen, spacing);
 		const from = editor.depth?.fromFt;
 		// No grid inside the not-to-scale strip.
@@ -55,7 +58,7 @@
 </script>
 
 <rect data-testid="bay" class="bay" x={topLeft.x} y={topLeft.y} width={w} height={h} />
-<g data-testid="grid" class="grid">
+<g data-testid="grid" class={['grid', { guides: choice !== 'off' && choice !== 'fine' }]}>
 	{#each lines.xs as x (x)}
 		{@const sx = worldToScreen({ x, y: 0 }, editor.viewport).x}
 		<line x1={sx} x2={sx} y1={topLeft.y} y2={topLeft.y + h} />
@@ -65,6 +68,15 @@
 		<line x1={topLeft.x} x2={topLeft.x + w} y1={sy} y2={sy} />
 	{/each}
 </g>
+{#if choice !== 'off' && choice !== 'fine'}
+	<g class="guide-labels">
+		{#each lines.ys as y (y)}
+			<text data-testid="guide-label" x={topLeft.x - 6} y={sy(y)} dy="0.35em">
+				{formatLength(y, unit)}
+			</text>
+		{/each}
+	</g>
+{/if}
 {#if strip}
 	<g data-testid="scale-break" class="scale-break">
 		<rect class="strip" x={topLeft.x} y={strip.top} width={w} height={strip.bottom - strip.top} />
@@ -105,6 +117,19 @@
 		fill: #fff;
 		stroke: var(--color-text);
 		stroke-width: 1.5;
+	}
+	.guide-labels {
+		pointer-events: none;
+	}
+	.guide-labels text {
+		fill: var(--color-muted);
+		font-size: 10px;
+		font-weight: 600;
+		text-anchor: end;
+	}
+	.grid.guides line {
+		stroke: #9ca3af;
+		stroke-width: 1.25;
 	}
 	.grid line {
 		stroke: var(--color-border);

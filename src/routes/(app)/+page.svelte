@@ -4,6 +4,7 @@
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
@@ -17,6 +18,8 @@
 		type PlanRecord
 	} from '#lib/store/records.js';
 	import { resolve } from '$app/paths';
+
+	let pickingTheme = $state(false);
 
 	let plans = $state<PlanRecord[]>([]);
 	let deletingPlan = $state<PlanRecord | null>(null);
@@ -85,8 +88,10 @@
 			<h1 class="m-0 mr-auto"><Wordmark /></h1>
 			<Button href={resolve('plans/new')}>New plan</Button>
 			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
+			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 		</div>
 	</header>
+	<ThemePicker bind:open={pickingTheme} />
 
 	<main class="mx-auto grid max-w-6xl gap-10 px-4 py-8">
 		<section aria-labelledby="plans-heading" class="grid gap-4">

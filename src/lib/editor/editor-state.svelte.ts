@@ -1,9 +1,11 @@
+import { getEntry } from '../catalog/index';
 import { snapStepFeet } from '../geometry/snap';
 import type { CanvasSize, Point, Size } from '../geometry/types';
-import { fitViewport, zoomAt, type Viewport } from '../geometry/viewport';
+import { fitViewport, screenToWorld, zoomAt, type Viewport } from '../geometry/viewport';
 import { emptyPlanDocument, type PlanDocument } from '../model/plan';
 import type { PlanRecord } from '../store/records';
 import { createHistory, type History } from './history';
+import { addObject } from './ops';
 
 export type SaveStatus = 'saved' | 'saving' | 'error';
 export type EditorDeps = { save: (doc: PlanDocument) => Promise<void> };
@@ -60,6 +62,26 @@ export class EditorState {
 
 	setPreview(doc: PlanDocument | null): void {
 		this.preview = doc;
+	}
+
+	/** Arms a palette symbol so the next tap on the stage places it; `null` disarms. */
+	arm(symbolId: string | null): void {
+		this.armedSymbolId = symbolId;
+	}
+
+	/**
+	 * Places a new object at a screen point (snapped, clamped to the bay), commits it, selects
+	 * it, and disarms. Returns the new object's id.
+	 */
+	placeAt(symbolId: string, screenPt: Point): string {
+		const entry = getEntry(symbolId);
+		if (!entry) throw new Error(`Unknown symbol: ${symbolId}`);
+		const world = screenToWorld(screenPt, this.viewport);
+		const { doc, id } = addObject(this.#current, entry, world, this.canvas, this.snapStep());
+		this.commit(doc);
+		this.selection = [id];
+		this.armedSymbolId = null;
+		return id;
 	}
 
 	async #save(doc: PlanDocument): Promise<void> {

@@ -24,3 +24,22 @@ export async function createPlanFromCanvas(page: Page, canvasName: string): Prom
 	await expect(page.getByTestId('bay')).toBeVisible();
 	return page.url().split('/').at(-1)!;
 }
+
+export type Point = { x: number; y: number };
+
+/** A page point inside the bay: `fx` across from the left, `fyFromTop` down from the top edge. */
+export async function bayPoint(page: Page, fx: number, fyFromTop: number): Promise<Point> {
+	const box = (await page.getByTestId('bay').boundingBox())!;
+	return { x: box.x + box.width * fx, y: box.y + box.height * fyFromTop };
+}
+
+/** Drags a palette item to a page point with the mouse. */
+export async function dragFromPalette(page: Page, symbolId: string, to: Point): Promise<void> {
+	const item = page.getByTestId(`palette-item-${symbolId}`);
+	await item.scrollIntoViewIfNeeded();
+	const box = (await item.boundingBox())!;
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(to.x, to.y, { steps: 10 });
+	await page.mouse.up();
+}

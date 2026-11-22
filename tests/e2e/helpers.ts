@@ -46,6 +46,8 @@ export async function dragFromPalette(page: Page, symbolId: string, to: Point): 
 
 /** The current theme's base color as computed CSS reports it, e.g. "rgb(129, 97, 60)". */
 export async function themeBaseRgb(page: Page): Promise<string> {
+	// The app applies the saved theme once it starts; read after that, not the CSS fallback.
+	await page.locator('html[data-theme]').waitFor({ state: 'attached' });
 	const hex = (
 		await page.evaluate(() =>
 			getComputedStyle(document.documentElement).getPropertyValue('--theme-base')

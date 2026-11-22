@@ -6,16 +6,18 @@ import Anthropic from '@anthropic-ai/sdk';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { estimateCostUsd } from '../cost';
-import { draftLayout, type DraftEffort } from '../service';
+import { anthropicDraftClient, draftLayout, type DraftEffort } from '../service';
 import { EVAL_CASES } from './cases';
 import { gradeDraft } from './grade';
 
 const effort = (process.env.EVAL_EFFORT ?? 'medium') as DraftEffort;
 
-it.skipIf(!process.env.ANTHROPIC_API_KEY)(
+// Only on purpose: an API key in the shell alone doesn't start a paid run.
+it.skipIf(!process.env.ANTHROPIC_API_KEY || process.env.RUN_DRAFT_EVAL !== '1')(
 	`drafts the reference stages at ${effort} effort`,
 	async () => {
-		const client = new Anthropic({ timeout: 300_000 });
+		// The production client: streaming, one retry, the service's own deadline.
+		const client = anthropicDraftClient(new Anthropic());
 		const rows = await Promise.all(
 			EVAL_CASES.map(async (c) => {
 				const started = Date.now();

@@ -18,11 +18,12 @@ Bay sizes are guesses until the MD supplies the real DRRC bays.
 is about $1–2). Run it only on purpose, never in CI:
 
 ```sh
-ANTHROPIC_API_KEY=sk-ant-… EVAL_EFFORT=medium pnpm eval:draft
+RUN_DRAFT_EVAL=1 ANTHROPIC_API_KEY=sk-ant-… EVAL_EFFORT=medium pnpm eval:draft
 ```
 
 Each run prints a table and writes `tools/draft-eval/out/<time>-<effort>.json` (git-ignored) with
-every draft, for a closer look.
+every draft, for a closer look. It uses the production client (streaming, one retry, the
+service's 4-minute deadline), so the seconds it reports are what MDs will wait.
 
 ## Results
 

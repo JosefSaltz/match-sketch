@@ -57,3 +57,31 @@ The app deploys as one Docker image built from `Dockerfile`, through `docker-com
 5. **Deploy.** Pushing to the connected branch redeploys if auto-deploy is on.
 
 Run `node scripts/local-env.ts docker compose build` to check the image locally.
+
+## Hosted rollout (Supabase project `zmuadxeutafbnnfopqqx`)
+
+These steps change the hosted project, so the operator runs them (or approves each one).
+
+1. **Migrations:**
+   - Run `supabase link --project-ref zmuadxeutafbnnfopqqx`, then `supabase db push --remote`. CLI v3 asks before it changes a hosted project; pass `--yes` only when you mean it.
+   - Check the result with the Supabase MCP: `list_tables` shows `public.profiles` with RLS on, and `get_advisors` (security) shows nothing new.
+2. **Auth settings** (dashboard → Authentication):
+   - **Sign-ups off:** Sign In / Providers → "Allow new users to sign up" disabled. Email provider stays enabled.
+   - **URL Configuration:** Site URL = the app's public URL. Add `https://<domain>/**` to the redirect URLs.
+   - **Passwords:** minimum length 8.
+   - **Emails → Invite user:** subject "You're invited to Match Sketch", body from `supabase/templates/invite.html`. The link must stay `{{ .SiteURL }}/accept-invite?token_hash={{ .TokenHash }}&type=invite`.
+3. **Custom SMTP** (dashboard → Authentication → Emails → SMTP settings), e.g. Resend or Postmark. Supabase's built-in sender only delivers to members of the Supabase organization's team, so MDs never receive invites without this. It is also rate-limited.
+4. **Coolify:** set the variables from the table above and deploy (see [Coolify](#coolify)).
+5. **First admin:**
+   1. Invite yourself from the dashboard (Authentication → Users → Invite user). Team members get the built-in email even before custom SMTP.
+   2. Accept the invite and set a password.
+   3. Promote yourself in the SQL editor (or with the MCP `execute_sql`):
+
+   ```sql
+   update public.profiles set role = 'admin'
+   where id = (select id from auth.users where email = 'you@example.com');
+   ```
+
+   Later admins are promoted the same way. There is no role editor in the app yet.
+
+6. **Optional:** turn on leaked-password protection (Authentication → Passwords). The security advisor flags it as off.

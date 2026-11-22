@@ -1,13 +1,19 @@
 import { fail } from '@sveltejs/kit';
+import { DRAFT_DAILY_SPEND_USD } from '$app/env/private';
 import { requireAdmin } from '#lib/server/auth.js';
 import { serverDb } from '#lib/server/db/index.js';
+import { spendToday } from '#lib/server/draft/limits.js';
 import { adminClient } from '#lib/server/supabase-admin.js';
 import { InviteInputSchema, inviteUser, listUsers } from '#lib/server/users.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	await requireAdmin(event);
-	return { users: await listUsers(adminClient(), serverDb()) };
+	const db = serverDb();
+	return {
+		users: await listUsers(adminClient(), db),
+		spend: { todayUsd: await spendToday(db), ceilingUsd: DRAFT_DAILY_SPEND_USD }
+	};
 };
 
 export const actions = {

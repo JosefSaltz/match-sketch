@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import { getSupabase } from '#lib/auth/client.js';
+	import { signOutDevice } from '#lib/auth/session.js';
+	import { clearStoredSession } from '#lib/auth/stored-session.js';
 	import { APP_NAME } from '#lib/app-info.js';
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
@@ -85,9 +87,12 @@
 	});
 
 	async function signOut() {
-		// Local scope clears this device's session; navigate even if the network call fails.
+		// Local scope signs out only this device; offline, the stored session is cleared directly.
 		try {
-			await getSupabase().auth.signOut({ scope: 'local' });
+			await signOutDevice(
+				() => getSupabase().auth.signOut({ scope: 'local' }),
+				() => clearStoredSession(document)
+			);
 		} finally {
 			await goto(resolve('/sign-in'));
 		}

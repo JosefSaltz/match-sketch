@@ -43,3 +43,14 @@ export async function dragFromPalette(page: Page, symbolId: string, to: Point): 
 	await page.mouse.move(to.x, to.y, { steps: 10 });
 	await page.mouse.up();
 }
+
+/** The current theme's base color as computed CSS reports it, e.g. "rgb(129, 97, 60)". */
+export async function themeBaseRgb(page: Page): Promise<string> {
+	const hex = (
+		await page.evaluate(() =>
+			getComputedStyle(document.documentElement).getPropertyValue('--theme-base')
+		)
+	).trim();
+	const channel = (i: number) => parseInt(hex.slice(i, i + 2), 16);
+	return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
+}

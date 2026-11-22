@@ -2,6 +2,10 @@
 	import { untrack } from 'svelte';
 	import { formatNumber, fromFeet, toFeet, type LengthUnit } from '#lib/geometry/units.js';
 	import { MAX_CANVAS_FT, MIN_CANVAS_FT, type CanvasInput } from '#lib/store/records.js';
+	import Button from '#lib/ui/Button.svelte';
+	import Field from '#lib/ui/Field.svelte';
+	import { controlClass } from '#lib/ui/styles.js';
+	import Toggle from '#lib/ui/Toggle.svelte';
 
 	type Props = {
 		initial?: { name: string; width: number; depth: number; unit: LengthUnit };
@@ -21,7 +25,8 @@
 	let saveToLibrary = $state(false);
 	let errors = $state<{ name?: string; width?: string; depth?: string }>({});
 
-	const formId = `canvas-form-${crypto.randomUUID()}`;
+	const uid = $props.id();
+	const formId = `canvas-form-${uid}`;
 
 	function parseLength(value: string): number | null {
 		const t = value.trim();
@@ -63,94 +68,65 @@
 	}
 </script>
 
-<form id={formId} class="canvas-form" onsubmit={submit} novalidate>
-	<label>
-		<span>Name</span>
-		<input type="text" bind:value={name} maxlength="80" aria-invalid={!!errors.name} />
-	</label>
-	{#if errors.name}<p class="error" role="alert">{errors.name}</p>{/if}
+<form id={formId} class="grid gap-4" onsubmit={submit} novalidate>
+	<Field label="Name" id="{formId}-name" error={errors.name}>
+		{#snippet children({ id, describedby })}
+			<input
+				{id}
+				type="text"
+				class={controlClass}
+				bind:value={name}
+				maxlength="80"
+				aria-invalid={!!errors.name}
+				aria-describedby={describedby}
+			/>
+		{/snippet}
+	</Field>
 
-	<label>
-		<span>Unit</span>
-		<select bind:value={unit}>
-			<option value="ft">Feet</option>
-			<option value="yd">Yards</option>
-		</select>
-	</label>
+	<Field label="Unit" id="{formId}-unit">
+		{#snippet children({ id })}
+			<select {id} class={controlClass} bind:value={unit}>
+				<option value="ft">Feet</option>
+				<option value="yd">Yards</option>
+			</select>
+		{/snippet}
+	</Field>
 
-	<div class="dims">
-		<label>
-			<span>Width</span>
-			<input type="text" inputmode="decimal" bind:value={width} aria-invalid={!!errors.width} />
-		</label>
-		<label>
-			<span>Depth</span>
-			<input type="text" inputmode="decimal" bind:value={depth} aria-invalid={!!errors.depth} />
-		</label>
+	<div class="grid grid-cols-2 gap-3">
+		<Field label="Width" id="{formId}-width" error={errors.width}>
+			{#snippet children({ id, describedby })}
+				<input
+					{id}
+					type="text"
+					inputmode="decimal"
+					class={controlClass}
+					bind:value={width}
+					aria-invalid={!!errors.width}
+					aria-describedby={describedby}
+				/>
+			{/snippet}
+		</Field>
+		<Field label="Depth" id="{formId}-depth" error={errors.depth}>
+			{#snippet children({ id, describedby })}
+				<input
+					{id}
+					type="text"
+					inputmode="decimal"
+					class={controlClass}
+					bind:value={depth}
+					aria-invalid={!!errors.depth}
+					aria-describedby={describedby}
+				/>
+			{/snippet}
+		</Field>
 	</div>
-	{#if errors.width}<p class="error" role="alert">{errors.width}</p>{/if}
-	{#if errors.depth}<p class="error" role="alert">{errors.depth}</p>{/if}
 
 	{#if showSaveToLibrary}
-		<label class="check">
-			<input type="checkbox" bind:checked={saveToLibrary} />
-			<span>Save to my canvas library</span>
-		</label>
+		<Toggle label="Save to my canvas library" bind:checked={saveToLibrary} />
 	{/if}
 
-	<div class="actions">
-		{#if oncancel}<button type="button" onclick={oncancel}>Cancel</button>{/if}
-		<button type="submit" class="primary">{submitLabel}</button>
+	<div class="flex flex-wrap justify-end gap-3">
+		{#if oncancel}<Button onclick={oncancel}>Cancel</Button>{/if}
+		<Button type="submit" variant="primary">{submitLabel}</Button>
 	</div>
 </form>
-
-<style>
-	.canvas-form {
-		display: grid;
-		gap: var(--space-3);
-	}
-	label {
-		display: grid;
-		gap: var(--space-1);
-	}
-	label span {
-		font-size: 0.9rem;
-		color: var(--color-muted);
-	}
-	.check {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-	.check span {
-		color: var(--color-text);
-	}
-	.dims {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-3);
-	}
-	input[type='text'],
-	select {
-		padding: var(--space-2);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-	}
-	.error {
-		margin: 0;
-		color: var(--color-danger);
-		font-size: 0.9rem;
-	}
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--space-2);
-	}
-	.primary {
-		background: var(--color-accent);
-		color: var(--color-accent-contrast);
-		border: 1px solid var(--color-accent);
-		border-radius: var(--radius);
-		padding: var(--space-2) var(--space-4);
-	}
-</style>

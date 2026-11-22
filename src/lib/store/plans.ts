@@ -1,5 +1,6 @@
 import { emptyPlanDocument, PlanDocumentSchema, type PlanDocument } from '../model/plan';
 import type { MatchSketchDB } from './db';
+import { nextStageOrder } from './matches';
 import { CanvasInputSchema, newSyncMeta, now, type CanvasInput, type PlanRecord } from './records';
 
 export async function listPlans(db: MatchSketchDB): Promise<PlanRecord[]> {
@@ -9,16 +10,20 @@ export async function listPlans(db: MatchSketchDB): Promise<PlanRecord[]> {
 		.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
 }
 
-/** Creates a plan with its own copy of the canvas dimensions (not a live link). */
+/**
+ * Creates a plan with its own copy of the canvas dimensions (not a live link). With `matchId`,
+ * the plan joins that match as its last stage.
+ */
 export async function createPlan(
 	db: MatchSketchDB,
-	input: { canvas: CanvasInput; sourceCanvasId: string | null }
+	input: { canvas: CanvasInput; sourceCanvasId: string | null; matchId?: string | null }
 ): Promise<PlanRecord> {
 	const { widthFt, depthFt, unit } = CanvasInputSchema.parse(input.canvas);
+	const matchId = input.matchId ?? null;
 	const record: PlanRecord = {
 		...newSyncMeta(),
-		matchId: null,
-		stageOrder: null,
+		matchId,
+		stageOrder: matchId ? await nextStageOrder(db, matchId) : null,
 		sourceCanvasId: input.sourceCanvasId,
 		widthFt,
 		depthFt,
@@ -61,6 +66,8 @@ export async function duplicatePlan(db: MatchSketchDB, id: string): Promise<Plan
 	const record: PlanRecord = {
 		...source,
 		...newSyncMeta(),
+		// A copy of a stage joins the same match, after its last stage.
+		stageOrder: source.matchId ? await nextStageOrder(db, source.matchId) : null,
 		document: { ...source.document, brief: { ...source.document.brief, stageName } }
 	};
 	await db.plans.add(record);

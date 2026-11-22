@@ -83,3 +83,10 @@ export async function clearLocalData(db: MatchSketchDB, storage: ClearableStorag
 	}
 	for (const key of keys) storage.removeItem(key);
 }
+
+/** The sign-out warning for `count` unsynced changes (count > 0). */
+export function unsyncedWarning(count: number): string {
+	return count === 1
+		? "1 change on this device hasn't synced. Signing out deletes it."
+		: `${count} changes on this device haven't synced. Signing out deletes them.`;
+}

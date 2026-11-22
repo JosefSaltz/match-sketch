@@ -12,7 +12,7 @@ import {
 	SYNC_OWNER,
 	THEME_SETTING
 } from '../store/settings';
-import { addedNotice, adoptDevice, clearLocalData, unsyncedCount } from './device';
+import { addedNotice, adoptDevice, clearLocalData, unsyncedCount, unsyncedWarning } from './device';
 
 const bay = { name: 'Bay 4', widthFt: 90, depthFt: 60, unit: 'yd' as const };
 let db: MatchSketchDB;
@@ -98,5 +98,16 @@ describe('unsyncedCount and clearLocalData', () => {
 		expect(await getSetting(db, THEME_SETTING)).toBe('woodland');
 		expect(await getSetting(db, SOUNDS_SETTING)).toBe('off');
 		expect([...storage.map.keys()]).toEqual(['other-app-key']);
+	});
+});
+
+describe('unsyncedWarning', () => {
+	it('warns about one change, or several', () => {
+		expect(unsyncedWarning(1)).toBe(
+			"1 change on this device hasn't synced. Signing out deletes it."
+		);
+		expect(unsyncedWarning(3)).toBe(
+			"3 changes on this device haven't synced. Signing out deletes them."
+		);
 	});
 });

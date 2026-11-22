@@ -18,6 +18,7 @@
 	import Field from '#lib/ui/Field.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
+	import Thumbnail from '#lib/print/Thumbnail.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -221,6 +222,7 @@
 								>
 									⠿
 								</button>
+								<Thumbnail {plan} title={planTitle(plan, n)} width={64} height={48} />
 								<span class="mr-auto grid min-w-0">
 									<span class="truncate font-semibold">{planTitle(plan, n)}</span>
 									<span class="text-sm text-muted">

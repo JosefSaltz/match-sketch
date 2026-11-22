@@ -199,6 +199,7 @@
 					</h2>
 					<Button href={`${resolve('/(app)/plans/new')}?match=${m.id}`}>New stage</Button>
 					<Button onclick={openAdd}>Add existing plan</Button>
+					<Button href={resolve('/(app)/matches/[id]/print', { id: m.id })}>Print match</Button>
 				</div>
 				{#if plans.length}
 					<ol

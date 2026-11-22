@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import { moveItem, reorderIndex } from '#lib/matches/reorder.js';
@@ -10,7 +11,7 @@
 		reorderMatchPlans,
 		updateMatch
 	} from '#lib/store/matches.js';
-	import { listPlans } from '#lib/store/plans.js';
+	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
 	import { effectiveStageNumber, planTitle, type PlanRecord } from '#lib/store/records.js';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
@@ -82,6 +83,21 @@
 	async function add(plan: PlanRecord) {
 		if (!match) return;
 		await assignPlan(getDb(), plan.id, match.id);
+		await refresh();
+	}
+
+	let deleting = $state<{ plan: PlanRecord; title: string } | null>(null);
+
+	/** The copy joins this match as its last stage. */
+	async function duplicate(plan: PlanRecord) {
+		await duplicatePlan(getDb(), plan.id);
+		await refresh();
+	}
+
+	async function confirmDelete() {
+		if (!deleting) return;
+		await deletePlan(getDb(), deleting.plan.id);
+		deleting = null;
 		await refresh();
 	}
 
@@ -231,7 +247,14 @@
 								>
 									↓
 								</Button>
+								<Button onclick={() => duplicate(plan)}>Duplicate</Button>
 								<Button onclick={() => remove(plan)}>Remove</Button>
+								<Button
+									variant="danger"
+									onclick={() => (deleting = { plan, title: planTitle(plan, n) })}
+								>
+									Delete
+								</Button>
 							</li>
 						{/each}
 					</ol>
@@ -273,4 +296,14 @@
 			</div>
 		</div>
 	</Dialog>
+{/if}
+
+{#if deleting}
+	<ConfirmDialog
+		title="Delete plan"
+		message={`Delete plan "${deleting.title}"?`}
+		confirmLabel="Delete"
+		onconfirm={confirmDelete}
+		oncancel={() => (deleting = null)}
+	/>
 {/if}

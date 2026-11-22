@@ -145,6 +145,21 @@ test.describe('match screen', () => {
 		await expect(unassigned(page)).toContainText('Alpha');
 	});
 
+	test('duplicate and delete a stage from the match', async ({ page }) => {
+		await addExisting(page, ['Alpha', 'Bravo']);
+		await stages(page)
+			.filter({ hasText: 'Alpha' })
+			.getByRole('button', { name: 'Duplicate' })
+			.click();
+		await expect(stages(page)).toHaveCount(3);
+		await expect(stages(page).nth(2)).toContainText('Stage 3 — Alpha (copy)');
+		await stages(page).filter({ hasText: 'Bravo' }).getByRole('button', { name: 'Delete' }).click();
+		await expect(page.getByRole('dialog')).toContainText('Delete plan "Stage 2 — Bravo"?');
+		await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+		await expect(stages(page)).toHaveCount(2);
+		await expect(stages(page).nth(1)).toContainText('Stage 2 — Alpha (copy)');
+	});
+
 	test('rename and date the match', async ({ page }) => {
 		const name = page.getByLabel('Name');
 		await name.fill('DRRC December');

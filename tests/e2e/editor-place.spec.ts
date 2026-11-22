@@ -62,3 +62,23 @@ test('Escape cancels a palette drag without arming the symbol', async ({ page })
 	await expect(page.getByTestId('object')).toHaveCount(0);
 	await expect(item).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('placed objects keep their symbols and places across a reload', async ({ page }) => {
+	// Review Focus #1: ids from Plan 1 still name the same entries after the redraw.
+	const ids = ['popper', 'barrel', 'wall', 'start-box'];
+	for (const [i, id] of ids.entries()) {
+		await dragFromPalette(page, id, await bayPoint(page, 0.2 + i * 0.2, 0.5));
+	}
+	await expect(page.getByTestId('object')).toHaveCount(4);
+	const before = await page
+		.getByTestId('object')
+		.evaluateAll((els) => els.map((e) => `${e.dataset.symbolId} ${e.getAttribute('transform')}`));
+	await page.reload();
+	await expect(page.getByTestId('object')).toHaveCount(4);
+	const after = await page
+		.getByTestId('object')
+		.evaluateAll((els) => els.map((e) => `${e.dataset.symbolId} ${e.getAttribute('transform')}`));
+	expect(after).toEqual(before);
+	// The start box marks its downrange edge.
+	await expect(page.locator('[data-symbol-id="start-box"] path')).toHaveCount(1);
+});

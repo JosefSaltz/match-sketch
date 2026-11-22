@@ -66,24 +66,11 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="editor">
+<div class="grid h-dvh grid-rows-[auto_1fr]">
 	<Toolbar {editor} />
-	<div class="workspace">
+	<div class="grid min-h-0 grid-cols-[16rem_1fr_17rem]">
 		<Palette {editor} />
 		<EditorCanvas {editor} />
 		<PropertiesPanel {editor} />
 	</div>
 </div>
-
-<style>
-	.editor {
-		display: grid;
-		grid-template-rows: auto 1fr;
-		height: 100vh;
-	}
-	.workspace {
-		display: grid;
-		grid-template-columns: 16rem 1fr 17rem;
-		min-height: 0;
-	}
-</style>

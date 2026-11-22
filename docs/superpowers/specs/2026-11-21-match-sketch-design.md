@@ -246,6 +246,7 @@ The plan `document` jsonb holds the brief, the objects list, labels, measure lin
 - Open sign-up with verification, terms/privacy pages, and possibly paid plans.
 - Linking shooting areas to the targets they engage, so distances from each SA can be labeled automatically.
 - Canvas features: permanent structures, berms, backstop direction, slope; safety checks (targets in front of the backstop).
+- Aerial photo underlay: upload top-down aerial photography of the range, scaled and aligned to the bay, shown under the stage drawing in the editor. Until then the bay stays plain white.
 - Discipline symbol sets (USPSA, IDPA, PRS, Steel Challenge).
 - Supplementary printouts (sequence cards, RO score sheets).
 - A4 paper.

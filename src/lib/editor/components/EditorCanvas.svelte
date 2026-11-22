@@ -22,8 +22,9 @@
 	let moving: number | null = null;
 	/** The pointer dragging a resize or rotate handle, if any. */
 	let handling: number | null = null;
-	/** The pointer drawing a line or dragging a line's end, if any. */
+	/** The pointer drawing a line or dragging a line's end, if any, and where it last was. */
 	let linking: number | null = null;
+	let linkAt: Point = { x: 0, y: 0 };
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -70,8 +71,19 @@
 
 	function onDown(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
-		// Extra pointers are ignored while dragging the selection, a handle, or a line.
-		if (moving !== null || handling !== null || linking !== null) return;
+		if (linking !== null) {
+			// A second finger while drawing a line means a pinch: drop the line and zoom instead.
+			if (e.pointerType !== 'touch') return;
+			editor.cancelLink();
+			gestures.down(linking, linkAt);
+			linking = null;
+			gestures.down(e.pointerId, local(e));
+			capture(e);
+			tap = null;
+			return;
+		}
+		// Extra pointers are ignored while dragging the selection or a handle.
+		if (moving !== null || handling !== null) return;
 		// Commit a field being edited before the selection changes under it.
 		(document.activeElement as HTMLElement | null)?.blur();
 		const p = local(e);
@@ -86,12 +98,14 @@
 		// The arrow and measure tools draw a line from the press to the release.
 		if (editor.tool === 'arrow' || editor.tool === 'measure') {
 			linking = e.pointerId;
+			linkAt = p;
 			editor.beginLink(p, objectIdAt(e));
 			return;
 		}
 		const lineEnd = (e.target as Element).closest('[data-annotation-handle]');
 		if (lineEnd) {
 			linking = e.pointerId;
+			linkAt = p;
 			editor.beginEndpoint(
 				lineEnd.getAttribute('data-link-id')!,
 				lineEnd.getAttribute('data-annotation-handle') as 'from' | 'to'
@@ -134,7 +148,8 @@
 
 	function onMove(e: PointerEvent) {
 		if (linking === e.pointerId) {
-			editor.updateLink(local(e), objectIdAt(e));
+			linkAt = local(e);
+			editor.updateLink(linkAt, objectIdAt(e));
 			return;
 		}
 		if (handling === e.pointerId) {

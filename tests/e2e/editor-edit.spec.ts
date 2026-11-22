@@ -129,6 +129,8 @@ test('a count above the maximum shows the clamped value', async ({ page }) => {
 test('tapping one of several selected objects selects just it', async ({ page }) => {
 	await page.getByTestId('object').click();
 	await page.keyboard.press('Control+d');
+	// Move the copy clear of the original so each can be clicked.
+	for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
 	const original = page.getByTestId('object').first();
 	await original.click({ modifiers: ['Shift'] });
 	await expect(page.getByTestId('selection')).toHaveCount(2);
@@ -139,6 +141,8 @@ test('tapping one of several selected objects selects just it', async ({ page })
 test('a typed label is kept when you click another object', async ({ page }) => {
 	await page.getByTestId('object').click();
 	await page.keyboard.press('Control+d');
+	// Move the copy clear of the original so each can be clicked.
+	for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
 	const [original, copy] = [page.getByTestId('object').first(), page.getByTestId('object').last()];
 	await original.click();
 	await props(page).getByLabel('Label').fill('Z9');

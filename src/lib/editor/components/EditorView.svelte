@@ -8,7 +8,7 @@
 	import { commandForKey } from '../shortcuts.js';
 	import EditorCanvas from './EditorCanvas.svelte';
 	import Palette from './Palette.svelte';
-	import PropertiesPanel from './PropertiesPanel.svelte';
+	import SidePanel from './SidePanel.svelte';
 	import Toolbar from './Toolbar.svelte';
 
 	let { plan }: { plan: PlanRecord } = $props();
@@ -31,6 +31,8 @@
 	function onKeydown(e: KeyboardEvent) {
 		// While a dialog (e.g. the theme picker) is open, keys belong to it, not the stage.
 		if (document.querySelector('dialog:modal')) return;
+		// A control that handled the key itself (e.g. the side panel's tabs) keeps it.
+		if (e.defaultPrevented) return;
 		const active = document.activeElement as HTMLElement | null;
 		const command = commandForKey(e, {
 			tagName: active?.tagName ?? 'BODY',
@@ -70,9 +72,9 @@
 
 <div class="grid h-dvh grid-rows-[auto_1fr]">
 	<Toolbar {editor} />
-	<div class="grid min-h-0 grid-cols-[16rem_1fr_17rem]">
+	<div class="grid min-h-0 grid-cols-[16rem_1fr_17rem] xl:grid-cols-[16rem_1fr_20rem]">
 		<Palette {editor} />
 		<EditorCanvas {editor} />
-		<PropertiesPanel {editor} />
+		<SidePanel {editor} />
 	</div>
 </div>

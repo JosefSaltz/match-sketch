@@ -104,6 +104,28 @@ describe('syncOnce: push', () => {
 	});
 });
 
+describe('syncOnce: batches', () => {
+	it('splits a push by size as well as count, to stay under the server body limit', async () => {
+		const pushes: number[] = [];
+		const counting: Transport = {
+			push: (items) => (pushes.push(items.length), server.push(items)),
+			pull: (cursor) => server.pull(cursor)
+		};
+		for (const name of ['Big 1', 'Big 2', 'Big 3']) {
+			const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+			const document = emptyPlanDocument();
+			document.brief.stageName = name;
+			document.brief.notes = [
+				{ id: crypto.randomUUID(), title: 'Notes', body: 'x'.repeat(150_000) }
+			];
+			await savePlanDocument(db, plan.id, document);
+		}
+		const outcome = await syncOnce(db, counting, () => at);
+		expect(outcome.pushed).toBe(3);
+		expect(pushes.length).toBeGreaterThan(1);
+	});
+});
+
 describe('syncOnce: conflicts', () => {
 	it("keeps the server's plan and saves this device's version as a conflicted copy", async () => {
 		const plan = await namedPlan('Bay drill');

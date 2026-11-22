@@ -216,6 +216,30 @@ export async function pendingConflicts(db: MatchSketchDB): Promise<ConflictCopy[
 	return readConflicts(await getSetting(db, SYNC_CONFLICTS));
 }
 
+/** A push body stays well under adapter-node's default 512 kB limit. */
+const MAX_PUSH_BYTES = 256 * 1024;
+
+/** Dirty records in pushes of at most MAX_PUSH_RECORDS and (one big record aside) MAX_PUSH_BYTES. */
+function batches(dirty: Dirty[]): Dirty[][] {
+	const out: Dirty[][] = [];
+	let batch: Dirty[] = [];
+	let bytes = 0;
+	for (const item of dirty) {
+		const size = JSON.stringify(toWire(item.table, item.record)).length;
+		const full =
+			batch.length === MAX_PUSH_RECORDS || (batch.length > 0 && bytes + size > MAX_PUSH_BYTES);
+		if (full) {
+			out.push(batch);
+			batch = [];
+			bytes = 0;
+		}
+		batch.push(item);
+		bytes += size;
+	}
+	if (batch.length > 0) out.push(batch);
+	return out;
+}
+
 /** One round: push every dirty record, then pull everything changed since the cursor. */
 export async function syncOnce(
 	db: MatchSketchDB,
@@ -240,8 +264,7 @@ export async function syncOnce(
 			outcome.stuck += 1;
 		}
 	}
-	for (let i = 0; i < dirty.length; i += MAX_PUSH_RECORDS) {
-		const batch = dirty.slice(i, i + MAX_PUSH_RECORDS);
+	for (const batch of batches(dirty)) {
 		const results = await transport.push(
 			batch.map(({ table, record }) => ({
 				record: toWire(table, record),

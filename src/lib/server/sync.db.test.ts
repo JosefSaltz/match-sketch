@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { emptyPlanDocument } from '../model/plan';
 import type { WireRecord } from '../sync/wire';
 import { createDatabase } from './db/client';
-import { canvases } from './db/schema';
+import { canvases, plans } from './db/schema';
 import { pullChanges, pushRecords } from './sync';
 import { testAdminClient, testDatabaseUrl, uniqueEmail } from './testing/supabase';
 
@@ -34,6 +35,23 @@ function canvas(name = 'Bay', id: string = crypto.randomUUID()): CanvasWire {
 		widthFt: 90,
 		depthFt: 60,
 		unit: 'yd'
+	};
+}
+
+function plan(): Extract<WireRecord, { table: 'plans' }> {
+	return {
+		table: 'plans',
+		id: crypto.randomUUID(),
+		updatedAt: new Date().toISOString(),
+		deletedAt: null,
+		matchId: null,
+		stageOrder: null,
+		sourceCanvasId: null,
+		widthFt: 90,
+		depthFt: 60,
+		unit: 'yd',
+		schemaVersion: 1,
+		document: emptyPlanDocument()
 	};
 }
 
@@ -146,6 +164,85 @@ describe('pullChanges', () => {
 		expect(second.records).toHaveLength(50);
 		expect(second.more).toBe(false);
 		expect(new Set([...first.records, ...second.records].map((r) => r.id)).size).toBe(250);
+	});
+
+	it('reads every table as of one moment, so a push landing mid-pull is not half seen', async () => {
+		const owner = await createOwner();
+		const c = canvas('Mid-pull');
+		const p = plan();
+		// A write that holds the plans table until it commits, with a canvas and a plan in it.
+		const write = db.transaction(async (tx) => {
+			await tx.execute(sql`lock table public.plans in access exclusive mode`);
+			await tx.insert(canvases).values({
+				id: c.id,
+				ownerId: owner,
+				version: 1,
+				updatedAt: new Date(c.updatedAt),
+				deletedAt: null,
+				name: c.name,
+				widthFt: c.widthFt,
+				depthFt: c.depthFt,
+				unit: c.unit
+			});
+			await tx.insert(plans).values({
+				id: p.id,
+				ownerId: owner,
+				version: 1,
+				updatedAt: new Date(p.updatedAt),
+				deletedAt: null,
+				matchId: null,
+				stageOrder: null,
+				sourceCanvasId: null,
+				widthFt: 90,
+				depthFt: 60,
+				unit: 'yd',
+				schemaVersion: 1,
+				document: p.document
+			});
+			await new Promise((r) => setTimeout(r, 400));
+		});
+		await new Promise((r) => setTimeout(r, 100));
+		// The canvases are read before the write commits; the plans read waits for the lock.
+		const first = await pullChanges(db, owner, 0);
+		await write;
+		const second = await pullChanges(db, owner, first.cursor);
+		const ids = [...first.records, ...second.records].map((r) => r.id).sort();
+		expect(ids).toEqual([c.id, p.id].sort());
+	});
+
+	it('never skips a row when pushes of several tables race pulls (Review Focus #3)', async () => {
+		const owner = await createOwner();
+		const ids: string[] = [];
+		const seen: string[] = [];
+		let cursor = 0;
+		let pushing = true;
+		const puller = (async () => {
+			while (pushing) {
+				const page = await pullChanges(db, owner, cursor, 5);
+				seen.push(...page.records.map((r) => r.id));
+				cursor = page.cursor;
+			}
+		})();
+		await Promise.all(
+			Array.from({ length: 40 }, () => {
+				const c = canvas('Race');
+				const p = { ...plan(), sourceCanvasId: c.id };
+				ids.push(c.id, p.id);
+				return pushRecords(db, owner, [
+					{ record: c, baseVersion: 0 },
+					{ record: p, baseVersion: 0 }
+				]);
+			})
+		);
+		pushing = false;
+		await puller;
+		for (;;) {
+			const page = await pullChanges(db, owner, cursor, 5);
+			seen.push(...page.records.map((r) => r.id));
+			cursor = page.cursor;
+			if (!page.more) break;
+		}
+		expect(seen.sort()).toEqual([...ids].sort());
 	});
 
 	it('never skips a row when pushes race each other and pulls (Review Focus #3)', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PointerGestures } from './gestures';
+import { movedBeyond, PointerGestures, TAP_SLOP_PX } from './gestures';
 
 describe('PointerGestures', () => {
 	it('pans with one pointer', () => {
@@ -28,5 +28,15 @@ describe('PointerGestures', () => {
 		g.up(1);
 		expect(g.active).toBe(0);
 		expect(g.move(1, { x: 5, y: 5 })).toBeNull();
+	});
+});
+
+describe('movedBeyond', () => {
+	it('counts only moves farther than the slop as drags', () => {
+		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 0 })).toBe(false);
+		expect(movedBeyond({ x: 0, y: 0 }, { x: 4, y: 0 })).toBe(false);
+		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 3 })).toBe(true);
+		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 0 }, 2)).toBe(true);
+		expect(TAP_SLOP_PX).toBe(4);
 	});
 });

@@ -1,5 +1,12 @@
 import type { Point } from '../geometry/types';
 
+/** How far a pointer may move, in px, and still count as a tap rather than a drag. */
+export const TAP_SLOP_PX = 4;
+
+export function movedBeyond(a: Point, b: Point, px = TAP_SLOP_PX): boolean {
+	return Math.hypot(b.x - a.x, b.y - a.y) > px;
+}
+
 export type GestureAction =
 	| { kind: 'pan'; dx: number; dy: number }
 	| { kind: 'pinch'; factor: number; at: Point; dx: number; dy: number };

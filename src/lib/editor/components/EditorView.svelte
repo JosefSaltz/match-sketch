@@ -4,18 +4,37 @@
 	import { sounds } from '#lib/audio/sounds.svelte.js';
 	import { getDb } from '#lib/store/index.js';
 	import { clearJournal, writeJournal } from '#lib/store/journal.js';
-	import { savePlanDocument } from '#lib/store/plans.js';
 	import type { PlanRecord } from '#lib/store/records.js';
 	import { EditorState, type MatchContext, type NudgeDir } from '../editor-state.svelte.js';
+	import { createPlanSaver } from '../plan-saver.js';
 	import { commandForKey } from '../shortcuts.js';
 	import EditorCanvas from './EditorCanvas.svelte';
 	import Palette from './Palette.svelte';
 	import SidePanel from './SidePanel.svelte';
 	import Toolbar from './Toolbar.svelte';
 
-	let { plan, match = null }: { plan: PlanRecord; match?: MatchContext | null } = $props();
+	let {
+		plan,
+		match = null,
+		onstale
+	}: {
+		plan: PlanRecord;
+		match?: MatchContext | null;
+		/** A pull or conflict replaced the plan while it was open; the edit went to a copy. */
+		onstale?: () => void;
+	} = $props();
 
-	// The parent keys this component by plan id, so one EditorState per mount is right.
+	// Saves never write over another device's version (see plan-saver.ts).
+	const saver = untrack(() =>
+		createPlanSaver({
+			db: getDb(),
+			planId: plan.id,
+			base: plan.updatedAt,
+			onStale: () => onstale?.()
+		})
+	);
+
+	// The parent keys this component by plan id and version, so one EditorState per mount is right.
 	const editor = untrack(
 		() =>
 			new EditorState(
@@ -24,11 +43,9 @@
 					onGridCross: () => {
 						if (sounds.on) playClick();
 					},
-					save: async (doc, at) => {
-						await savePlanDocument(getDb(), plan.id, doc, at);
-					},
+					save: (doc, at) => saver.save(doc, at),
 					journal: {
-						write: (doc, at) => writeJournal(localStorage, plan.id, doc, at),
+						write: (doc, at) => writeJournal(localStorage, plan.id, doc, at, saver.bases),
 						clear: () => clearJournal(localStorage, plan.id)
 					}
 				},

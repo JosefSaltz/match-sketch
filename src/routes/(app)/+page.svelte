@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { APP_NAME } from '#lib/app-info.js';
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
@@ -9,13 +10,18 @@
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
+	import { formatMatchDate, stageCount } from '#lib/matches/format.js';
+	import MatchForm from '#lib/matches/MatchForm.svelte';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
+	import { createMatch, deleteMatch, listMatches } from '#lib/store/matches.js';
 	import { getDb } from '#lib/store/index.js';
 	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
 	import {
 		planTitle,
 		type CanvasInput,
 		type CanvasRecord,
+		type MatchInput,
+		type MatchRecord,
 		type PlanRecord
 	} from '#lib/store/records.js';
 	import { resolve } from '$app/paths';
@@ -24,6 +30,13 @@
 	let showingCredits = $state(false);
 
 	let plans = $state<PlanRecord[]>([]);
+	let matches = $state<MatchRecord[]>([]);
+	let creatingMatch = $state(false);
+	let deletingMatch = $state<MatchRecord | null>(null);
+	/** Plans not in a match; plans in a match are listed on its screen. */
+	const unassigned = $derived(plans.filter((p) => p.matchId === null));
+	/** How many stages a match has (its plans that aren't deleted). */
+	const stagesIn = (matchId: string) => plans.filter((p) => p.matchId === matchId).length;
 	let deletingPlan = $state<PlanRecord | null>(null);
 	let canvases = $state<CanvasRecord[]>([]);
 	let canvasDialog = $state<{ mode: 'create' } | { mode: 'edit'; canvas: CanvasRecord } | null>(
@@ -39,10 +52,39 @@
 		plans = await listPlans(getDb());
 	}
 
+	async function refreshMatches() {
+		matches = await listMatches(getDb());
+	}
+
 	onMount(() => {
 		void refreshPlans();
 		void refreshCanvases();
+		void refreshMatches();
 	});
+
+	async function saveMatch(input: MatchInput) {
+		const match = await createMatch(getDb(), input);
+		creatingMatch = false;
+		await goto(resolve('/(app)/matches/[id]', { id: match.id }));
+	}
+
+	function deleteMatchMessage(m: MatchRecord): string {
+		const n = stagesIn(m.id);
+		const rest =
+			n === 0
+				? ''
+				: n === 1
+					? ' Its 1 stage stays as an unassigned plan.'
+					: ` Its ${n} stages stay as unassigned plans.`;
+		return `Delete match "${m.name}"?${rest}`;
+	}
+
+	async function confirmDeleteMatch() {
+		if (!deletingMatch) return;
+		await deleteMatch(getDb(), deletingMatch.id);
+		deletingMatch = null;
+		await Promise.all([refreshMatches(), refreshPlans()]);
+	}
 
 	async function duplicate(plan: PlanRecord) {
 		await duplicatePlan(getDb(), plan.id);
@@ -89,6 +131,7 @@
 		<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-4">
 			<h1 class="m-0 mr-auto"><Wordmark /></h1>
 			<Button href={resolve('plans/new')}>New plan</Button>
+			<Button onclick={() => (creatingMatch = true)}>New match</Button>
 			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 		</div>
@@ -96,11 +139,48 @@
 	<ThemePicker bind:open={pickingTheme} />
 
 	<main class="mx-auto grid max-w-6xl gap-10 px-4 py-8">
-		<section aria-labelledby="plans-heading" class="grid gap-4">
-			<h2 id="plans-heading" class="m-0 font-display text-2xl tracking-wide uppercase">Plans</h2>
-			{#if plans.length}
+		<section aria-labelledby="matches-heading" class="grid gap-4">
+			<h2 id="matches-heading" class="m-0 font-display text-2xl tracking-wide uppercase">
+				My matches
+			</h2>
+			{#if matches.length}
 				<ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-5 p-0">
-					{#each plans as plan (plan.id)}
+					{#each matches as match (match.id)}
+						<li
+							class="overflow-hidden rounded-xl border-[3px] border-black bg-white shadow-[3px_3px_0_#000]"
+						>
+							<header class="bg-theme border-b-[3px] border-black px-3 py-2.5">
+								<h3 class="m-0 font-display text-base tracking-wide uppercase text-outline-sm">
+									{match.name}
+								</h3>
+							</header>
+							<div class="grid gap-3 p-3">
+								<p class="m-0 grid text-sm text-muted">
+									<span>{formatMatchDate(match.date)}</span>
+									<span>{stageCount(stagesIn(match.id))}</span>
+								</p>
+								<div class="flex flex-wrap gap-2">
+									<Button variant="primary" href={resolve('/(app)/matches/[id]', { id: match.id })}>
+										Open
+									</Button>
+									<Button variant="danger" onclick={() => (deletingMatch = match)}>Delete</Button>
+								</div>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="m-0 text-muted">No matches yet. Group stages into a match with “New match”.</p>
+			{/if}
+		</section>
+
+		<section aria-labelledby="plans-heading" class="grid gap-4">
+			<h2 id="plans-heading" class="m-0 font-display text-2xl tracking-wide uppercase">
+				Unassigned plans
+			</h2>
+			{#if unassigned.length}
+				<ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-5 p-0">
+					{#each unassigned as plan (plan.id)}
 						<li
 							class="overflow-hidden rounded-xl border-[3px] border-black bg-white shadow-[3px_3px_0_#000]"
 						>
@@ -126,7 +206,9 @@
 					{/each}
 				</ul>
 			{:else}
-				<p class="m-0 text-muted">No plans yet. Start one with “New plan”.</p>
+				<p class="m-0 text-muted">
+					{plans.length ? 'No unassigned plans.' : 'No plans yet. Start one with “New plan”.'}
+				</p>
 			{/if}
 		</section>
 
@@ -189,6 +271,26 @@
 		confirmLabel="Delete"
 		onconfirm={confirmDeletePlan}
 		oncancel={() => (deletingPlan = null)}
+	/>
+{/if}
+
+{#if creatingMatch}
+	<Dialog title="New match" onclose={() => (creatingMatch = false)}>
+		<MatchForm
+			submitLabel="Create match"
+			onsubmit={saveMatch}
+			oncancel={() => (creatingMatch = false)}
+		/>
+	</Dialog>
+{/if}
+
+{#if deletingMatch}
+	<ConfirmDialog
+		title="Delete match"
+		message={deleteMatchMessage(deletingMatch)}
+		confirmLabel="Delete"
+		onconfirm={confirmDeleteMatch}
+		oncancel={() => (deletingMatch = null)}
 	/>
 {/if}
 

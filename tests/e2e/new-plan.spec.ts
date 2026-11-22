@@ -63,7 +63,7 @@ test('plans list: duplicate and delete', async ({ page }) => {
 	await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });
 	await createPlanFromCanvas(page, 'Bay A');
 	await page.goto('/');
-	const plans = page.getByRole('region', { name: 'Plans' });
+	const plans = page.getByRole('region', { name: 'Unassigned plans' });
 	await plans.getByRole('button', { name: 'Duplicate' }).click();
 	await expect(plans.getByText('Untitled stage (copy)')).toBeVisible();
 	await plans

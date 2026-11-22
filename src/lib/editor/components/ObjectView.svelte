@@ -50,7 +50,7 @@
 	data-object-id={obj.id}
 	data-symbol-id={obj.symbolId}
 	class="object"
-	transform="translate({at.x} {at.y})"
+	transform="{editor.swing.transformFor(obj.id)} translate({at.x} {at.y})"
 >
 	<g transform="rotate({obj.rotation})">
 		{#if entry?.kind === 'footprint'}

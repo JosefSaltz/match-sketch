@@ -48,7 +48,8 @@
 		<rect
 			data-testid="selection"
 			class="outline"
-			transform="translate({o.at.x} {o.at.y}) rotate({o.rotation})"
+			transform="{editor.swing.transformFor(o.id)} translate({o.at.x} {o.at
+				.y}) rotate({o.rotation})"
 			x={o.box.x - PAD_PX}
 			y={o.box.y - PAD_PX}
 			width={o.box.width + PAD_PX * 2}
@@ -57,7 +58,10 @@
 	{/each}
 	{#if single}
 		{@const topY = single.box.y - PAD_PX}
-		<g transform="translate({single.at.x} {single.at.y}) rotate({single.rotation})">
+		<g
+			transform="{editor.swing.transformFor(single.id)} translate({single.at.x} {single.at
+				.y}) rotate({single.rotation})"
+		>
 			<line class="stem" x1="0" x2="0" y1={topY} y2={topY - ROTATE_GAP_PX} />
 			<g
 				class="handle rotate"

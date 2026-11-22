@@ -74,3 +74,21 @@ test('plans list: duplicate and delete', async ({ page }) => {
 	await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 	await expect(plans.getByRole('listitem')).toHaveCount(1);
 });
+
+test('zoom in grows even a tiny bay', async ({ page }) => {
+	// Review Focus #2: on a large screen a 3 × 3 ft bay fits at a scale above the old zoom maximum.
+	await page.setViewportSize({ width: 1600, height: 1000 });
+	await page.goto('/plans/new');
+	await page.getByLabel('New canvas').check();
+	await page.getByLabel('Name').fill('Tiny');
+	await page.getByLabel('Width').fill('3');
+	await page.getByLabel('Depth').fill('3');
+	await page.getByLabel('Unit').selectOption({ label: 'Feet' });
+	await page.getByRole('button', { name: 'Create plan' }).click();
+	await expect(page.getByTestId('bay')).toBeVisible();
+	const w0 = (await page.getByTestId('bay').boundingBox())!.width;
+	await page.getByRole('button', { name: 'Zoom in' }).click();
+	expect((await page.getByTestId('bay').boundingBox())!.width).toBeGreaterThan(w0);
+	const bar = (await page.getByTestId('scale-bar').boundingBox())!;
+	expect(bar.width).toBeLessThan(200);
+});

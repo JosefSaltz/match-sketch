@@ -1,3 +1,4 @@
+import numpy as np
 from helpers import PALETTE4, colors_of, random_blobs
 
 from patterns.plaid import plaid
@@ -31,3 +32,29 @@ def test_tile_stays_under_the_size_budget(tmp_path):
     labels = random_blobs(seed=3, size=(900, 1300), colors=4)
     out = render_webp(labels, PALETTE4, tmp_path / "t.webp", width=1600)
     assert out.stat().st_size <= 250_000
+
+
+def test_photo_labels_keeps_small_distinct_colors_apart_from_a_dominant_one():
+    # Chocolate Chip: a tan ground covers most of the cloth; dark brown and the black and white
+    # "rocks" are small. Each must still come out as its own color.
+    from PIL import Image
+
+    from patterns.separate import photo_labels
+
+    rng = np.random.default_rng(5)
+    colors = ["#b39b85", "#c9b9a5", "#8f6550", "#6a4a3e", "#ded5d0", "#3a3030"]
+    rgb = np.array([[int(h[i : i + 2], 16) for i in (1, 3, 5)] for h in colors])
+    labels = np.zeros((400, 600), np.uint8)  # mostly ground
+    labels[40:160, 40:260] = 1
+    labels[220:330, 300:520] = 2
+    labels[60:120, 380:470] = 3
+    for k, count in ((4, 40), (5, 25)):  # small rocks
+        for y, x in rng.integers([10, 10], [390, 590], size=(count, 2)):
+            labels[y - 4 : y + 4, x - 4 : x + 4] = k
+    noisy = rgb[labels] + rng.normal(0, 4, (400, 600, 3))
+    img = Image.fromarray(np.clip(noisy, 0, 255).astype(np.uint8))
+    _, palette = photo_labels(img, 6, 600, medians=(3,), min_px=12, flatten=False)
+    found = np.array([[int(h[i : i + 2], 16) for i in (1, 3, 5)] for h in palette])
+    for want in rgb:
+        assert np.min(np.abs(found - want).sum(1)) < 30, f"missing {want}"
+

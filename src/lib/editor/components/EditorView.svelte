@@ -4,27 +4,31 @@
 	import { clearJournal, writeJournal } from '#lib/store/journal.js';
 	import { savePlanDocument } from '#lib/store/plans.js';
 	import type { PlanRecord } from '#lib/store/records.js';
-	import { EditorState, type NudgeDir } from '../editor-state.svelte.js';
+	import { EditorState, type MatchContext, type NudgeDir } from '../editor-state.svelte.js';
 	import { commandForKey } from '../shortcuts.js';
 	import EditorCanvas from './EditorCanvas.svelte';
 	import Palette from './Palette.svelte';
 	import SidePanel from './SidePanel.svelte';
 	import Toolbar from './Toolbar.svelte';
 
-	let { plan }: { plan: PlanRecord } = $props();
+	let { plan, match = null }: { plan: PlanRecord; match?: MatchContext | null } = $props();
 
 	// The parent keys this component by plan id, so one EditorState per mount is right.
 	const editor = untrack(
 		() =>
-			new EditorState(plan, {
-				save: async (doc, at) => {
-					await savePlanDocument(getDb(), plan.id, doc, at);
+			new EditorState(
+				plan,
+				{
+					save: async (doc, at) => {
+						await savePlanDocument(getDb(), plan.id, doc, at);
+					},
+					journal: {
+						write: (doc, at) => writeJournal(localStorage, plan.id, doc, at),
+						clear: () => clearJournal(localStorage, plan.id)
+					}
 				},
-				journal: {
-					write: (doc, at) => writeJournal(localStorage, plan.id, doc, at),
-					clear: () => clearJournal(localStorage, plan.id)
-				}
-			})
+				match
+			)
 	);
 
 	/** Editor shortcuts; keys typed into fields are left to the field (see commandForKey). */

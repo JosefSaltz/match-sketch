@@ -98,3 +98,12 @@ export async function reorderMatchPlans(
 		}
 	});
 }
+
+/**
+ * Plans in no live match: unassigned ones, and ones whose match was deleted (on another device,
+ * or by a conflict), which would otherwise be in no list at all.
+ */
+export function unassignedPlans(plans: PlanRecord[], matches: MatchRecord[]): PlanRecord[] {
+	const live = new Set(matches.filter((m) => m.deletedAt === null).map((m) => m.id));
+	return plans.filter((p) => p.matchId === null || !live.has(p.matchId));
+}

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { PageProps } from './$types';
+	import { getSupabase } from '#lib/auth/client.js';
 	import { APP_NAME } from '#lib/app-info.js';
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
@@ -26,6 +28,8 @@
 		type PlanRecord
 	} from '#lib/store/records.js';
 	import { resolve } from '$app/paths';
+
+	let { data }: PageProps = $props();
 
 	let pickingTheme = $state(false);
 	let showingCredits = $state(false);
@@ -62,6 +66,15 @@
 		void refreshCanvases();
 		void refreshMatches();
 	});
+
+	async function signOut() {
+		// Local scope clears this device's session; navigate even if the network call fails.
+		try {
+			await getSupabase().auth.signOut({ scope: 'local' });
+		} finally {
+			await goto(resolve('/sign-in'));
+		}
+	}
 
 	async function saveMatch(input: MatchInput) {
 		const match = await createMatch(getDb(), input);
@@ -135,6 +148,10 @@
 			<Button onclick={() => (creatingMatch = true)}>New match</Button>
 			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
+			{#if data.account.email}
+				<span class="text-sm text-muted">{data.account.email}</span>
+			{/if}
+			<Button onclick={signOut}>Sign out</Button>
 		</div>
 	</header>
 	<ThemePicker bind:open={pickingTheme} />

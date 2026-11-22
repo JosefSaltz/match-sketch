@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 /** Symbol entries in the catalog: 19 targets, 10 props, the dump box and the shooting position. */
 const SYMBOL_COUNT = 31;

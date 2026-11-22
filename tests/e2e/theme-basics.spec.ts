@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createCanvas, createPlanFromCanvas } from './helpers';
 
 test('the home page shows the wordmark in Graduate', async ({ page }) => {

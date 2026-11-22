@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createCanvas, createPlanFromCanvas, themeBaseRgb } from './helpers';
 
 test('home has a patterned top bar with the page actions', async ({ page }) => {

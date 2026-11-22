@@ -2,7 +2,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { paletteGroups, type CatalogEntry, type FootprintEntry } from '#lib/catalog/index.js';
 	import type { Point } from '#lib/geometry/types.js';
-	import type { EditorState } from '../editor-state.svelte.js';
+	import type { AnnotationTool, EditorState } from '../editor-state.svelte.js';
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
 	import { movedBeyond } from '../gestures.js';
@@ -12,6 +12,13 @@
 	const uid = $props.id();
 	const TOGGLE =
 		'focus-ring flex min-h-11 w-full cursor-pointer items-center gap-1 border-0 bg-transparent p-2 text-left';
+
+	/** Annotation tools, armed like symbols: tap (text) or drag (arrow, measure) on the stage. */
+	const TOOLS: { id: AnnotationTool; name: string }[] = [
+		{ id: 'text', name: 'Text label' },
+		{ id: 'arrow', name: 'Movement arrow' },
+		{ id: 'measure', name: 'Measure' }
+	];
 
 	let query = $state('');
 	const groups = $derived(paletteGroups(query));
@@ -101,6 +108,7 @@
 		const t = e.target as HTMLElement | null;
 		if (t?.closest('input, textarea, select, [contenteditable]')) return;
 		if (editor.armedSymbolId) editor.arm(null);
+		if (editor.tool) editor.armTool(null);
 	}
 
 	/** A footprint's shape fitted into the 40 × 40 thumbnail, never thinner than 3 px. */
@@ -144,6 +152,24 @@
 				{/if}
 			</svg>
 		{/if}
+	</span>
+{/snippet}
+
+{#snippet toolIcon(id: AnnotationTool)}
+	<span
+		class="grid size-10 flex-none place-items-center rounded-md border border-border bg-white text-text"
+		aria-hidden="true"
+	>
+		<svg class="size-8 fill-none stroke-current stroke-2" viewBox="0 0 32 32">
+			{#if id === 'text'}
+				<path d="M8 9h16M16 9v15" />
+			{:else if id === 'arrow'}
+				<path d="M6 24 24 8" stroke-dasharray="4 3" />
+				<path d="M15 8h9v9" />
+			{:else}
+				<path d="M5 16h22M5 11v10M27 11v10" />
+			{/if}
+		</svg>
 	</span>
 {/snippet}
 
@@ -196,6 +222,33 @@
 		/>
 	</div>
 	<div class="flex-1 overflow-y-auto pt-1 pb-4">
+		<div role="group" aria-labelledby="{uid}-annotate">
+			<h3
+				id="{uid}-annotate"
+				class="m-0 flex min-h-11 items-center p-2 text-xs font-bold tracking-wider text-muted uppercase"
+			>
+				Annotate
+			</h3>
+			<ul class="m-0 list-none p-0">
+				{#each TOOLS as t (t.id)}
+					<li>
+						<button
+							type="button"
+							class={[
+								'focus-ring flex w-full cursor-pointer items-center gap-2 rounded-md py-1 pr-2 pl-4 text-left text-text select-none hover:bg-surface',
+								'aria-pressed:bg-[color-mix(in_srgb,var(--theme-accent)_18%,white)] aria-pressed:shadow-[inset_0_0_0_2px_var(--theme-accent)]'
+							]}
+							data-testid="tool-{t.id}"
+							aria-pressed={editor.tool === t.id}
+							onclick={() => editor.armTool(editor.tool === t.id ? null : t.id)}
+						>
+							{@render toolIcon(t.id)}
+							<span>{t.name}</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		</div>
 		{#each groups as group (group.category)}
 			{@const key = `category-${group.category}`}
 			<div role="group" aria-labelledby="{uid}-{key}">

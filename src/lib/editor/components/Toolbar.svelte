@@ -7,11 +7,13 @@
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
+	import { syncState } from '#lib/sync/loop.svelte.js';
 	import SyncStatus from '#lib/sync/SyncStatus.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import type { EditorState } from '../editor-state.svelte.js';
+	import DraftDialog from './DraftDialog.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -35,6 +37,7 @@
 		'focus-ring min-h-11 cursor-pointer rounded-[10px] border-[3px] border-black bg-white px-2 text-sm font-semibold shadow-[3px_3px_0_#000]';
 
 	let pickingTheme = $state(false);
+	let drafting = $state(false);
 
 	/** Drag clicks on or off for this device (remembered like the theme). */
 	function toggleSounds() {
@@ -160,7 +163,20 @@
 		{sounds.on ? '🔊' : '🔇'}
 	</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
+	<Button
+		disabled={!syncState.online}
+		title={syncState.online ? undefined : 'Drafting needs a connection.'}
+		onclick={() => (drafting = true)}
+	>
+		Draft from text
+	</Button>
+	{#if !syncState.online}
+		<span class="text-xs text-outline-sm">Drafting needs a connection.</span>
+	{/if}
 	<SyncStatus />
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />
+{#if drafting}
+	<DraftDialog {editor} onclose={() => (drafting = false)} />
+{/if}

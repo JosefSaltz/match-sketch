@@ -14,6 +14,14 @@ export async function requireUser(event: RequestEvent): Promise<SignedInUser> {
 	return { id: claims.sub, email: typeof claims.email === 'string' ? claims.email : '' };
 }
 
+/** The verified user for an API route; otherwise a 401 (no redirect: the caller is code). */
+export async function requireApiUser(event: RequestEvent): Promise<SignedInUser> {
+	const { data, error: claimsError } = await event.locals.supabase.auth.getClaims();
+	const claims = claimsError ? null : data?.claims;
+	if (!claims?.sub) error(401, 'Sign in first');
+	return { id: claims.sub, email: typeof claims.email === 'string' ? claims.email : '' };
+}
+
 /** The verified user if their profile is an admin's; otherwise a 403. */
 export async function requireAdmin(event: RequestEvent): Promise<SignedInUser> {
 	const user = await requireUser(event);

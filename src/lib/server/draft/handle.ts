@@ -1,20 +1,18 @@
 import { DraftRequestSchema } from '../../draft/contract';
 import type { Database } from '../db/client';
 import { estimateCostUsd } from './cost';
-import { draftsToday, logDraft, spendToday, withDraftLock } from './limits';
-import { DRAFT_MODEL, draftLayout, type DraftClient, type DraftEffort } from './service';
+import { reserveDraft, settleDraft } from './limits';
+import { draftLayout, type DraftClient, type DraftEffort } from './service';
 
 /** The effort the eval settled on (tools/draft-eval/README.md). */
 export const DRAFT_EFFORT: DraftEffort = 'medium';
 
 export type DraftResponse = { status: number; body: unknown };
 
-const NO_USAGE = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, costUsd: 0 };
-
 /**
- * POST /api/drafts for a signed-in user (spec §7.5, §6): validate, one draft at a time per
- * user, the per-user daily cap, the site-wide spend ceiling, then the model; every request
- * that gets past validation is logged in ai_drafts.
+ * POST /api/drafts for a signed-in user (spec §7.5, §6): validate, then reserve the draft
+ * against the limits (one at a time per user, the daily cap, the spend ceiling, a site-wide
+ * running limit), then the model, then settle the reserved ai_drafts row with the real cost.
  */
 export async function handleDraft(options: {
 	db: Database;
@@ -37,33 +35,37 @@ export async function handleDraft(options: {
 		};
 	}
 	const request = parsed.data;
-	const logged = { ownerId, planId: request.planId, request, error: null };
 
-	const ran = await withDraftLock(db, ownerId, async (): Promise<DraftResponse> => {
-		if ((await draftsToday(db, ownerId)) >= cap) {
-			await logDraft(db, {
-				...logged,
-				...NO_USAGE,
-				model: DRAFT_MODEL,
-				status: 'capped',
-				response: {}
-			});
+	const reservation = await reserveDraft(db, {
+		ownerId,
+		planId: request.planId,
+		request,
+		cap,
+		ceilingUsd
+	});
+	switch (reservation.kind) {
+		case 'busy':
+			return {
+				status: 429,
+				body: { code: 'busy', message: 'A draft is already running for you.' }
+			};
+		case 'capped': {
 			const message = `You've used today's ${cap} drafts. Drafting resets at midnight UTC.`;
 			return { status: 429, body: { code: 'capped', cap, message } };
 		}
-		if ((await spendToday(db)) >= ceilingUsd) {
-			await logDraft(db, {
-				...logged,
-				...NO_USAGE,
-				model: DRAFT_MODEL,
-				status: 'paused',
-				response: {}
-			});
+		case 'paused':
 			return { status: 503, body: { code: 'paused', message: 'Drafting is paused for today.' } };
-		}
-		const outcome = await draftLayout({ client, request, effort });
-		await logDraft(db, {
-			...logged,
+		case 'site-busy':
+			return {
+				status: 503,
+				body: { code: 'site-busy', message: 'Drafting is busy right now. Try again in a minute.' }
+			};
+	}
+
+	// The model call holds no database connection; the reserved row is settled afterwards.
+	const outcome = await draftLayout({ client, request, effort });
+	try {
+		await settleDraft(db, reservation.id, {
 			model: outcome.model,
 			status: outcome.result.status,
 			inputTokens: outcome.usage.inputTokens,
@@ -73,9 +75,9 @@ export async function handleDraft(options: {
 			error: outcome.error,
 			response: outcome.result
 		});
-		return { status: 200, body: outcome.result };
-	});
-	return (
-		ran ?? { status: 429, body: { code: 'busy', message: 'A draft is already running for you.' } }
-	);
+	} catch (e) {
+		// The MD still gets the draft; the row stays pending and expires with its reserve.
+		console.error('Could not record a finished draft', e);
+	}
+	return { status: 200, body: outcome.result };
 }

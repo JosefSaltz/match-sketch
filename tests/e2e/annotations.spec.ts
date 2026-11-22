@@ -249,3 +249,31 @@ test.describe('lines and areas', () => {
 		await expect(props(page).getByRole('heading', { name: 'Measure line' })).toBeVisible();
 	});
 });
+
+test.describe('lines on touch', () => {
+	test.use({ hasTouch: true, viewport: { width: 1180, height: 820 } });
+
+	test('pinching with the measure tool armed zooms and draws no line', async ({ page }) => {
+		await page.getByTestId('tool-measure').click();
+		const w0 = (await page.getByTestId('bay').boundingBox())!.width;
+		const a = await bayPoint(page, 0.4, 0.5);
+		const b = await bayPoint(page, 0.6, 0.5);
+		const ev = (id: number, x: number, y: number) => ({
+			pointerType: 'touch',
+			isPrimary: id === 7,
+			pointerId: id,
+			bubbles: true,
+			clientX: x,
+			clientY: y
+		});
+		const stage = page.locator('svg[data-stage]');
+		await stage.dispatchEvent('pointerdown', ev(7, a.x, a.y));
+		await stage.dispatchEvent('pointerdown', ev(8, b.x, b.y));
+		await stage.dispatchEvent('pointermove', ev(8, b.x + 60, b.y));
+		await stage.dispatchEvent('pointermove', ev(8, b.x + 120, b.y));
+		await stage.dispatchEvent('pointerup', ev(8, b.x + 120, b.y));
+		await stage.dispatchEvent('pointerup', ev(7, a.x, a.y));
+		await expect(measures(page)).toHaveCount(0);
+		expect((await page.getByTestId('bay').boundingBox())!.width).toBeGreaterThan(w0 * 1.2);
+	});
+});

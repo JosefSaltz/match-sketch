@@ -4,6 +4,7 @@ import { emptyPlanDocument } from '../model/plan';
 import { createCanvas, updateCanvas } from '../store/canvases';
 import { createDb, type MatchSketchDB } from '../store/db';
 import { createMatch, updateMatch } from '../store/matches';
+import { MatchInputSchema } from '../store/records';
 import { createPlan, deletePlan, getPlan, savePlanDocument } from '../store/plans';
 import {
 	getSetting,
@@ -154,6 +155,14 @@ describe('syncOnce: conflicts', () => {
 			'Bay 5 (conflicted copy, Nov 22 3:04 PM)',
 			'SOF Day 2 (conflicted copy, Nov 22 3:04 PM)'
 		]);
+	});
+
+	it('shortens a long name so the copy still fits the 80-character limit', () => {
+		const long = 'DRRC SOF Multigun Championship 2026 — Day 2, Bays 1 to 7 (rifle)';
+		const name = conflictName(long, new Date('2026-11-22T15:04:00'));
+		expect(name.length).toBeLessThanOrEqual(80);
+		expect(name).toMatch(/^DRRC SOF Multigun.*… \(conflicted copy, Nov 22 3:04 PM\)$/);
+		expect(MatchInputSchema.safeParse({ name, date: '' }).success).toBe(true);
 	});
 
 	it('formats the conflicted name in a readable local time', () => {

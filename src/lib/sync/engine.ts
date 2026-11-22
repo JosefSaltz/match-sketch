@@ -55,11 +55,20 @@ type Dirty = { table: SyncTable; record: AnyRecord };
 
 const tableOf = (db: MatchSketchDB, table: SyncTable) => db.table<AnyRecord, string>(table);
 
-/** `"<name> (conflicted copy, Nov 22 3:04 PM)"` in the device's local time. */
+/** Names are at most this long (CanvasInputSchema, MatchInputSchema). */
+const MAX_NAME = 80;
+
+/**
+ * `"<name> (conflicted copy, Nov 22 3:04 PM)"` in the device's local time, with a long name
+ * shortened ("…") so the copy still passes validation and can sync.
+ */
 export function conflictName(name: string, at: Date): string {
 	const day = at.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 	const time = at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-	return `${name} (conflicted copy, ${day} ${time})`;
+	const suffix = ` (conflicted copy, ${day} ${time})`;
+	const room = MAX_NAME - suffix.length;
+	const base = name.length <= room ? name : `${name.slice(0, room - 1).trimEnd()}…`;
+	return `${base}${suffix}`;
 }
 
 function recordName(table: SyncTable, record: AnyRecord): string {

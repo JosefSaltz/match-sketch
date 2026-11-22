@@ -53,7 +53,7 @@ Don't use the Supabase MCP `apply_migration` tool for schema changes. It records
   - `DRAFT_DAILY_CAP` drafts per user per UTC day;
   - drafting pauses for everyone once the day's estimated spend reaches `DRAFT_DAILY_SPEND_USD`. A running draft counts at its worst case ($0.80) until it finishes.
 - **The admin page** shows today's spend against the ceiling.
-- **The eval** (`tools/draft-eval/README.md`) grades drafts of the seven reference stages. It costs money, so run it only on purpose: `ANTHROPIC_API_KEY=… pnpm eval:draft`.
+- **The eval** (`tools/draft-eval/README.md`) grades drafts of the seven reference stages. It costs money, so run it only on purpose: `RUN_DRAFT_EVAL=1 ANTHROPIC_API_KEY=… pnpm eval:draft`.
 
 ## Environment variables
 

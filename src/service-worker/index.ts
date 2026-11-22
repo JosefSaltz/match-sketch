@@ -5,6 +5,7 @@ import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
 import { resolve } from '$app/paths';
 import { self } from '$app/service-worker';
+import { networkFirst } from '../lib/net/network-first';
 
 /**
  * Lets a device that has signed in before open the app with no network (spec §7.9). The built
@@ -59,13 +60,13 @@ self.addEventListener('fetch', (event) => {
 	}
 
 	if (request.mode === 'navigate') {
-		// Network first, so a deploy shows at once; the cached shell when offline.
+		// Network first, so a deploy shows at once; the cached shell when offline or on weak signal.
 		event.respondWith(
-			fetch(request).catch(async () => {
-				const shell = await caches.match(SHELL);
-				if (shell) return shell;
-				throw new Error('Offline, and the app shell is not cached yet');
-			})
+			networkFirst(
+				() => fetch(request),
+				() => caches.match(SHELL),
+				3000
+			)
 		);
 	}
 });

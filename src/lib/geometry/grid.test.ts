@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { gridSpacing, scaleBar } from './grid';
+import { gridSpacing, scaleBar, visibleGridLines } from './grid';
 
 describe('gridSpacing', () => {
 	it('keeps the base spacing when lines are far enough apart', () => {
@@ -25,5 +25,30 @@ describe('scaleBar', () => {
 
 	it('is not fooled by floating point at the limit', () => {
 		expect(scaleBar(0.4, 'yd')).toEqual({ lengthFt: 300, label: '100 yd', px: 120 });
+	});
+});
+
+describe('visibleGridLines', () => {
+	it('returns interior lines of a fitted bay', () => {
+		const lines = visibleGridLines(
+			{ widthFt: 150, depthFt: 75 },
+			{ scale: 6, offsetX: 50, offsetY: 525 },
+			{ width: 1000, height: 600 },
+			15
+		);
+		expect(lines.xs).toEqual([15, 30, 45, 60, 75, 90, 105, 120, 135]);
+		expect(lines.ys).toEqual([15, 30, 45, 60]);
+	});
+
+	it('only returns lines on screen when zoomed far into a huge bay', () => {
+		// Review Focus #2: never one line per foot across a 3000 ft bay
+		const lines = visibleGridLines(
+			{ widthFt: 3000, depthFt: 3000 },
+			{ scale: 200, offsetX: 0, offsetY: 600 },
+			{ width: 1000, height: 600 },
+			1
+		);
+		expect(lines.xs.length).toBeLessThanOrEqual(6);
+		expect(lines.ys.length).toBeLessThanOrEqual(4);
 	});
 });

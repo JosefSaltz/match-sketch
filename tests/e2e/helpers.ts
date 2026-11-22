@@ -13,3 +13,14 @@ export async function createCanvas(page: Page, c: CanvasFields): Promise<void> {
 	await dialog.getByRole('button', { name: 'Save canvas' }).click();
 	await expect(page.getByRole('dialog')).toHaveCount(0);
 }
+
+/** From the home page: new plan on a saved canvas; returns the new plan's id. */
+export async function createPlanFromCanvas(page: Page, canvasName: string): Promise<string> {
+	await page.getByRole('link', { name: 'New plan' }).click();
+	await page.getByLabel('Use a saved canvas').check();
+	await page.getByRole('combobox', { name: 'Canvas' }).selectOption({ label: canvasName });
+	await page.getByRole('button', { name: 'Create plan' }).click();
+	await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/);
+	await expect(page.getByTestId('bay')).toBeVisible();
+	return page.url().split('/').at(-1)!;
+}

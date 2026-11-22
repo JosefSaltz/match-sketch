@@ -1,23 +1,23 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 
 	type Props = { title: string; onclose: () => void; children: Snippet };
 	let { title, onclose, children }: Props = $props();
 
-	let el: HTMLDialogElement;
 	const titleId = `dialog-${crypto.randomUUID()}`;
 
-	$effect(() => {
-		el.showModal();
+	/** Opens as a modal when mounted; the parent controls visibility with {#if}. */
+	const modal: Attachment<HTMLDialogElement> = (dialog) => {
+		dialog.showModal();
 		return () => {
-			if (el.open) el.close();
+			if (dialog.open) dialog.close();
 		};
-	});
+	};
 </script>
 
-<!-- Mounted only while open; the parent controls visibility with {#if}. -->
 <dialog
-	bind:this={el}
+	{@attach modal}
 	aria-labelledby={titleId}
 	oncancel={(e) => {
 		e.preventDefault();

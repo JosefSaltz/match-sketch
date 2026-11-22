@@ -1,4 +1,6 @@
+import type { CanvasSize, Size } from './types';
 import { formatNumber, toFeet, type LengthUnit } from './units';
+import { screenToWorld, type Viewport } from './viewport';
 
 const GRID_MULTIPLIERS = [1, 5, 10, 50, 100, 500, 1000];
 const NICE_LENGTHS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
@@ -31,5 +33,26 @@ export function scaleBar(
 		lengthFt,
 		label: `${formatNumber(chosen)} ${unit}`,
 		px: Math.round(lengthFt * pxPerFt * 100) / 100
+	};
+}
+
+/** Multiples of `spacingFt` strictly inside the bay and within the visible screen area. */
+export function visibleGridLines(
+	canvas: CanvasSize,
+	vp: Viewport,
+	screen: Size,
+	spacingFt: number
+): { xs: number[]; ys: number[] } {
+	const topLeft = screenToWorld({ x: 0, y: 0 }, vp);
+	const bottomRight = screenToWorld({ x: screen.width, y: screen.height }, vp);
+	const along = (lo: number, hi: number, limit: number) => {
+		const out: number[] = [];
+		const start = Math.max(spacingFt, Math.ceil(Math.max(lo, 0) / spacingFt) * spacingFt);
+		for (let v = start; v < limit - EPSILON && v <= hi + EPSILON; v += spacingFt) out.push(v);
+		return out;
+	};
+	return {
+		xs: along(topLeft.x, bottomRight.x, canvas.widthFt),
+		ys: along(bottomRight.y, topLeft.y, canvas.depthFt)
 	};
 }

@@ -1,6 +1,7 @@
 import { emptyPlanDocument } from '../../src/lib/model/plan';
 import { expect, test } from './fixtures';
 import { createCanvas, createPlanFromCanvas } from './helpers';
+import { signIn } from './support/accounts';
 import { accountId, eventually, otherDevice, pushed, synced, withSql } from './support/devices';
 
 const unassigned = (page: import('@playwright/test').Page) =>
@@ -50,41 +51,46 @@ test('a plan reaches another device, with its edits and its deletion', async ({
 	await other.context.close();
 });
 
-test('the first sign-in on a device uploads its plans from before accounts', async ({
-	page,
-	browser,
-	baseURL,
-	account
-}) => {
-	// Keep the plan unsynced (version 0), like one made before accounts existed.
-	await page.route('**/api/sync/**', (route) => route.abort());
-	await namedPlan(page, 'From before accounts');
-	await page.goto('/');
-	// Make the device look like it has never been signed in: no owner on record.
-	await page.evaluate(
-		() =>
-			new Promise<void>((resolve, reject) => {
-				const open = indexedDB.open('match-sketch');
-				open.onsuccess = () => {
-					const tx = open.result.transaction('settings', 'readwrite');
-					tx.objectStore('settings').delete('sync-owner');
-					tx.oncomplete = () => (open.result.close(), resolve());
-					tx.onerror = () => reject(tx.error ?? new Error('transaction failed'));
-				};
-				open.onerror = () => reject(open.error ?? new Error('open failed'));
-			})
-	);
-	await page.unroute('**/api/sync/**');
-	await page.reload();
-	await expect(
-		page.getByText('Added 1 plan and 1 canvas from this device to your account.')
-	).toBeVisible();
-	await synced(page);
-	const other = await otherDevice(browser, baseURL!, account);
-	await expect(unassigned(other.page).getByText('From before accounts')).toBeVisible({
-		timeout: 15_000
+test.describe('with requests routed', () => {
+	// page.route can't see requests that a service worker handles.
+	test.use({ serviceWorkers: 'block' });
+
+	test('the first sign-in on a device uploads its plans from before accounts', async ({
+		page,
+		browser,
+		baseURL,
+		account
+	}) => {
+		// Keep the plan unsynced (version 0), like one made before accounts existed.
+		await page.route('**/api/sync/**', (route) => route.abort());
+		await namedPlan(page, 'From before accounts');
+		await page.goto('/');
+		// Make the device look like it has never been signed in: no owner on record.
+		await page.evaluate(
+			() =>
+				new Promise<void>((resolve, reject) => {
+					const open = indexedDB.open('match-sketch');
+					open.onsuccess = () => {
+						const tx = open.result.transaction('settings', 'readwrite');
+						tx.objectStore('settings').delete('sync-owner');
+						tx.oncomplete = () => (open.result.close(), resolve());
+						tx.onerror = () => reject(tx.error ?? new Error('transaction failed'));
+					};
+					open.onerror = () => reject(open.error ?? new Error('open failed'));
+				})
+		);
+		await page.unroute('**/api/sync/**');
+		await page.reload();
+		await expect(
+			page.getByText('Added 1 plan and 1 canvas from this device to your account.')
+		).toBeVisible();
+		await synced(page);
+		const other = await otherDevice(browser, baseURL!, account);
+		await expect(unassigned(other.page).getByText('From before accounts')).toBeVisible({
+			timeout: 15_000
+		});
+		await other.context.close();
 	});
-	await other.context.close();
 });
 
 test('a plan saved by a newer app asks for a reload', async ({ page, account }) => {
@@ -102,4 +108,21 @@ test('a plan saved by a newer app asks for a reload', async ({ page, account }) 
 		page.getByText('A newer version of Match Sketch saved some of your plans. Reload to update.')
 	).toBeVisible({ timeout: 15_000 });
 	await expect(page.getByRole('button', { name: 'Reload' })).toBeVisible();
+});
+
+test('a plan link opened on a new device shows the plan once it arrives', async ({
+	page,
+	browser,
+	baseURL,
+	account
+}) => {
+	const planId = await namedPlan(page, 'Linked');
+	await pushed(page);
+	const context = await browser.newContext({ baseURL, reducedMotion: 'reduce' });
+	const fresh = await context.newPage();
+	// Signing in from the link lands straight on the plan, before the first pull.
+	await fresh.goto(`/sign-in?next=${encodeURIComponent(`/plans/${planId}`)}`);
+	await signIn(fresh, account);
+	await expect(fresh.getByRole('tab', { name: 'Brief' })).toBeVisible({ timeout: 15_000 });
+	await context.close();
 });

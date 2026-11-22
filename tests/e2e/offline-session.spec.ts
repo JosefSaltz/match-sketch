@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import { MD, SIGNED_OUT, signIn } from './support/accounts';
 
-test.use({ storageState: SIGNED_OUT });
+// page.route can't see requests that a service worker handles.
+test.use({ storageState: SIGNED_OUT, serviceWorkers: 'block' });
 
 /**
  * Signs in, then makes Supabase's token endpoint unreachable and lets the access token expire

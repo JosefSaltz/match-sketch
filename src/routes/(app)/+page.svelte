@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import { getSupabase } from '#lib/auth/client.js';
+	import { announceSignOut } from '#lib/auth/sign-out-broadcast.js';
 	import { signOutDevice } from '#lib/auth/session.js';
 	import { clearStoredSession } from '#lib/auth/stored-session.js';
 	import { APP_NAME } from '#lib/app-info.js';
@@ -134,6 +135,7 @@
 			}
 			await clearLocalData(getDb(), localStorage);
 		});
+		announceSignOut();
 		location.assign(resolve('/sign-in'));
 	}
 

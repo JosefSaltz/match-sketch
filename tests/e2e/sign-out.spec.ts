@@ -72,3 +72,13 @@ test("the device's theme survives signing out", async ({ page }) => {
 	await expect(page).toHaveURL(/\/sign-in/);
 	await expect(page.locator('html')).toHaveAttribute('data-theme', 'ranger-green');
 });
+
+test('signing out in one tab signs the other tabs out too', async ({ page, context }) => {
+	await page.goto('/');
+	const other = await context.newPage();
+	await other.goto('/');
+	await expect(other.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
+	await page.getByRole('button', { name: 'Sign out' }).click();
+	await expect(page).toHaveURL(/\/sign-in/);
+	await expect(other).toHaveURL(/\/sign-in/, { timeout: 5000 });
+});

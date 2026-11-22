@@ -46,6 +46,7 @@ import {
 	type ObjectPatch
 } from './ops';
 import { SaveQueue, type SaveStatus } from './save-queue';
+import { DragSwing } from './swing.svelte';
 
 export type { SaveStatus };
 
@@ -148,6 +149,8 @@ export class EditorState {
 	saveStatus = $state<SaveStatus>('saved');
 	canUndo = $state(false);
 	canRedo = $state(false);
+	/** The swing of the items being dragged (visual only). */
+	readonly swing = new DragSwing();
 	/** Which tab the right column shows. */
 	panel = $state<'properties' | 'brief'>('properties');
 	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
@@ -530,6 +533,7 @@ export class EditorState {
 		const delta = { x: target.x - anchor.x, y: target.y - anchor.y };
 		this.preview =
 			delta.x === 0 && delta.y === 0 ? null : moveItems(m.base, m.ids, delta, this.canvas);
+		this.swing.move(m.ids, screenPt);
 	}
 
 	#handle: HandleDrag | null = null;
@@ -619,12 +623,14 @@ export class EditorState {
 
 	/** Drops an in-progress move without changing the document (e.g. the browser took the pointer). */
 	cancelMove(): void {
+		this.swing.stop();
 		this.#move = null;
 		this.preview = null;
 	}
 
 	/** Commits the previewed move once; a press without movement changes nothing. */
 	endMove(): void {
+		this.swing.release();
 		const preview = this.preview;
 		this.#move = null;
 		if (preview) this.commit(preview);

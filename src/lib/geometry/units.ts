@@ -20,3 +20,8 @@ export function formatNumber(value: number): string {
 	const rounded = Math.round(value * 10) / 10;
 	return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
+
+/** "50 × 25 yd": width × depth in the display unit. */
+export function formatDimensions(widthFt: number, depthFt: number, unit: LengthUnit): string {
+	return `${formatNumber(fromFeet(widthFt, unit))} × ${formatNumber(fromFeet(depthFt, unit))} ${unit}`;
+}

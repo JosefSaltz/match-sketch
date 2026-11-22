@@ -17,6 +17,8 @@ from patterns.plaid import plaid
 from patterns.preview import write_review
 from patterns.render import render_webp, save_webp, trace_svg
 from patterns.seamless import neighbour_mismatch, seamless, wrap_mismatch
+from patterns.flat import find_period, flat_labels
+from patterns.grid import grid_tile
 from patterns.separate import photo_labels
 from patterns.sources import SUPPORTED_KINDS, fetch, load_manifest
 
@@ -33,17 +35,44 @@ def build(entry, svg: bool) -> dict:
         save_webp(img, out)
         seam = "n/a (woven)"
         palette = sorted({c for c, _ in entry.sett})
-        display = img.width
+        display = entry.display_width or img.width
     else:
         reference = fetch(entry, CACHE)
         src = Image.open(reference)
-        labels, sampled = photo_labels(
-            src, entry.colors, entry.work_width, tuple(entry.crop) if entry.crop else None
-        )
-        labels = seamless(labels, entry.seam_band, axes=(0, 1))
-        palette = entry.palette or sampled
-        render_webp(labels, palette, out, entry.tile_width)
-        display = entry.tile_width // 2
+        if entry.kind == "grid":
+            labels = grid_tile(
+                src, tuple(entry.cells), entry.cell_px, entry.coverage, entry.seed or 7
+            )
+            palette = entry.palette
+            render_webp(labels, palette, out, labels.shape[1], resample="nearest")
+        else:
+            if entry.kind == "flat":
+                labels, sampled = flat_labels(src, entry.colors)
+                # Keep any repeat the swatch already has; blend seams only where it has none.
+                axes = []
+                for axis in (0, 1):
+                    period = find_period(labels, axis)
+                    if period:
+                        labels = labels[:period] if axis == 0 else labels[:, :period]
+                    else:
+                        axes.append(axis)
+            else:
+                labels, sampled = photo_labels(
+                    src,
+                    entry.colors,
+                    entry.work_width,
+                    tuple(entry.crop) if entry.crop else None,
+                    medians=tuple(entry.medians or (7, 5)),
+                    min_px=entry.min_px or 60,
+                    flatten=entry.flatten,
+                )
+                axes = [0, 1]
+            if axes:
+                labels = seamless(labels, entry.seam_band, axes=tuple(axes))
+            # A calibrated palette replaces the sampled colors position by position (light to dark).
+            palette = entry.palette or sampled
+            render_webp(labels, palette, out, entry.tile_width)
+        display = entry.display_width or entry.tile_width // 2
         seam = f"{wrap_mismatch(labels):.3f} vs {neighbour_mismatch(labels):.3f} interior"
         if svg:
             trace_svg(labels, palette, OUT / f"{entry.id}.svg")
@@ -75,8 +104,10 @@ def main() -> int:
         if entry.kind not in SUPPORTED_KINDS:
             print(f"  {entry.id}: skipped ({entry.kind!r} sources are not supported yet)")
             continue
-        if entry.kind != "plaid" and not (entry.source and entry.source.url):
-            print(f"  {entry.id}: skipped (no downloadable source)")
+        if entry.kind != "plaid" and not (
+            entry.source and (entry.source.url or entry.source.cache_file)
+        ):
+            print(f"  {entry.id}: skipped (no source file)")
             continue
         results.append(build(entry, args.svg))
     if args.preview and results:

@@ -51,11 +51,26 @@
 
 	const drawnDepth = $derived(toDrawn(canvas.depthFt, depth));
 	const shown = $derived(view ?? { x: 0, y: 0, width: canvas.widthFt, height: drawnDepth });
-	/** Room inside the area: above for the downrange arrow, below for the scale bar. */
+	/**
+	 * Room around the bay so nothing printed is cut off: above for the downrange arrow and for
+	 * targets standing on the back line (a full symbol tall), at the sides for half a symbol and
+	 * labels (and the strip's distance ticks on the left), below for the scale bar.
+	 */
+	const pad = $derived({
+		top: symbolPx + 34,
+		bottom: Math.max(36, symbolPx / 2 + 20),
+		left: symbolPx / 2 + 14 + (depth ? 46 : 0),
+		right: symbolPx / 2 + 48
+	});
 	const inner = $derived(
 		view || bare
 			? area
-			: { x: area.x + 4, y: area.y + 30, width: area.width - 8, height: area.height - 62 }
+			: {
+					x: area.x + pad.left,
+					y: area.y + pad.top,
+					width: Math.max(1, area.width - pad.left - pad.right),
+					height: Math.max(1, area.height - pad.top - pad.bottom)
+				}
 	);
 	const scale = $derived(Math.min(inner.width / shown.width, inner.height / shown.height));
 	const vp: Viewport = $derived({
@@ -362,39 +377,23 @@
 
 {#if !bare}
 	{#if !view}
+		{@const ax = bay.x + bay.width / 2}
 		<g>
-			<line
-				x1={bay.x + bay.width / 2}
-				x2={bay.x + bay.width / 2}
-				y1={bay.y - 6}
-				y2={bay.y - 24}
-				stroke="#555"
-				stroke-width="1.5"
-			/>
+			<line x1={ax} x2={ax} y1={area.y + 28} y2={area.y + 10} stroke="#555" stroke-width="1.5" />
 			<path
-				d="M{bay.x + bay.width / 2 - 5} {bay.y - 18} L{bay.x + bay.width / 2} {bay.y - 26} L{bay.x +
-					bay.width / 2 +
-					5} {bay.y - 18}"
+				d="M{ax - 5} {area.y + 16} L{ax} {area.y + 8} L{ax + 5} {area.y + 16}"
 				fill="none"
 				stroke="#555"
 				stroke-width="1.5"
 			/>
-			<text
-				x={bay.x + bay.width / 2 + 9}
-				y={bay.y - 14}
-				font-family={FONT}
-				font-size="9"
-				fill="#555"
-			>
-				Downrange
+			<text x={ax + 9} y={area.y + 22} font-family={FONT} font-size="9" fill="#555">Downrange</text>
+		</g>
+		<g data-print-scalebar transform="translate({area.x + 6} {area.y + area.height - 10})">
+			<rect x="-4" y="-18" width={bar.px + (depth ? 130 : 30)} height="24" fill="#fff" />
+			<path d="M0 0H{bar.px}M0 -5V0M{bar.px} -5V0" fill="none" stroke={INK} stroke-width="1.5" />
+			<text x="0" y="-8" font-family={FONT} font-size="9" fill={INK}>
+				{bar.label}{depth ? ' · outside the strip' : ''}
 			</text>
 		</g>
 	{/if}
-	<g transform="translate({area.x + 6} {area.y + area.height - 10})">
-		<rect x="-4" y="-18" width={bar.px + (depth ? 130 : 30)} height="24" fill="#fff" />
-		<path d="M0 0H{bar.px}M0 -5V0M{bar.px} -5V0" fill="none" stroke={INK} stroke-width="1.5" />
-		<text x="0" y="-8" font-family={FONT} font-size="9" fill={INK}>
-			{bar.label}{depth ? ' · outside the strip' : ''}
-		</text>
-	</g>
 {/if}

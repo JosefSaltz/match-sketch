@@ -124,3 +124,60 @@ test.describe('a 40 × 300 yd bay', () => {
 		await expect(pages(page).first()).toContainText('150 yd');
 	});
 });
+
+test.describe('print edges (final review)', () => {
+	type Box = { x: number; y: number; width: number; height: number };
+	const inside = (b: Box, f: Box) =>
+		b.x >= f.x - 1 &&
+		b.y >= f.y - 1 &&
+		b.x + b.width <= f.x + f.width + 1 &&
+		b.y + b.height <= f.y + f.height + 1;
+
+	async function placeAt(page: Page, id: string, x: string, y: string) {
+		await dragFromPalette(page, id, await bayPoint(page, 0.5, 0.5));
+		for (const [label, v] of [
+			['X', x],
+			['Y', y]
+		] as const) {
+			await props(page).getByLabel(label).fill(v);
+			await props(page).getByLabel(label).press('Enter');
+		}
+	}
+
+	test('targets on the back line and objects at the sides print whole', async ({ page }) => {
+		await page.goto('/');
+		await createCanvas(page, { name: 'Deep bay', width: '40', depth: '100', unit: 'Yards' });
+		await createPlanFromCanvas(page, 'Deep bay');
+		await page.getByRole('combobox', { name: 'Symbol size' }).selectOption({ label: 'Large' });
+		await placeAt(page, 'paper', '20', '99.67');
+		await placeAt(page, 'paper', '0', '50');
+		await placeAt(page, 'popper', '40', '50');
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await openPrint(page);
+		const frame = (await page.getByTestId('print-diagram-frame').first().boundingBox())!;
+		for (const obj of await pages(page).first().locator('[data-print-object]').all()) {
+			expect(inside((await obj.boundingBox())!, frame)).toBe(true);
+		}
+		const arrow = (await pages(page).first().getByText('Downrange').boundingBox())!;
+		const back = (await pages(page).first().locator('[data-print-object]').first().boundingBox())!;
+		expect(arrow.y + arrow.height).toBeLessThanOrEqual(back.y + 1);
+	});
+
+	test('tile pages show the downrange arrow and keep the start corner clear', async ({ page }) => {
+		await page.goto('/');
+		await createCanvas(page, { name: 'Long bay', width: '40', depth: '300', unit: 'Yards' });
+		await createPlanFromCanvas(page, 'Long bay');
+		await placeAt(page, 'shooting-position', '1', '1');
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await openPrint(page);
+		await page.getByLabel('Diagram').selectOption({ label: 'Tile' });
+		await page.getByLabel('Tile scale').selectOption({ label: '1 in = 10 yd' });
+		const tile = pages(page).nth(1);
+		await expect(tile).toContainText('Downrange');
+		const frame = (await tile.getByTestId('print-diagram-frame').boundingBox())!;
+		const bar = (await tile.locator('[data-print-scalebar]').boundingBox())!;
+		expect(bar.y + bar.height).toBeLessThanOrEqual(frame.y + 1);
+		const sa = (await tile.locator('[data-print-object="shooting-position"]').boundingBox())!;
+		expect(sa.y + sa.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+	});
+});

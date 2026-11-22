@@ -50,7 +50,8 @@ Update this table as plans are written and finished.
 - **Spec:** §7.7 (style rules, catalog entry shape, first symbol set), anti-goals in §2 (no legend needed, black-and-white legible, original art only).
 - **User checkpoint first:** draw a sample of about 8 symbols in 2–3 style directions (targets drawn standing up; footprints from above) and get the user's pick **before** drawing the full set. Use the visual companion or an HTML preview for side-by-side comparison.
 - **Builds:**
-  - The full first symbol set from §7.7: about 16 targets, about 26 props and structures, and about 7 areas and markers. It replaces the Plan 1 placeholders and **keeps their ids** (`paper`, `popper`, `steel-static`, `barrel`, `dump-box`, `shooting-position`, `wall`, `shooting-box`, `start-box`, `fault-line`).
+  - The full first symbol set from §7.7: about 16 targets, about 26 props and structures, and about 7 areas and markers. It replaces the Plan 1 placeholders and **keeps their ids** (`paper`, `popper`, `popper-static`, `popper-trigger`, `popper-auto-reset`, `steel-static`, `barrel`, `dump-box`, `shooting-position`, `wall`, `shooting-box`, `start-box`, `fault-line`).
+  - Families for every target type with variants (paper, poppers, plates, movers…), so the palette groups them (spec §7.1, §7.7). Plan 1 adds the `family` field and the Poppers family.
   - Aliases for search and for the model in Plan 6.
   - Footprint styles beyond solid/outline/line as needed: walls with windows or ports, fences, berms.
 - **Tests:** catalog invariants (unique ids, every symbol has an SVG, footprints have sizes, aliases unique within the catalog); a Playwright visual check that every symbol renders at all three sizes without clipping; a grayscale screenshot review with the user.

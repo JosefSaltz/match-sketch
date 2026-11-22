@@ -13,18 +13,17 @@ test('the editor bar is themed and the wordmark links home', async ({ page }) =>
 	await expect(page).toHaveURL(/\/$/);
 });
 
-test('the side panels start with patterned title strips', async ({ page }) => {
+test('the side panels start with patterned strips', async ({ page }) => {
 	const base = await themeBaseRgb(page);
-	for (const [panel, title] of [
-		['Symbols', 'Symbols'],
-		['Properties', 'Properties']
-	]) {
-		const heading = page.getByRole('complementary', { name: panel }).getByRole('heading', {
-			name: title
-		});
-		await expect(heading).toBeVisible();
-		await expect(heading.locator('..')).toHaveCSS('background-color', base);
-	}
+	const heading = page
+		.getByRole('complementary', { name: 'Symbols' })
+		.getByRole('heading', { name: 'Symbols' });
+	await expect(heading).toBeVisible();
+	await expect(heading.locator('..')).toHaveCSS('background-color', base);
+	// The right column's strip holds its tabs (Properties | Brief).
+	const tabs = page.getByRole('complementary', { name: 'Inspector' }).getByRole('tablist');
+	await expect(tabs.getByRole('tab', { name: 'Properties' })).toBeVisible();
+	await expect(tabs).toHaveCSS('background-color', base);
 });
 
 test('the stage stays white under a patterned theme (Review Focus #1)', async ({ page }) => {

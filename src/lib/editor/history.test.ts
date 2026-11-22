@@ -24,4 +24,21 @@ describe('history', () => {
 		expect(lim.current).toBe(2);
 		expect(lim.canUndo).toBe(false);
 	});
+
+	it('replace swaps the current value without adding an undo step', () => {
+		const h = createHistory(1);
+		h.push(2);
+		h.replace(3);
+		expect(h.current).toBe(3);
+		expect(h.undo()).toBe(1);
+		expect(h.redo()).toBe(3);
+	});
+
+	it('replace clears redo', () => {
+		const h = createHistory(1);
+		h.push(2);
+		h.undo();
+		h.replace(5);
+		expect(h.canRedo).toBe(false);
+	});
 });

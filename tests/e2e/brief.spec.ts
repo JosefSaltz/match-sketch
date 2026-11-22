@@ -87,3 +87,33 @@ test('notes sections can be added, filled and removed', async ({ page }) => {
 	await brief(page).getByRole('button', { name: 'Remove section' }).click();
 	await expect(brief(page).getByLabel('Title')).toHaveCount(0);
 });
+
+test('targets tally follows the diagram and can be overridden', async ({ page }) => {
+	await dragFromPalette(page, 'paper', await bayPoint(page, 0.3, 0.5));
+	await dragFromPalette(page, 'paper', await bayPoint(page, 0.5, 0.5));
+	await dragFromPalette(page, 'popper', await bayPoint(page, 0.7, 0.5));
+	await page.getByTestId('object').first().click();
+	await props(page).getByLabel('Count').fill('3');
+	await props(page).getByLabel('Count').press('Enter');
+	await openBrief(page);
+	await expect(brief(page).getByTestId('targets-tally')).toHaveText(
+		'4 paper targets, 1 knock-down popper'
+	);
+	await brief(page).getByRole('button', { name: 'Override' }).click();
+	const targets = brief(page).getByLabel('Targets');
+	await expect(targets).toHaveValue('4 paper targets, 1 knock-down popper');
+	await targets.fill('4 paper, 1 popper (activator)');
+	await targets.blur();
+	await page.reload();
+	await openBrief(page);
+	await expect(brief(page).getByLabel('Targets')).toHaveValue('4 paper, 1 popper (activator)');
+	await brief(page).getByRole('button', { name: 'Use computed tally' }).click();
+	await expect(brief(page).getByTestId('targets-tally')).toHaveText(
+		'4 paper targets, 1 knock-down popper'
+	);
+});
+
+test('an empty diagram says there are no targets yet', async ({ page }) => {
+	await openBrief(page);
+	await expect(brief(page).getByTestId('targets-tally')).toHaveText('No targets yet');
+});

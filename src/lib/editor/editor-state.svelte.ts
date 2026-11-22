@@ -15,7 +15,7 @@ import {
 	zoomLimitsFor,
 	type Viewport
 } from '../geometry/viewport';
-import { depthMapFor, type DepthMap } from '../geometry/depth-map';
+import { depthMapFor, toDrawn, toTrue, type DepthMap } from '../geometry/depth-map';
 import {
 	emptyPlanDocument,
 	type Anchor,
@@ -61,7 +61,8 @@ export type AnnotationTool = 'text' | 'arrow' | 'measure';
 type MoveDrag = {
 	ids: string[];
 	anchorId: string;
-	startWorld: Point;
+	/** Screen offset from the press to the grabbed item's position, kept under the pointer. */
+	grab: Point;
 	base: PlanDocument;
 	/** Where the press started on screen; nothing moves until the pointer leaves the slop. */
 	startScreen: Point;
@@ -497,10 +498,12 @@ export class EditorState {
 	 */
 	beginMove(id: string, screenPt: Point, slopPx = TAP_SLOP_PX): void {
 		const ids = this.selection.includes(id) ? this.selection : [id];
+		const anchor = itemPosition(this.#current, id);
+		const at = anchor ? worldToScreen(anchor, this.viewport) : screenPt;
 		this.#move = {
 			ids,
 			anchorId: id,
-			startWorld: screenToWorld(screenPt, this.viewport),
+			grab: { x: at.x - screenPt.x, y: at.y - screenPt.y },
 			base: this.#current,
 			startScreen: screenPt,
 			slopPx,
@@ -518,9 +521,10 @@ export class EditorState {
 		}
 		const anchor = itemPosition(m.base, m.anchorId);
 		if (!anchor) return;
-		const w = screenToWorld(screenPt, this.viewport);
+		// The grabbed item's point stays at the same screen offset from the pointer, so it lands
+		// under the hand even across a scale break; the rest of the selection follows in true feet.
 		const target = snapPoint(
-			{ x: anchor.x + w.x - m.startWorld.x, y: anchor.y + w.y - m.startWorld.y },
+			screenToWorld({ x: screenPt.x + m.grab.x, y: screenPt.y + m.grab.y }, this.viewport),
 			this.snapStep()
 		);
 		const delta = { x: target.x - anchor.x, y: target.y - anchor.y };
@@ -545,10 +549,20 @@ export class EditorState {
 				y: ((obj.depthFt ?? entry.footprint.depthFt) / 2) * (corner.startsWith('n') ? 1 : -1)
 			};
 			const off = rotateWorld(half, obj.rotation);
-			const press = screenToWorld(screenPt, this.viewport);
+			const press = this.#localPoint(obj, screenPt);
 			grab = { x: obj.x + off.x - press.x, y: obj.y + off.y - press.y };
 		}
 		this.#handle = { kind: 'resize', id, corner, grab, base };
+	}
+
+	/**
+	 * A screen point in an object's drawn frame: feet from the object's position at the stage's
+	 * scale, as drawn. Footprints draw at full scale even inside a scale break, so handles work here.
+	 */
+	#localPoint(obj: Point, screenPt: Point): Point {
+		const c = worldToScreen(obj, this.viewport);
+		const s = this.viewport.scale;
+		return { x: obj.x + (screenPt.x - c.x) / s, y: obj.y + (c.y - screenPt.y) / s };
 	}
 
 	beginRotate(id: string): void {
@@ -561,9 +575,14 @@ export class EditorState {
 		if (!h) return;
 		const obj = h.base.objects.find((o) => o.id === h.id);
 		if (!obj) return;
-		const world = screenToWorld(screenPt, this.viewport);
 		if (h.kind === 'rotate') {
-			const rotation = angleFromPointer(obj, world, opts.shiftKey ? null : ROTATE_SNAP_DEG);
+			// Measured on screen (y flipped so up is downrange), so a break can't skew the angle.
+			const c = worldToScreen(obj, this.viewport);
+			const rotation = angleFromPointer(
+				{ x: c.x, y: -c.y },
+				{ x: screenPt.x, y: -screenPt.y },
+				opts.shiftKey ? null : ROTATE_SNAP_DEG
+			);
 			this.preview =
 				rotation === obj.rotation ? null : setObjectProps(h.base, h.id, { rotation }, this.canvas);
 			return;
@@ -577,9 +596,12 @@ export class EditorState {
 			widthFt: obj.widthFt ?? entry.footprint.widthFt,
 			depthFt: obj.depthFt ?? entry.footprint.depthFt
 		};
-		const pointer = { x: world.x + h.grab.x, y: world.y + h.grab.y };
+		const local = this.#localPoint(obj, screenPt);
+		const pointer = { x: local.x + h.grab.x, y: local.y + h.grab.y };
 		const next = resizeFromCorner(box, h.corner, pointer, this.snapStep(), MIN_SIZE_FT);
-		this.preview = setObjectProps(h.base, h.id, next, this.canvas);
+		// The new center was found in the drawn frame; map its depth back to true feet.
+		const y = toTrue(toDrawn(obj.y, this.depth) + (next.y - obj.y), this.depth);
+		this.preview = setObjectProps(h.base, h.id, { ...next, y }, this.canvas);
 	}
 
 	/** Commits the previewed handle drag once; a press without a change commits nothing. */

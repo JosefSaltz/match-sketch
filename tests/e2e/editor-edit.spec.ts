@@ -145,3 +145,14 @@ test('a typed label is kept when you click another object', async ({ page }) => 
 	await copy.click();
 	await expect(original.getByTestId('object-label')).toHaveText('Z9');
 });
+
+test('Delete during a drag stays deleted when the drag ends', async ({ page }) => {
+	const o = (await page.getByTestId('object').boundingBox())!;
+	await page.mouse.move(o.x + o.width / 2, o.y + o.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(o.x + o.width / 2 + 40, o.y + o.height / 2, { steps: 4 });
+	await page.keyboard.press('Delete');
+	await page.mouse.move(o.x + o.width / 2 + 60, o.y + o.height / 2, { steps: 2 });
+	await page.mouse.up();
+	await expect(page.getByTestId('object')).toHaveCount(0);
+});

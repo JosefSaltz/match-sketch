@@ -1,13 +1,13 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
-import type { createServerClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
 			/** Per-request server client; verify the user with `getClaims()`. */
-			supabase: ReturnType<typeof createServerClient>;
+			supabase: SupabaseClient;
 		}
 		// interface PageData {}
 		// interface PageState {}

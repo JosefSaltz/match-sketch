@@ -9,5 +9,6 @@ export const load: LayoutLoad = async ({ url }) => {
 	if (sessionState({ session: data.session, error }) === 'signed-out') {
 		redirect(307, `/sign-in?next=${encodeURIComponent(url.pathname + url.search)}`);
 	}
-	return { account: { email: data.session?.user.email ?? null } };
+	const user = data.session?.user;
+	return { account: { id: user?.id ?? null, email: user?.email ?? null } };
 };

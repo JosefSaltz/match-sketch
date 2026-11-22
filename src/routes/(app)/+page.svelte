@@ -61,7 +61,24 @@
 		matches = await listMatches(getDb());
 	}
 
+	let isAdmin = $state(false);
+
+	/** Shows the Admin link. RLS lets a user read only their own profile; errors leave it hidden. */
+	async function checkAdmin(id: string) {
+		try {
+			const { data: profile } = await getSupabase()
+				.from('profiles')
+				.select('role')
+				.eq('id', id)
+				.maybeSingle();
+			isAdmin = profile?.role === 'admin';
+		} catch {
+			// Offline: the link stays hidden.
+		}
+	}
+
 	onMount(() => {
+		if (data.account.id) void checkAdmin(data.account.id);
 		void refreshPlans();
 		void refreshCanvases();
 		void refreshMatches();
@@ -147,6 +164,9 @@
 			<Button href={resolve('plans/new')}>New plan</Button>
 			<Button onclick={() => (creatingMatch = true)}>New match</Button>
 			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
+			{#if isAdmin}
+				<Button href={resolve('/admin')}>Admin</Button>
+			{/if}
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 			{#if data.account.email}
 				<span class="text-sm text-muted">{data.account.email}</span>

@@ -15,24 +15,48 @@ def srgb_to_lab(rgb: np.ndarray) -> np.ndarray:
     return np.stack([116 * f[:, 1] - 16, 500 * (f[:, 0] - f[:, 1]), 200 * (f[:, 1] - f[:, 2])], 1)
 
 
-def kmeans(x: np.ndarray, k: int, iters: int = 30, seed: int = 0) -> np.ndarray:
+def kmeans(
+    x: np.ndarray, k: int, weights: np.ndarray | None = None, iters: int = 30, seed: int = 0,
+    tries: int = 5,
+) -> np.ndarray:
+    """Weighted k-means with k-means++ seeding (best of `tries`)."""
+    w = np.ones(len(x)) if weights is None else np.asarray(weights, float)
     rng = np.random.default_rng(seed)
-    centers = x[rng.choice(len(x), k, replace=False)]
-    for _ in range(iters):
-        assign = np.argmin(((x[:, None] - centers[None]) ** 2).sum(-1), 1)
-        centers = np.stack(
-            [x[assign == i].mean(0) if np.any(assign == i) else centers[i] for i in range(k)]
-        )
-    return centers
+    best, best_cost = None, np.inf
+    for _ in range(tries):
+        centers = [x[rng.choice(len(x), p=w / w.sum())]]
+        for _ in range(1, k):
+            d2 = np.min(((x[:, None] - np.array(centers)[None]) ** 2).sum(-1), 1) * w
+            centers.append(x[rng.choice(len(x), p=d2 / d2.sum())])
+        centers = np.array(centers)
+        for _ in range(iters):
+            assign = np.argmin(((x[:, None] - centers[None]) ** 2).sum(-1), 1)
+            centers = np.stack(
+                [
+                    np.average(x[assign == i], axis=0, weights=w[assign == i])
+                    if np.any(assign == i)
+                    else centers[i]
+                    for i in range(k)
+                ]
+            )
+        cost = (np.min(((x[:, None] - centers[None]) ** 2).sum(-1), 1) * w).sum()
+        if cost < best_cost:
+            best, best_cost = centers, cost
+    return best
 
 
 def _assign(rgb: np.ndarray, k: int) -> np.ndarray:
-    """k-means in CIE Lab on a sample, then label every pixel."""
+    """Cluster the distinct colors present (Lab rounded to 3 units), each weighted by the square
+    root of its pixel count, then label every pixel by its nearest cluster. Square-root weights
+    keep a large ground color from outvoting small distinct ones (a camo's white rocks) without
+    letting the many in-between colors along shape edges form clusters of their own."""
     flat = rgb.reshape(-1, 3).astype(float)
     lab = srgb_to_lab(flat)
-    rng = np.random.default_rng(1)
-    sample = lab[rng.choice(len(lab), min(60_000, len(lab)), replace=False)]
-    centers = kmeans(sample, k)
+    bins, counts = np.unique(np.round(lab / 3), axis=0, return_counts=True)
+    if len(bins) > 20_000:
+        keep = np.argsort(-counts)[:20_000]
+        bins, counts = bins[keep], counts[keep]
+    centers = kmeans(bins * 3, k, weights=np.sqrt(counts))
     return np.argmin(((lab[:, None] - centers[None]) ** 2).sum(-1), 1).reshape(rgb.shape[:2])
 
 
@@ -54,8 +78,10 @@ def photo_labels(
     crop: tuple[int, int, int, int] | None = None,
     medians: tuple[int, ...] = (7, 5),
     min_px: int = 60,
+    flatten: bool = True,
 ) -> tuple[np.ndarray, list[str]]:
-    """Fabric photo -> label map: even out lighting, denoise, k-means, drop specks.
+    """Reference image -> label map: even out lighting (fabric photos only; it would pull a
+    digital swatch's large patches toward the average), denoise, k-means, drop specks.
 
     Returns the labels (light to dark) and each color sampled from the untouched photo.
     """
@@ -64,8 +90,10 @@ def photo_labels(
         img = img.crop(crop)
     img = img.resize((work_width, round(img.height * work_width / img.width)), Image.LANCZOS)
     original = np.asarray(img).astype(float)
-    light = np.stack([ndimage.gaussian_filter(original[..., c], 120) for c in range(3)], -1)
-    flat = np.clip(original / light * light.reshape(-1, 3).mean(0), 0, 255)
+    flat = original
+    if flatten:
+        light = np.stack([ndimage.gaussian_filter(original[..., c], 120) for c in range(3)], -1)
+        flat = np.clip(original / light * light.reshape(-1, 3).mean(0), 0, 255)
     den = Image.fromarray(flat.astype(np.uint8))
     for size in medians:
         den = den.filter(ImageFilter.MedianFilter(size))

@@ -2,7 +2,7 @@ import { getEntry, type CatalogEntry } from '../catalog/index';
 import { snapPoint } from '../geometry/snap';
 import { normalizeDegrees } from '../geometry/transform';
 import type { CanvasSize, Point } from '../geometry/types';
-import type { PlanDocument, PlanObject } from '../model/plan';
+import type { Anchor, PlanDocument, PlanObject } from '../model/plan';
 import { nextLabel } from './labels';
 
 export const MIN_SIZE_FT = 0.5;
@@ -13,7 +13,7 @@ export type ObjectPatch = Partial<
 	Pick<PlanObject, 'x' | 'y' | 'rotation' | 'label' | 'count' | 'widthFt' | 'depthFt'>
 >;
 
-function clampInside(p: Point, canvas: CanvasSize): Point {
+export function clampInside(p: Point, canvas: CanvasSize): Point {
 	return {
 		x: Math.min(canvas.widthFt, Math.max(0, p.x)),
 		y: Math.min(canvas.depthFt, Math.max(0, p.y))
@@ -44,18 +44,26 @@ export function addObject(
 	return { doc: { ...doc, objects: [...doc.objects, obj] }, id };
 }
 
-/** Moves the objects by one shared delta, stopped at the bay edge so the group keeps its shape. */
-export function moveObjects(
+/**
+ * Moves objects, text labels, and the free (point) ends of selected lines by one shared delta,
+ * stopped at the bay edge so the group keeps its shape. Ends attached to objects stay attached.
+ */
+export function moveItems(
 	doc: PlanDocument,
 	ids: string[],
 	delta: Point,
 	canvas: CanvasSize
 ): PlanDocument {
 	const selected = new Set(ids);
-	const moving = doc.objects.filter((o) => selected.has(o.id));
-	if (moving.length) {
-		const xs = moving.map((o) => o.x);
-		const ys = moving.map((o) => o.y);
+	const points: Point[] = doc.objects.filter((o) => selected.has(o.id));
+	for (const a of doc.annotations) {
+		if (!selected.has(a.id)) continue;
+		if (a.type === 'text') points.push(a);
+		else for (const end of [a.from, a.to]) if (end.kind === 'point') points.push(end);
+	}
+	if (points.length) {
+		const xs = points.map((p) => p.x);
+		const ys = points.map((p) => p.y);
 		const clampDelta = (d: number, lo: number, hi: number) =>
 			lo <= hi ? Math.min(hi, Math.max(lo, d)) : d;
 		delta = {
@@ -63,13 +71,17 @@ export function moveObjects(
 			y: clampDelta(delta.y, -Math.min(...ys), canvas.depthFt - Math.max(...ys))
 		};
 	}
+	const shift = (p: Point) => clampInside({ x: p.x + delta.x, y: p.y + delta.y }, canvas);
+	const shiftEnd = (end: Anchor): Anchor =>
+		end.kind === 'point' ? { kind: 'point', ...shift(end) } : end;
 	return {
 		...doc,
-		objects: doc.objects.map((o) =>
-			selected.has(o.id)
-				? { ...o, ...clampInside({ x: o.x + delta.x, y: o.y + delta.y }, canvas) }
-				: o
-		)
+		objects: doc.objects.map((o) => (selected.has(o.id) ? { ...o, ...shift(o) } : o)),
+		annotations: doc.annotations.map((a) => {
+			if (!selected.has(a.id)) return a;
+			if (a.type === 'text') return { ...a, ...shift(a) };
+			return { ...a, from: shiftEnd(a.from), to: shiftEnd(a.to) };
+		})
 	};
 }
 
@@ -101,9 +113,24 @@ export function setObjectProps(
 	};
 }
 
-export function deleteObjects(doc: PlanDocument, ids: string[]): PlanDocument {
+/**
+ * Deletes objects and annotations by id. A line attached to a deleted object keeps its end where
+ * the object was, as a free point, so the MD's line survives (undo restores the attachment).
+ */
+export function deleteItems(doc: PlanDocument, ids: string[]): PlanDocument {
 	const remove = new Set(ids);
-	return { ...doc, objects: doc.objects.filter((o) => !remove.has(o.id)) };
+	const gone = new Map(doc.objects.filter((o) => remove.has(o.id)).map((o) => [o.id, o]));
+	const detach = (end: Anchor): Anchor => {
+		const o = end.kind === 'object' ? gone.get(end.objectId) : undefined;
+		return o ? { kind: 'point', x: o.x, y: o.y } : end;
+	};
+	return {
+		...doc,
+		objects: doc.objects.filter((o) => !remove.has(o.id)),
+		annotations: doc.annotations
+			.filter((a) => !remove.has(a.id))
+			.map((a) => (a.type === 'text' ? a : { ...a, from: detach(a.from), to: detach(a.to) }))
+	};
 }
 
 export function duplicateObjects(

@@ -36,6 +36,31 @@ export const StageBriefSchema = z.object({
 });
 export type StageBrief = z.infer<typeof StageBriefSchema>;
 
+/** Where an end of an arrow or measure line sits: on an object (follows it) or a fixed point. */
+export const AnchorSchema = z.discriminatedUnion('kind', [
+	z.object({ kind: z.literal('object'), objectId: z.uuid() }),
+	z.object({ kind: z.literal('point'), x: finite, y: finite })
+]);
+export type Anchor = z.infer<typeof AnchorSchema>;
+
+const link = { id: z.uuid(), from: AnchorSchema, to: AnchorSchema };
+
+/** Text labels, movement arrows and measure lines, drawn at a fixed size (spec §7.3). */
+export const AnnotationSchema = z.discriminatedUnion('type', [
+	z.object({
+		id: z.uuid(),
+		type: z.literal('text'),
+		x: finite,
+		y: finite,
+		text: z.string().min(1).max(200)
+	}),
+	z.object({ type: z.literal('arrow'), ...link }),
+	z.object({ type: z.literal('measure'), ...link })
+]);
+export type Annotation = z.infer<typeof AnnotationSchema>;
+export type TextAnnotation = Extract<Annotation, { type: 'text' }>;
+export type LinkAnnotation = Extract<Annotation, { type: 'arrow' | 'measure' }>;
+
 export const ScaleBreakSchema = z
 	.object({ fromFt: finite, toFt: finite })
 	.refine((b) => b.fromFt < b.toFt, 'A scale break must start before it ends');
@@ -51,8 +76,7 @@ export type PlanDisplay = z.infer<typeof PlanDisplaySchema>;
 export const PlanDocumentSchema = z.object({
 	brief: StageBriefSchema,
 	objects: z.array(PlanObjectSchema),
-	// Plan 2 defines annotations (text, arrows, measure lines); empty until then.
-	annotations: z.array(z.unknown()).max(0),
+	annotations: z.array(AnnotationSchema),
 	scaleBreaks: z.array(ScaleBreakSchema),
 	display: PlanDisplaySchema
 });

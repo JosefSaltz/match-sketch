@@ -25,10 +25,10 @@ import { movedBeyond, TAP_SLOP_PX } from './gestures';
 import { createHistory, type History } from './history';
 import {
 	addObject,
-	deleteObjects,
+	deleteItems,
 	duplicateObjects,
 	MIN_SIZE_FT,
-	moveObjects,
+	moveItems,
 	reorder,
 	setObjectProps,
 	type ObjectPatch
@@ -96,6 +96,8 @@ export class EditorState {
 	selection = $state.raw<string[]>([]);
 	/** The selected objects, in document order. */
 	selectedObjects = $derived(this.doc.objects.filter((o) => this.selection.includes(o.id)));
+	/** The selected annotations, in document order. */
+	selectedAnnotations = $derived(this.doc.annotations.filter((a) => this.selection.includes(a.id)));
 	armedSymbolId = $state<string | null>(null);
 	saveStatus = $state<SaveStatus>('saved');
 	canUndo = $state(false);
@@ -153,8 +155,10 @@ export class EditorState {
 		this.preview = null;
 		this.canUndo = this.#history.canUndo;
 		this.canRedo = this.#history.canRedo;
-		// Undo can remove selected objects; keep only those that still exist.
-		const kept = this.selection.filter((id) => doc.objects.some((o) => o.id === id));
+		// Undo can remove selected items; keep only those that still exist.
+		const kept = this.selection.filter(
+			(id) => doc.objects.some((o) => o.id === id) || doc.annotations.some((a) => a.id === id)
+		);
 		if (kept.length !== this.selection.length) this.selection = kept;
 		// One timestamp per edit, shared by the journal and the stored plan, so recovery can tell
 		// which is newer even when an earlier save lands after this edit was journaled.
@@ -229,7 +233,7 @@ export class EditorState {
 
 	deleteSelected(): void {
 		if (!this.selection.length) return;
-		this.commit(deleteObjects(this.#current, this.selection));
+		this.commit(deleteItems(this.#current, this.selection));
 		this.selection = [];
 	}
 
@@ -257,7 +261,7 @@ export class EditorState {
 			up: { x: 0, y: s },
 			down: { x: 0, y: -s }
 		}[dir];
-		this.commit(moveObjects(this.#current, this.selection, delta, this.canvas));
+		this.commit(moveItems(this.#current, this.selection, delta, this.canvas));
 	}
 
 	setProps(id: string, patch: ObjectPatch): void {
@@ -349,7 +353,7 @@ export class EditorState {
 		);
 		const delta = { x: target.x - anchor.x, y: target.y - anchor.y };
 		this.preview =
-			delta.x === 0 && delta.y === 0 ? null : moveObjects(m.base, m.ids, delta, this.canvas);
+			delta.x === 0 && delta.y === 0 ? null : moveItems(m.base, m.ids, delta, this.canvas);
 	}
 
 	#handle: HandleDrag | null = null;

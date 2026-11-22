@@ -87,6 +87,17 @@ describe('recoverUnsavedEdits', () => {
 		expect(s.map.size).toBe(0);
 	});
 
+	it('opens with the journaled document if writing it back fails', async () => {
+		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const gone = { ...plan, id: crypto.randomUUID() }; // not in the store, so saving throws
+		const s = memoryStorage();
+		writeJournal(s, gone.id, docWith('Kept'), '2999-01-01T00:00:00.000Z');
+		const recovered = await recoverUnsavedEdits(db, s, gone);
+		expect(recovered.document.brief.stageName).toBe('Kept');
+		expect(s.map.has(journalKey(gone.id))).toBe(true);
+	});
+
 	it('leaves the plan alone when there is nothing newer', async () => {
 		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
 		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });

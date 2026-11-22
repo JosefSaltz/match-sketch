@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Attachment } from 'svelte/attachments';
+	import type { Corner } from '#lib/geometry/transform.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import { movedBeyond, PointerGestures } from '../gestures.js';
@@ -17,6 +18,8 @@
 	let tap: { pointerId: number; start: Point } | null = null;
 	/** The pointer dragging the selection, if any. */
 	let moving: number | null = null;
+	/** The pointer dragging a resize or rotate handle, if any. */
+	let handling: number | null = null;
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -51,12 +54,22 @@
 
 	function onDown(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
-		if (moving !== null) return; // Extra pointers are ignored while dragging the selection.
+		// Extra pointers are ignored while dragging the selection or a handle.
+		if (moving !== null || handling !== null) return;
 		// Commit a field being edited before the selection changes under it.
 		(document.activeElement as HTMLElement | null)?.blur();
 		const p = local(e);
 		capture(e);
 		const armed = editor.armedSymbolId;
+		const handle = armed ? null : (e.target as Element).closest('[data-handle]');
+		const selected = editor.selection.length === 1 ? editor.selection[0] : null;
+		if (handle && selected) {
+			const kind = handle.getAttribute('data-handle')!;
+			handling = e.pointerId;
+			if (kind === 'rotate') editor.beginRotate(selected);
+			else editor.beginResize(selected, kind as Corner, p);
+			return;
+		}
 		const hit = armed ? null : (e.target as Element).closest('[data-object-id]');
 		if (hit) {
 			// Pressing an object selects it (Shift toggles) and starts moving the selection.
@@ -78,6 +91,10 @@
 	}
 
 	function onMove(e: PointerEvent) {
+		if (handling === e.pointerId) {
+			editor.updateHandle(local(e), { shiftKey: e.shiftKey });
+			return;
+		}
 		if (moving === e.pointerId) {
 			editor.updateMove(local(e));
 			return;
@@ -89,6 +106,11 @@
 	}
 
 	function onUp(e: PointerEvent) {
+		if (handling === e.pointerId) {
+			handling = null;
+			editor.endHandle();
+			return;
+		}
 		if (moving === e.pointerId) {
 			const moved = editor.preview !== null;
 			moving = null;
@@ -105,6 +127,10 @@
 	}
 
 	function onCancel(e: PointerEvent) {
+		if (handling === e.pointerId) {
+			handling = null;
+			editor.cancelHandle();
+		}
 		if (moving === e.pointerId) {
 			moving = null;
 			narrowTo = null;

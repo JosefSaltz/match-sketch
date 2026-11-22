@@ -50,6 +50,11 @@ test.describe('as the admin', () => {
 		await expect(page.getByRole('row').filter({ hasText: MD.email })).toContainText('Active');
 	});
 
+	test("shows today's model spend against the ceiling", async ({ page }) => {
+		await page.goto('/admin');
+		await expect(page.getByText(/^Model spend today: \$\d+\.\d{2} of \$10\.00$/)).toBeVisible();
+	});
+
 	test('the invite action itself works for an admin', async ({ page }) => {
 		await page.goto('/admin');
 		const email = uniqueEmail('direct');

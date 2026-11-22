@@ -160,6 +160,13 @@ describe('syncOnce: pull', () => {
 		expect(Number(await getSetting(db, SYNC_CURSOR))).toBe(server.seq);
 	});
 
+	it("does not report this device's own pushes as changes", async () => {
+		await namedPlan('Mine');
+		const outcome = await syncOnce(db, server, () => at);
+		expect(outcome.pushed).toBe(1);
+		expect(outcome.changed).toEqual([]);
+	});
+
 	it('does not overwrite a record with local changes', async () => {
 		const plan = await namedPlan('Local');
 		await syncOnce(db, server, () => at);

@@ -63,7 +63,11 @@ export function readNewerJournal(
 	return null;
 }
 
-/** Applies a newer journal entry to the stored plan (then clears it); otherwise returns `plan`. */
+/**
+ * Applies a newer journal entry to the stored plan (then clears it); otherwise returns `plan`.
+ * If writing it back fails, the plan still opens with the recovered document and the entry is
+ * kept, so the editor's next save (or the next load) can store it.
+ */
 export async function recoverUnsavedEdits(
 	db: MatchSketchDB,
 	storage: StorageLike,
@@ -71,7 +75,11 @@ export async function recoverUnsavedEdits(
 ): Promise<PlanRecord> {
 	const document = readNewerJournal(storage, plan.id, plan.updatedAt);
 	if (!document) return plan;
-	const saved = await savePlanDocument(db, plan.id, document);
-	clearJournal(storage, plan.id);
-	return saved;
+	try {
+		const saved = await savePlanDocument(db, plan.id, document);
+		clearJournal(storage, plan.id);
+		return saved;
+	} catch {
+		return { ...plan, document };
+	}
 }

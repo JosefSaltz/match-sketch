@@ -91,7 +91,9 @@ export function createLoop(state: SyncState, options: LoopOptions): Loop {
 	}
 
 	function run(): Promise<void> {
-		if (stopped || !ready || state.otherAccount || !state.online) return Promise.resolve();
+		// Once a newer app's records are waiting, this one stops syncing until it is reloaded.
+		const paused = state.otherAccount || state.needsReload;
+		if (stopped || !ready || paused || !state.online) return Promise.resolve();
 		if (running) {
 			again = true;
 			return running;

@@ -12,8 +12,10 @@ export const SYNC_OWNER = 'sync-owner';
 export const SYNC_CURSOR = 'sync-cursor';
 /** Conflicted copies the MD hasn't looked at yet (JSON list of ConflictCopy). */
 export const SYNC_CONFLICTS = 'sync-conflicts';
+/** The plan schema version of the app that stored the cursor; a newer app pulls everything again. */
+export const SYNC_CURSOR_SCHEMA = 'sync-cursor-schema';
 /** Settings that belong to the signed-in account and are cleared with it on sign-out. */
-export const SYNC_SETTINGS = [SYNC_OWNER, SYNC_CURSOR, SYNC_CONFLICTS] as const;
+export const SYNC_SETTINGS = [SYNC_OWNER, SYNC_CURSOR, SYNC_CURSOR_SCHEMA, SYNC_CONFLICTS] as const;
 
 export async function getSetting(db: MatchSketchDB, key: string): Promise<string | undefined> {
 	return (await db.settings.get(key))?.value;

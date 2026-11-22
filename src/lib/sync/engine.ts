@@ -8,10 +8,17 @@ import {
 	type MatchRecord,
 	type PlanRecord
 } from '../store/records';
-import { getSetting, setSetting, SYNC_CONFLICTS, SYNC_CURSOR } from '../store/settings';
+import {
+	getSetting,
+	setSetting,
+	SYNC_CONFLICTS,
+	SYNC_CURSOR,
+	SYNC_CURSOR_SCHEMA
+} from '../store/settings';
 import {
 	fromServer,
 	MAX_PUSH_RECORDS,
+	SUPPORTED_SCHEMA_VERSION,
 	SYNC_TABLES,
 	toWire,
 	WireRecordSchema,
@@ -96,6 +103,13 @@ async function applyConflict(
 ): Promise<{ copy: ConflictCopy | null; needsReload: boolean }> {
 	const table = tableOf(db, sent.table);
 	let needsReload = false;
+	try {
+		fromServer(server);
+	} catch {
+		// A plan from a newer app: this one can't hold it, so it keeps its own version (still
+		// dirty) and makes no copy; syncing pauses until the reload brings the newer app.
+		return { copy: null, needsReload: true };
+	}
 	const copy = await db.transaction('rw', db.canvases, db.matches, db.plans, async () => {
 		const current = (await table.get(sent.record.id)) ?? sent.record;
 		const name = conflictName(recordName(sent.table, current), at);
@@ -243,7 +257,11 @@ export async function syncOnce(
 		}
 	}
 
-	let cursor = Number((await getSetting(db, SYNC_CURSOR)) ?? 0) || 0;
+	// Records this app skipped as too new come back once it's updated: a cursor stored by an
+	// app with an older plan schema starts over (pulling again is cheap; known versions are skipped).
+	const schema = String(SUPPORTED_SCHEMA_VERSION);
+	const sameSchema = (await getSetting(db, SYNC_CURSOR_SCHEMA)) === schema;
+	let cursor = sameSchema ? Number((await getSetting(db, SYNC_CURSOR)) ?? 0) || 0 : 0;
 	for (;;) {
 		const page = await transport.pull(cursor);
 		for (const record of page.records) {
@@ -258,6 +276,7 @@ export async function syncOnce(
 		// Records kept local or too new were looked at on purpose; the cursor moves past them.
 		cursor = page.cursor;
 		await setSetting(db, SYNC_CURSOR, String(cursor));
+		await setSetting(db, SYNC_CURSOR_SCHEMA, schema);
 		if (!page.more) break;
 	}
 

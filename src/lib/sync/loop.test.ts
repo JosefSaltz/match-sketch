@@ -165,6 +165,20 @@ describe('the sync loop', () => {
 		expect(settled).toBe(true);
 	});
 
+	it('pauses syncing once a reload is needed', async () => {
+		const { timers } = manualTimers();
+		const { transport, calls } = fakeTransport();
+		const loop = start(transport, timers);
+		await vi.waitFor(() => expect(calls.pull).toBe(1));
+		await vi.waitFor(() => expect(state.syncing).toBe(false));
+		state.needsReload = true;
+		await loop.syncNow();
+		win.dispatchEvent(new Event('online'));
+		await new Promise((r) => setTimeout(r, 20));
+		expect(calls.pull).toBe(1);
+		loop.stop();
+	});
+
 	it("pauses for another account's data and says so", async () => {
 		const { timers } = manualTimers();
 		const { transport, calls } = fakeTransport();

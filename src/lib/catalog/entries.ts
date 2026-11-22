@@ -1,86 +1,82 @@
-import type { CatalogEntry, SymbolFamily } from './types';
-import paperSvg from './svg/paper.svg?raw';
-import popperSvg from './svg/popper.svg?raw';
-import popperStaticSvg from './svg/popper-static.svg?raw';
-import popperTriggerSvg from './svg/popper-trigger.svg?raw';
-import popperAutoResetSvg from './svg/popper-auto-reset.svg?raw';
-import steelStaticSvg from './svg/steel-static.svg?raw';
-import barrelSvg from './svg/barrel.svg?raw';
-import dumpBoxSvg from './svg/dump-box.svg?raw';
-import shootingPositionSvg from './svg/shooting-position.svg?raw';
+import type { CatalogEntry, SymbolEntry, SymbolFamily } from './types';
 
-/** Families used by the entries below. Plan 3 adds the rest (paper, plates, movers…). */
+/** Every symbol's SVG (`svg/<id>.svg`), bundled as text. */
+const SVGS = import.meta.glob<string>('./svg/*.svg', {
+	query: '?raw',
+	import: 'default',
+	eager: true
+});
+
+function svgFor(id: string): string {
+	const svg = SVGS[`./svg/${id}.svg`];
+	if (!svg) throw new Error(`Missing symbol art: svg/${id}.svg`);
+	return svg;
+}
+
+/** Families group variants of one target type in the palette (spec §7.1, §7.7). */
 export const FAMILIES: Readonly<Record<string, SymbolFamily>> = {
-	poppers: { id: 'poppers', name: 'Poppers' }
+	paper: { id: 'paper', name: 'Paper' },
+	poppers: { id: 'poppers', name: 'Poppers' },
+	steel: { id: 'steel', name: 'Steel' },
+	movers: { id: 'movers', name: 'Movers' }
 };
 
-/** Placeholder set for Plan 1. Plan 3 redraws the art and keeps these ids. */
+type TargetExtra = Partial<Pick<SymbolEntry, 'plural' | 'keepCase'>>;
+
+/** A standing, front-facing target: countable, anchored at its base. */
+function target(
+	id: string,
+	name: string,
+	family: string,
+	aliases: string[],
+	extra: TargetExtra = {}
+): SymbolEntry {
+	return {
+		id,
+		name,
+		aliases,
+		category: 'target',
+		family,
+		countable: true,
+		kind: 'symbol',
+		svg: svgFor(id),
+		anchor: 'base',
+		...extra
+	};
+}
+
+/** The first set from spec §7.7, drawn in style A. Plan 1 ids are kept so saved plans still open. */
 export const ENTRIES: readonly CatalogEntry[] = [
-	{
-		id: 'paper',
-		name: 'Paper target',
-		aliases: [],
-		category: 'target',
-		countable: true,
-		kind: 'symbol',
-		svg: paperSvg,
-		anchor: 'base'
-	},
-	{
-		id: 'popper',
-		name: 'Knock-down popper',
-		aliases: ['popper', 'pepper popper'],
-		category: 'target',
-		family: 'poppers',
-		countable: true,
-		kind: 'symbol',
-		svg: popperSvg,
-		anchor: 'base'
-	},
-	{
-		id: 'popper-static',
-		name: 'Static popper',
-		aliases: [],
-		category: 'target',
-		family: 'poppers',
-		countable: true,
-		kind: 'symbol',
-		svg: popperStaticSvg,
-		anchor: 'base'
-	},
-	{
-		id: 'popper-trigger',
-		name: 'Trigger popper',
-		aliases: ['activator', 'activator popper'],
-		category: 'target',
-		family: 'poppers',
-		countable: true,
-		kind: 'symbol',
-		svg: popperTriggerSvg,
-		anchor: 'base'
-	},
-	{
-		id: 'popper-auto-reset',
-		name: 'Auto-reset popper',
-		aliases: ['auto popper', 'self-resetting popper'],
-		category: 'target',
-		family: 'poppers',
-		countable: true,
-		kind: 'symbol',
-		svg: popperAutoResetSvg,
-		anchor: 'base'
-	},
-	{
-		id: 'steel-static',
-		name: 'Static steel',
-		plural: 'Static steel',
-		aliases: ['steel plate', 'plate'],
-		category: 'target',
-		countable: true,
-		kind: 'symbol',
-		svg: steelStaticSvg,
-		anchor: 'base'
-	},
+	target('paper', 'Paper target', 'paper', ['IPSC target', 'USPSA target', 'cardboard']),
+	target('paper-small', 'Small paper target', 'paper', ['mini IPSC', 'small cardboard']),
+	target('paper-hard-cover', 'Paper with hard cover', 'paper', ['hard cover', 'partial target'], {
+		plural: 'Papers with hard cover'
+	}),
+	target('no-shoot', 'No-shoot', 'paper', ['NS', 'no shoot', 'penalty target']),
+	target('popper', 'Knock-down popper', 'poppers', ['popper', 'pepper popper']),
+	target('popper-static', 'Static popper', 'poppers', []),
+	target('popper-trigger', 'Trigger popper', 'poppers', ['activator', 'activator popper']),
+	target('popper-auto-reset', 'Auto-reset popper', 'poppers', [
+		'auto popper',
+		'self-resetting popper'
+	]),
+	target('steel-static', 'Static steel', 'steel', ['steel plate', 'plate'], {
+		plural: 'Static steel'
+	}),
+	target('plate-kd', 'KD plate', 'steel', ['knock-down plate', 'falling plate'], {
+		keepCase: true
+	}),
+	target('plate-stop', 'Stop plate', 'steel', ['stop target', 'last target']),
+	target('plate-rack', 'Plate rack', 'steel', ['row of plates', 'plate bank']),
+	target('ducks', 'Ducks in a row', 'steel', ['duck targets', 'ducks'], {
+		plural: 'Ducks in a row'
+	}),
+	target('bottle', 'Bottle', 'steel', ['steel bottle']),
+	target('swinger', 'Swinger', 'movers', ['swinging target', 'swinging paper']),
+	target('flasher', 'Flasher', 'movers', ['disappearing target', 'bobber']),
+	target('spinner', 'Spinner', 'movers', ['spinning target']),
+	target('texas-star', 'Texas star', 'movers', ['star'], { keepCase: true }),
+	target('whirly-gig', 'Whirly-gig', 'movers', ['whirlygig']),
 	{
 		id: 'barrel',
 		name: 'Barrel',
@@ -88,7 +84,7 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		category: 'prop',
 		countable: false,
 		kind: 'symbol',
-		svg: barrelSvg,
+		svg: svgFor('barrel'),
 		anchor: 'center'
 	},
 	{
@@ -98,7 +94,7 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		category: 'prop',
 		countable: false,
 		kind: 'symbol',
-		svg: dumpBoxSvg,
+		svg: svgFor('dump-box'),
 		anchor: 'center',
 		autoLabel: { prefix: '', style: 'letter' }
 	},
@@ -109,7 +105,7 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		category: 'marker',
 		countable: false,
 		kind: 'symbol',
-		svg: shootingPositionSvg,
+		svg: svgFor('shooting-position'),
 		anchor: 'center',
 		autoLabel: { prefix: 'SA-', style: 'number' }
 	},

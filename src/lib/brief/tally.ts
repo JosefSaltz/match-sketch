@@ -13,7 +13,7 @@ export function targetsTally(objects: PlanObject[]): string {
 		const n = entry.category === 'target' ? counts.get(entry.id) : undefined;
 		if (!n) continue;
 		const name = n === 1 ? entry.name : (entry.plural ?? `${entry.name}s`);
-		parts.push(`${n} ${name.toLowerCase()}`);
+		parts.push(`${n} ${entry.keepCase ? name : name.toLowerCase()}`);
 	}
 	return parts.join(', ');
 }

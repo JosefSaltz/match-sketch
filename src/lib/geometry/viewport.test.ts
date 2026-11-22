@@ -47,3 +47,35 @@ describe('zoomLimitsFor', () => {
 		expect(zoomLimitsFor(0.1).min).toBeLessThanOrEqual(0.1 / 4);
 	});
 });
+describe('with a scale break', () => {
+	const depth = { fromFt: 90, toFt: 900, drawnFt: 75 };
+	const bvp = { scale: 2, offsetX: 0, offsetY: 400, depth };
+
+	it('draws depth through the break and maps back', () => {
+		expect(worldToScreen({ x: 0, y: 900 }, bvp).y).toBe(400 - 165 * 2);
+		const w = screenToWorld(worldToScreen({ x: 3, y: 450 }, bvp), bvp);
+		expect(w.x).toBeCloseTo(3);
+		expect(w.y).toBeCloseTo(450);
+	});
+
+	it('fits the drawn depth', () => {
+		const fit = fitViewport(
+			{ widthFt: 120, depthFt: 900 },
+			{ width: 1000, height: 430 },
+			50,
+			depth
+		);
+		expect(fit.scale).toBeCloseTo(330 / 165);
+		expect(fit.depth).toEqual(depth);
+	});
+
+	it('zooms about the point under the cursor', () => {
+		const at = { x: 120, y: 150 };
+		const before = screenToWorld(at, bvp);
+		const z = zoomAt(bvp, at, 1.5);
+		const after = screenToWorld(at, z);
+		expect(after.x).toBeCloseTo(before.x);
+		expect(after.y).toBeCloseTo(before.y);
+		expect(z.depth).toEqual(depth);
+	});
+});

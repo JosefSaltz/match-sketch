@@ -102,14 +102,15 @@ export const PullResponseSchema = z.object({
 });
 export type PullResponse = z.infer<typeof PullResponseSchema>;
 
-type LocalRecord = { canvases: CanvasRecord; matches: MatchRecord; plans: PlanRecord };
-
 /** The record as it goes up: without `dirty` or `version`. */
-export function toWire<T extends SyncTable>(table: T, record: LocalRecord[T]): WireRecord {
+export function toWire(
+	table: SyncTable,
+	record: CanvasRecord | MatchRecord | PlanRecord
+): WireRecord {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { dirty, version, ...fields } = record;
-	// `T` ties the table to its record type, which TypeScript can't follow through the spread.
-	return { table, ...fields } as unknown as WireRecord;
+	// The caller pairs the table with its kind of record; the schemas check it on the server.
+	return { table, ...fields } as WireRecord;
 }
 
 function withoutTable<R extends { table: SyncTable }>(record: R): Omit<R, 'table'> {

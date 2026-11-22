@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect, type Page } from '@playwright/test';
 import { createCanvas, createMatch, createPlanFromCanvas } from './helpers';
 
@@ -239,5 +240,43 @@ test.describe('plans in a match', () => {
 		await expect(page.getByRole('banner')).toContainText('Stage 2');
 		await page.goto('/');
 		await expect(myMatches(page).getByRole('listitem')).toContainText('2 stages');
+	});
+});
+
+test.describe('match print', () => {
+	test('a match prints every stage in order as one document', async ({ page }) => {
+		// Review Focus #4
+		await page.goto('/');
+		await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });
+		await namedPlan(page, 'Alpha');
+		await namedPlan(page, 'Bravo');
+		await page.getByRole('tab', { name: 'Brief' }).click();
+		const steps = Array.from({ length: 40 }, (_, i) => `Step ${i + 1} of the course of fire`);
+		const field = page.getByRole('tabpanel', { name: 'Brief' }).getByLabel('Stage procedure');
+		await field.fill(steps.join('\n'));
+		await field.blur();
+		await expect(page.getByTestId('save-status')).toHaveText('Saved');
+		await page.goto('/');
+		await createMatch(page, 'DRRC November', '2026-11-29');
+		await addExisting(page, ['Alpha', 'Bravo']);
+
+		await page.getByRole('link', { name: 'Print match' }).click();
+		const pages = page.getByTestId('print-page');
+		await expect(pages).toHaveCount(3);
+		await expect(pages.nth(0)).toContainText(/alpha/i);
+		await expect(pages.nth(0)).toContainText('DRRC November · Stage 1');
+		await expect(pages.nth(0)).toContainText('Page 1 of 3');
+		await expect(pages.nth(1)).toContainText(/bravo/i);
+		await expect(pages.nth(1)).toContainText('Page 2 of 3');
+		await expect(pages.nth(1)).toContainText('Stage procedure and notes on page 3');
+		await expect(pages.nth(2)).toContainText('Page 3 of 3');
+
+		const [download] = await Promise.all([
+			page.waitForEvent('download'),
+			page.getByRole('button', { name: 'Download PDF' }).click()
+		]);
+		expect(download.suggestedFilename()).toBe('DRRC November.pdf');
+		const pdf = (await readFile(await download.path())).toString('latin1');
+		expect((pdf.match(/\/Type\s*\/Page(?!s)/g) ?? []).length).toBe(3);
 	});
 });

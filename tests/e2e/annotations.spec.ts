@@ -222,3 +222,30 @@ test.describe('lines', () => {
 		await expect(arrows(page)).toHaveCount(1);
 	});
 });
+
+test.describe('lines and areas', () => {
+	test('a line can start inside a shooting box and be clicked where it crosses one', async ({
+		page
+	}) => {
+		await page.getByRole('combobox', { name: 'Snap' }).selectOption({ label: '1 yd' });
+		await dragFromPalette(page, 'shooting-box', await bayPoint(page, 0.5, 0.5));
+		for (const [label, v] of [
+			['X', '25'],
+			['Y', '12.5'],
+			['Width', '20'],
+			['Depth', '10']
+		] as const) {
+			await props(page).getByLabel(label).fill(v);
+			await props(page).getByLabel(label).press('Enter');
+		}
+		await page.getByTestId('tool-measure').click();
+		await drag(page, await bayPoint(page, 0.34, 0.5), await bayPoint(page, 0.9, 0.5));
+		// From the point pressed inside the box (17 yd), not the box's center (25 yd).
+		await expect(page.getByTestId('measure-label')).toHaveText('28 yd');
+
+		await page.keyboard.press('Escape');
+		const inside = await bayPoint(page, 0.6, 0.5);
+		await page.mouse.click(inside.x, inside.y);
+		await expect(props(page).getByRole('heading', { name: 'Measure line' })).toBeVisible();
+	});
+});

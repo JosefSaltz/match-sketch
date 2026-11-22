@@ -7,9 +7,10 @@
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	/**
-	 * `below` draws arrows and measure lines under the objects, so a press on an object always
-	 * reaches the object even where a line ends on it. `above` draws text labels and the end
-	 * handles of a selected line.
+	 * `below` draws arrows and measure lines under the objects. `above` draws the lines' hit
+	 * areas (trimmed back from ends attached to objects, so a press on an object still reaches
+	 * it), text labels, and the end handles of a selected line. Hit areas sit above the objects so
+	 * a line stays clickable where it crosses a shooting box or other area.
 	 */
 	let { editor, layer }: { editor: EditorState; layer: 'below' | 'above' } = $props();
 
@@ -18,6 +19,8 @@
 	const TICK_HALF_PX = 4;
 	/** Touch target radius, as for resize handles. */
 	const HIT_R = 13;
+	/** A line's hit area stops this far short of an end attached to an object. */
+	const TRIM_PX = 16;
 
 	type DrawnLink = { a: LinkAnnotation; p: Point; q: Point; u: Point; n: Point; len: number };
 
@@ -55,6 +58,17 @@
 			: []
 	);
 
+	/** The clickable part of a line: shortened at ends attached to objects. */
+	function hitSpan(d: DrawnLink): { a: Point; b: Point } | null {
+		const cutA = d.a.from.kind === 'object' ? TRIM_PX : 0;
+		const cutB = d.a.to.kind === 'object' ? TRIM_PX : 0;
+		if (d.len <= cutA + cutB) return null;
+		return {
+			a: { x: d.p.x + d.u.x * cutA, y: d.p.y + d.u.y * cutA },
+			b: { x: d.q.x - d.u.x * cutB, y: d.q.y - d.u.y * cutB }
+		};
+	}
+
 	function head(d: DrawnLink): string {
 		const b = { x: d.q.x - d.u.x * HEAD_PX, y: d.q.y - d.u.y * HEAD_PX };
 		const l = { x: b.x + d.n.x * HEAD_HALF_PX, y: b.y + d.n.y * HEAD_HALF_PX };
@@ -82,7 +96,6 @@
 				data-annotation-type={d.a.type}
 				class={['annotation', d.a.type, { selected }]}
 			>
-				<line data-testid="link-hit" class="hit" x1={d.p.x} y1={d.p.y} x2={d.q.x} y2={d.q.y} />
 				{#if d.a.type === 'arrow'}
 					{@const stop = Math.max(0, d.len - HEAD_PX + 2)}
 					<line
@@ -111,6 +124,21 @@
 	</g>
 {:else}
 	<g class="labels">
+		{#each links as d (d.a.id)}
+			{@const span = hitSpan(d)}
+			{#if span}
+				<g class="annotation" data-annotation-id={d.a.id}>
+					<line
+						data-testid="link-hit"
+						class="hit"
+						x1={span.a.x}
+						y1={span.a.y}
+						x2={span.b.x}
+						y2={span.b.y}
+					/>
+				</g>
+			{/if}
+		{/each}
 		{#each editor.doc.annotations as a (a.id)}
 			{#if a.type === 'text'}
 				{@const at = worldToScreen(a, editor.viewport)}

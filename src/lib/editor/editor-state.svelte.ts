@@ -10,6 +10,7 @@ import {
 import {
 	fitViewport,
 	screenToWorld,
+	worldToScreen,
 	zoomAt,
 	zoomLimitsFor,
 	type Viewport
@@ -84,6 +85,12 @@ type LinkDrag = {
 	fixed: Anchor;
 	base: PlanDocument;
 };
+
+/**
+ * A line end attaches to a footprint (a box, a wall) only when pressed this close to its center;
+ * elsewhere inside it is open ground, so the MD can measure from any point in a shooting area.
+ */
+export const ATTACH_PX = 16;
 
 /** Rotation snaps to this many degrees unless Shift is held. */
 export const ROTATE_SNAP_DEG = 15;
@@ -252,11 +259,21 @@ export class EditorState {
 
 	#link: LinkDrag | null = null;
 
+	/** The object a line end at `screenPt` attaches to: symbols anywhere, footprints near their center. */
+	#attachTo(hitObjectId: string | null, screenPt: Point): string | null {
+		const obj = hitObjectId ? this.doc.objects.find((o) => o.id === hitObjectId) : undefined;
+		if (!obj) return null;
+		if (getEntry(obj.symbolId)?.kind !== 'footprint') return obj.id;
+		const at = worldToScreen(obj, this.viewport);
+		return Math.hypot(at.x - screenPt.x, at.y - screenPt.y) <= ATTACH_PX ? obj.id : null;
+	}
+
 	/** Starts drawing a line with the armed arrow or measure tool; the press is its start. */
 	beginLink(screenPt: Point, hitObjectId: string | null): void {
 		const type = this.tool;
 		if (type !== 'arrow' && type !== 'measure') return;
 		const base = this.#current;
+		hitObjectId = this.#attachTo(hitObjectId, screenPt);
 		const world = screenToWorld(screenPt, this.viewport);
 		this.#link = {
 			id: crypto.randomUUID(),
@@ -281,7 +298,8 @@ export class EditorState {
 		const l = this.#link;
 		if (!l) return;
 		const world = screenToWorld(screenPt, this.viewport);
-		const moving = anchorAt(l.base, hitObjectId, world, this.canvas, this.snapStep());
+		const hit = this.#attachTo(hitObjectId, screenPt);
+		const moving = anchorAt(l.base, hit, world, this.canvas, this.snapStep());
 		this.preview = l.isNew
 			? addAnnotation(l.base, { id: l.id, type: l.type, from: l.fixed, to: moving })
 			: setAnchor(l.base, l.id, l.end, moving);

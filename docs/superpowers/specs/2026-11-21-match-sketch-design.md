@@ -83,6 +83,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 - Accounts are **invite-only** for the MVP.
 - Stage plans can be grouped into a **match**, and a whole match prints as one document.
 - **Full offline editing** is required.
+- The symbol library is a **left sidebar**: a scrollable list of thumbnails with names, grouped by category and, inside a category, by **family**, so variants of one target type sit together (e.g. Poppers: knock-down, static, trigger, auto-reset). Decided 2026-11-21, during Plan 1.
 
 ## 6. Calls made by the designer (not discussed in depth; correctable)
 
@@ -114,7 +115,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 4. **New plan:** pick a canvas from the library or define a new one (name, width, depth, unit) with an option to save it to the library; optionally pick a match. Then the editor opens.
 5. **Editor:**
    - Center: the canvas (bay outline, grid, scale bar, downrange arrow), with pan and zoom.
-   - Left: symbol library, grouped by category, with search.
+   - Left: symbol library as a scrollable list of thumbnails with names, grouped by category and then by family (variants of one target type, e.g. Poppers: knock-down, static, trigger, auto-reset), with search. Groups collapse; search opens every group with a match.
    - Right: properties of the selected object (label, rotation, size for footprint objects, position in ft/yd), and the **Stage brief** panel.
    - Top bar: undo/redo, snap setting, units, symbol size, measure tool, **Draft from text** (disabled offline, with a reason), print/preview, PDF, sync state.
 6. **Print preview:** paged view of the document exactly as it will print, with fit-to-page vs. tile choice and orientation. Works offline.
@@ -188,9 +189,9 @@ The procedure text in real plans usually says _what_ and _in what order_ but rar
 ### 7.7 Symbol library
 
 - **Style:** one consistent line style; shapes distinguishable in black and white; limited accent colors (e.g. tan for paper, steel gray, red for no-shoot hits) that degrade to fills/patterns when printed in grayscale; legible at roughly 0.35–0.5 in printed.
-- **Catalog entry:** id, display name, aliases (e.g. "pepper popper", "popper"), category, kind (footprint/symbol), default size, the SVG, and optional label anchor point. The catalog is a TypeScript module plus SVG files in the repo, versioned with the app; adding a discipline set is adding catalog entries.
+- **Catalog entry:** id, display name, aliases (e.g. "pepper popper", "popper"), category, optional family (groups variants of one target type in the palette, e.g. Poppers), kind (footprint/symbol), default size, the SVG, and optional label anchor point. The catalog is a TypeScript module plus SVG files in the repo, versioned with the app; adding a discipline set is adding catalog entries.
 - **First set (from the reference plans):**
-  - _Targets:_ paper (large), paper (small), paper with hard cover, no-shoot, swinger (swinging paper), popper, KD (knock-down plate), static steel, flasher, spinner, Texas star, whirly-gig, ducks in a row, plate rack, bottle, stop plate.
+  - _Targets:_ paper (large), paper (small), paper with hard cover, no-shoot, swinger (swinging paper), poppers (knock-down, static, trigger, auto-reset), KD (knock-down plate), static steel, flasher, spinner, Texas star, whirly-gig, ducks in a row, plate rack, bottle, stop plate.
   - _Props and structures:_ wall, wall with window/port, half wall with port, V-tac wall, door, barrel, stacked barrels, tire, pallet, car, chopper seat/bench, table, chair, sawhorse, staircase, rooftop/platform, wobble platform, plank/bench, low barrier ("sticks"), ammo can, bucket, crate/box, tree, berm/mound, fence/mesh, target frame/stand.
   - _Areas and markers:_ start box, shooting box/area, fault line, dump box, SA label, movement arrow, text note.
 

@@ -810,15 +810,29 @@ Add to `helpers.ts`: `createPlanFromCanvas(page, canvasName: string): Promise<st
 
 **Files:**
 
-- Create: `src/lib/editor/components/{Palette,ObjectView}.svelte`, `tests/e2e/editor-place.spec.ts`
-- Modify: `EditorCanvas.svelte`, `editor-state.svelte.ts`, `src/routes/(app)/plans/[id]/+page.svelte`, `tests/e2e/helpers.ts`
+- Create: `src/lib/editor/components/{Palette,ObjectView}.svelte`, `src/lib/editor/object-geometry.ts`, `object-geometry.test.ts`, `src/lib/catalog/svg/{popper-static,popper-trigger,popper-auto-reset}.svg`, `tests/e2e/editor-place.spec.ts`
+- Modify: `src/lib/catalog/{types,entries,index}.ts`, `catalog.test.ts`, `src/lib/editor/gestures.ts`, `gestures.test.ts`, `EditorCanvas.svelte`, `EditorView.svelte`, `editor-state.svelte.ts`, `tests/e2e/helpers.ts`
+
+**Palette grouping (user decision, 2026-11-21, made during this task; spec §5, §7.1, §7.7):** the palette is a scrollable list of thumbnails with names, grouped by category and, inside a category, by **family**: variants of one target type (Poppers: knock-down, static, trigger, auto-reset). Entries get an optional `family` id; Plan 3 adds the remaining families with the full art.
 
 **Interfaces:**
 
 - Consumes: `CATALOG`, `CATEGORY_ORDER`, `CATEGORY_LABEL`, `searchCatalog`, `getEntry` (Task 4); `addObject` (Task 5); `screenToWorld`, `worldToScreen` (Task 3); `SYMBOL_PX` (Task 4).
 - Produces:
   - `EditorState.placeAt(symbolId: string, screenPt: Point): string` (adds the object and commits it; returns its id); `EditorState.arm(symbolId: string | null): void`.
-  - Palette: a search box with placeholder `Search symbols`, groups headed by `CATEGORY_LABEL` in `CATEGORY_ORDER`, items `data-testid="palette-item-<id>"` showing the glyph and name.
+  - Catalog:
+    - `CatalogEntry.family?: string` (a `FAMILIES` id); `FAMILIES: Record<string, { id: string; name: string }>`, starting with `poppers` (`Poppers`).
+    - The popper family: `popper` (renamed `Knock-down popper`; aliases `popper`, `pepper popper`), and new `popper-static` (`Static popper`), `popper-trigger` (`Trigger popper`; alias `activator`), `popper-auto-reset` (`Auto-reset popper`; alias `auto popper`). All are countable base-anchored targets with placeholder art.
+    - `searchCatalog` also matches the family name (`poppers` returns all four).
+    - `paletteGroups(query: string): PaletteGroup[]`, where `PaletteGroup = { category; label; items: PaletteItem[] }` and `PaletteItem = { kind: 'entry'; entry } | { kind: 'family'; family; entries }`. Categories follow `CATEGORY_ORDER`; empty ones are dropped. Inside a category, items keep catalog order, and a family sits where its first member is. Only matching entries are kept.
+  - `object-geometry.ts`: `localBox(obj, entry, scale, symbolPx): Rect` is the drawn box in screen px relative to the object's screen position, before rotation. Symbols are `symbolPx` square: above the point for `base`, centered for `center`. Footprints are `widthFt × depthFt` scaled and centered. `rotatedBounds(box, deg): Rect` gives the axis-aligned bounds after rotating clockwise. Both are reused by the selection overlay and handles (Tasks 10–11).
+  - `gestures.ts`: `TAP_SLOP_PX = 4`; `movedBeyond(a: Point, b: Point, px = TAP_SLOP_PX): boolean`.
+  - Palette (`<aside aria-label="Symbols">`): a search box with placeholder `Search symbols`, then a scrollable list.
+    - Each category is a collapsible group headed by a button named after its `CATEGORY_LABEL` (`aria-expanded`). Groups follow `CATEGORY_ORDER`.
+    - Inside a category, each family is a collapsible `role="group"` named after the family, with a header button of the same name. Its variants sit indented under it.
+    - Groups start open. While the search box has text, every group with a match is shown open.
+    - Items are buttons, `data-testid="palette-item-<id>"`, with a thumbnail and the name. Footprint thumbnails draw their style (`solid`, `outline`, `line`).
+    - Items use `touch-action: pan-y`, so on a tablet a vertical swipe scrolls the list and a sideways drag pulls the symbol out toward the stage.
     - **Drag** (pointer moves more than 4 px after pointerdown): a ghost follows the pointer; releasing over the editor SVG places the object at the snapped world point (clamped to the bay). Releasing anywhere else cancels.
     - **Tap/click** (no movement): arms the symbol (item shows pressed state, `aria-pressed="true"`). While armed, a tap/click on the canvas places it (instead of panning or selecting) and disarms. `Escape` disarms.
     - A newly placed object becomes the selection (`selection = [id]`).
@@ -862,14 +876,24 @@ test('tap a symbol then tap the bay to place it', async ({ page }) => {
 	await page.mouse.click(p.x, p.y);
 	await expect(page.getByTestId('object')).toHaveAttribute('data-symbol-id', 'wall');
 });
+test('popper variants are grouped in a collapsible family', async ({ page }) => {
+	const poppers = page.getByRole('group', { name: 'Poppers' });
+	await expect(poppers.getByTestId(/^palette-item-/)).toHaveCount(4);
+	await page.getByRole('button', { name: 'Poppers', exact: true }).click();
+	await expect(page.getByTestId('palette-item-popper-static')).toHaveCount(0);
+	await page.getByPlaceholder('Search symbols').fill('static');
+	await expect(page.getByTestId('palette-item-popper-static')).toBeVisible();
+});
 ```
+
+The catalog (`paletteGroups`, family search, family invariants: every `family` is in `FAMILIES` and each family's members share one category), `localBox`/`rotatedBounds`, and `movedBeyond` get Vitest tests first.
 
 Add to `helpers.ts`: `bayPoint(page, fx: number, fyFromTop: number): Promise<Point>` (a point inside the bay's bounding box) and `dragFromPalette(page, symbolId: string, to: Point): Promise<void>` (mouse down on the item, move in 10 steps, mouse up).
 
 - [ ] **Step 2: Run to verify failure** — `pnpm exec playwright test tests/e2e/editor-place.spec.ts` → FAIL
 - [ ] **Step 3: Implement** the palette, placement, and object rendering.
 - [ ] **Step 4: Run to verify pass** → PASS
-- [ ] **Step 5: Commit** — `git commit -m "feat: symbol palette, drag and tap placement, object rendering"`
+- [ ] **Step 5: Commit** — atomic commits per AGENTS.md: `feat(catalog): group popper variants into a family`, `feat(editor): add object geometry helpers`, `feat(editor): place symbols from the palette and draw objects`
 
 ---
 

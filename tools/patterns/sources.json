@@ -1,0 +1,147 @@
+{
+	"patterns": [
+		{
+			"id": "dpm",
+			"name": "Woodland DPM",
+			"kind": "photo",
+			"cleared": true,
+			"source": {
+				"file_page": "https://commons.wikimedia.org/wiki/File:DPM_Combat_95_Camouflage_Material_MOD_45149982.jpg",
+				"url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/DPM_Combat_95_Camouflage_Material_MOD_45149982.jpg",
+				"author": "Cpl Adrian Harlen RLC (UK Ministry of Defence)",
+				"license": "Open Government Licence v1.0",
+				"sha256": "8f374e91105aaa3a2bf91321d3d13e97963258a9ae8619ef71f48b47ce25fd4b"
+			},
+			"colors": 4,
+			"palette": null,
+			"work_width": 1600,
+			"seam_band": 220,
+			"tile_width": 1380
+		},
+		{
+			"id": "dbdu",
+			"name": "Chocolate Chip",
+			"kind": "photo",
+			"cleared": true,
+			"source": {
+				"file_page": "https://commons.wikimedia.org/wiki/File:Man_modelling_DBDU_in_1976.jpg",
+				"url": "https://upload.wikimedia.org/wikipedia/commons/8/87/Man_modelling_DBDU_in_1976.jpg",
+				"author": "U.S. Army Soldier Systems Center",
+				"license": "Public domain",
+				"sha256": "e785d9fef76eba8f551065b49d72ce4f8b81900b728a0d2cb44585daad411e56"
+			},
+			"colors": 6,
+			"palette": null,
+			"crop": null,
+			"work_width": 1200,
+			"seam_band": 120,
+			"tile_width": 1100,
+			"notes": "Crop to a flat area of the garment at review; a weak result waits for a better source."
+		},
+		{
+			"id": "m81",
+			"name": "M81 Woodland",
+			"kind": "flat",
+			"cleared": false,
+			"source": {
+				"file_page": "https://commons.wikimedia.org/wiki/File:Brown-dominant_%22highland%22_ERDL_camouflage_pattern_swatch.png",
+				"url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Brown-dominant_%22highland%22_ERDL_camouflage_pattern_swatch.png",
+				"author": "Credited to US Army ERDL; Commons credit chain leads to a Spoonflower design",
+				"license": "Public domain (tag; provenance to confirm)"
+			},
+			"palette": ["#c8ae5c", "#336530", "#644c2a", "#202927"],
+			"notes": "M81 = brown-dominant ERDL enlarged 60%. Rights deferred by the user (spec 8)."
+		},
+		{
+			"id": "erdl",
+			"name": "ERDL",
+			"kind": "flat",
+			"cleared": false,
+			"source": {
+				"file_page": "https://commons.wikimedia.org/wiki/File:Brown-dominant_%22highland%22_ERDL_camouflage_pattern_swatch.png",
+				"url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Brown-dominant_%22highland%22_ERDL_camouflage_pattern_swatch.png",
+				"author": "Credited to US Army ERDL; Commons credit chain leads to a Spoonflower design",
+				"license": "Public domain (tag; provenance to confirm)"
+			},
+			"notes": "Same artwork as M81 at its original scale. Rights deferred by the user (spec 8)."
+		},
+		{
+			"id": "dcu",
+			"name": "3-Color Desert",
+			"kind": "flat",
+			"cleared": false,
+			"source": {
+				"file_page": "https://commons.wikimedia.org/wiki/File:DCU_camo_swatch.png",
+				"url": "https://upload.wikimedia.org/wikipedia/commons/8/82/DCU_camo_swatch.png",
+				"author": "Credited to US Army; Commons credit chain leads to a shop product photo",
+				"license": "Public domain (tag; provenance to confirm)"
+			},
+			"notes": "Rights deferred by the user (spec 8)."
+		},
+		{
+			"id": "tiger-stripe",
+			"name": "Tiger Stripe",
+			"kind": "photo",
+			"cleared": false,
+			"source": {
+				"file_page": null,
+				"url": null,
+				"author": "Unknown (user-supplied reference, 750 px)",
+				"license": "Unknown"
+			},
+			"notes": "Vietnam-era look approved in the spike; origin and license to confirm (spec 8)."
+		},
+		{
+			"id": "desert-night",
+			"name": "Desert Night",
+			"kind": "grid",
+			"cleared": false,
+			"source": {
+				"file_page": null,
+				"url": null,
+				"author": "User-supplied fabric photo (authorship to confirm)",
+				"license": "Unknown"
+			},
+			"palette": ["#939881", "#262a1d"],
+			"notes": "Grid redrawn exactly; real rubble shapes scattered evenly (approved in the spike)."
+		},
+		{
+			"id": "buffalo-check",
+			"name": "Buffalo Check",
+			"kind": "plaid",
+			"cleared": true,
+			"sett": [
+				["#b3141b", 16],
+				["#1a1a1a", 16]
+			],
+			"thread_px": 2
+		},
+		{
+			"id": "hunter",
+			"name": "Hunter",
+			"kind": "plaid",
+			"cleared": true,
+			"sett": [
+				["#1e4d2b", 24],
+				["#111111", 4],
+				["#1c2541", 16],
+				["#111111", 4],
+				["#e8c547", 2]
+			],
+			"thread_px": 2
+		},
+		{
+			"id": "range-day",
+			"name": "Range Day",
+			"kind": "plaid",
+			"cleared": true,
+			"sett": [
+				["#c9a66b", 20],
+				["#4a5240", 12],
+				["#c9a66b", 4],
+				["#e8590c", 2]
+			],
+			"thread_px": 2
+		}
+	]
+}

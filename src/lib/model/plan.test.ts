@@ -33,4 +33,35 @@ describe('plan document schema', () => {
 			PlanDocumentSchema.safeParse({ ...doc, scaleBreaks: [{ fromFt: 50, toFt: 40 }] }).success
 		).toBe(false);
 	});
+
+	it('accepts the three annotation types and rejects others', () => {
+		const text = { id: crypto.randomUUID(), type: 'text', x: 1, y: 2, text: 'Hard cover' };
+		const arrow = {
+			id: crypto.randomUUID(),
+			type: 'arrow',
+			from: { kind: 'object', objectId: obj.id },
+			to: { kind: 'point', x: 5, y: 6 }
+		};
+		const measure = { ...arrow, id: crypto.randomUUID(), type: 'measure' };
+		const withObj = { ...doc, objects: [obj] };
+		expect(
+			PlanDocumentSchema.safeParse({ ...withObj, annotations: [text, arrow, measure] }).success
+		).toBe(true);
+		expect(
+			PlanDocumentSchema.safeParse({ ...withObj, annotations: [{ ...text, type: 'circle' }] })
+				.success
+		).toBe(false);
+	});
+
+	it('rejects empty text and malformed anchors', () => {
+		const text = { id: crypto.randomUUID(), type: 'text', x: 1, y: 2, text: '' };
+		expect(PlanDocumentSchema.safeParse({ ...doc, annotations: [text] }).success).toBe(false);
+		const bad = {
+			id: crypto.randomUUID(),
+			type: 'measure',
+			from: { kind: 'object' },
+			to: { kind: 'point', x: 1, y: 1 }
+		};
+		expect(PlanDocumentSchema.safeParse({ ...doc, annotations: [bad] }).success).toBe(false);
+	});
 });

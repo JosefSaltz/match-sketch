@@ -1,4 +1,5 @@
-import type { CatalogEntry, SymbolEntry, SymbolFamily } from './types';
+import type { FootprintStyle } from './footprint-shapes';
+import type { CatalogEntry, FootprintEntry, SymbolEntry, SymbolFamily } from './types';
 
 /** Every symbol's SVG (`svg/<id>.svg`), bundled as text. */
 const SVGS = import.meta.glob<string>('./svg/*.svg', {
@@ -20,6 +21,40 @@ export const FAMILIES: Readonly<Record<string, SymbolFamily>> = {
 	steel: { id: 'steel', name: 'Steel' },
 	movers: { id: 'movers', name: 'Movers' }
 };
+
+/** A prop seen from above, drawn at a fixed size about its center. */
+function prop(id: string, name: string, aliases: string[]): SymbolEntry {
+	return {
+		id,
+		name,
+		aliases,
+		category: 'prop',
+		countable: false,
+		kind: 'symbol',
+		svg: svgFor(id),
+		anchor: 'center'
+	};
+}
+
+/** A structure seen from above, drawn to scale (default size in ft). */
+function structure(
+	id: string,
+	name: string,
+	style: FootprintStyle,
+	widthFt: number,
+	depthFt: number,
+	aliases: string[]
+): FootprintEntry {
+	return {
+		id,
+		name,
+		aliases,
+		category: 'structure',
+		countable: false,
+		kind: 'footprint',
+		footprint: { style, widthFt, depthFt }
+	};
+}
 
 type TargetExtra = Partial<Pick<SymbolEntry, 'plural' | 'keepCase'>>;
 
@@ -77,16 +112,16 @@ export const ENTRIES: readonly CatalogEntry[] = [
 	target('spinner', 'Spinner', 'movers', ['spinning target']),
 	target('texas-star', 'Texas star', 'movers', ['star'], { keepCase: true }),
 	target('whirly-gig', 'Whirly-gig', 'movers', ['whirlygig']),
-	{
-		id: 'barrel',
-		name: 'Barrel',
-		aliases: ['drum'],
-		category: 'prop',
-		countable: false,
-		kind: 'symbol',
-		svg: svgFor('barrel'),
-		anchor: 'center'
-	},
+	prop('barrel', 'Barrel', ['drum', '55 gallon drum']),
+	prop('barrels-stacked', 'Stacked barrels', ['barrel stack']),
+	prop('tire', 'Tire', ['tyre', 'wheel']),
+	prop('chair', 'Chair', ['seat']),
+	prop('ammo-can', 'Ammo can', ['ammo box']),
+	prop('bucket', 'Bucket', ['pail']),
+	prop('crate', 'Crate', ['box', 'wooden box']),
+	prop('tree', 'Tree', ['bush']),
+	prop('target-stand', 'Target stand', ['target frame', 'stand']),
+	prop('sawhorse', 'Sawhorse', ['saw horse']),
 	{
 		id: 'dump-box',
 		name: 'Dump box',
@@ -109,15 +144,29 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		anchor: 'center',
 		autoLabel: { prefix: 'SA-', style: 'number' }
 	},
-	{
-		id: 'wall',
-		name: 'Wall',
-		aliases: [],
-		category: 'structure',
-		countable: false,
-		kind: 'footprint',
-		footprint: { style: 'solid', widthFt: 8, depthFt: 0.5 }
-	},
+	structure('wall', 'Wall', 'solid', 8, 0.5, ['partition', 'panel']),
+	structure('wall-port', 'Wall with port', 'wall-port', 8, 0.5, [
+		'port wall',
+		'window wall',
+		'wall with window'
+	]),
+	structure('half-wall-port', 'Half wall with port', 'half-wall-port', 8, 0.5, [
+		'low wall',
+		'half wall'
+	]),
+	structure('v-wall', 'V-tac wall', 'v-wall', 6, 3, ['V wall', 'VTAC']),
+	structure('door', 'Door', 'door', 3, 3, ['doorway']),
+	structure('car', 'Car', 'car', 6, 15, ['vehicle', 'truck']),
+	structure('table', 'Table', 'table', 6, 3, ['desk']),
+	structure('pallet', 'Pallet', 'pallet', 4, 4, ['skid']),
+	structure('chopper-seat', 'Chopper seat', 'bench', 5, 2, ['helicopter seat', 'bench seat']),
+	structure('plank', 'Plank', 'bench', 8, 1, ['board', 'balance beam']),
+	structure('stairs', 'Staircase', 'stairs', 4, 6, ['stairs', 'steps']),
+	structure('platform', 'Platform', 'platform', 8, 8, ['rooftop', 'raised platform']),
+	structure('wobble', 'Wobble platform', 'wobble', 4, 4, ['wobble board', 'unstable platform']),
+	structure('barrier', 'Low barrier', 'barrier', 6, 0.5, ['sticks', 'low port']),
+	structure('berm', 'Berm', 'berm', 20, 6, ['mound', 'dirt pile']),
+	structure('fence', 'Fence', 'fence', 10, 0.3, ['mesh', 'snow fence']),
 	{
 		id: 'shooting-box',
 		name: 'Shooting box',

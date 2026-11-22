@@ -2,7 +2,8 @@ import { getEntry } from '../catalog';
 import type { DraftPlacement, Placement } from './contract';
 
 export const MAX_PLACEMENTS = 200;
-const MIN_FOOTPRINT_FT = 0.5;
+/** The smallest size a draft may give a footprint; catalog sizes (a 0.25 ft fault line) always pass. */
+const MIN_FOOTPRINT_FT = 0.1;
 const MAX_FOOTPRINT_FT = 200;
 const MAX_LABEL = 24;
 
@@ -46,9 +47,9 @@ export function validatePlacements(
 		if (entry.kind === 'footprint') {
 			const widthFt = p.widthFt ?? entry.footprint.widthFt;
 			const depthFt = p.depthFt ?? entry.footprint.depthFt;
-			const sane = (v: number) =>
-				Number.isFinite(v) && v >= MIN_FOOTPRINT_FT && v <= MAX_FOOTPRINT_FT;
-			if (!sane(widthFt) || !sane(depthFt)) {
+			const sane = (v: number | null) =>
+				v === null || (Number.isFinite(v) && v >= MIN_FOOTPRINT_FT && v <= MAX_FOOTPRINT_FT);
+			if (!sane(p.widthFt) || !sane(p.depthFt)) {
 				return fail(
 					`size ${widthFt} × ${depthFt} ft is not between ${MIN_FOOTPRINT_FT} and ${MAX_FOOTPRINT_FT} ft`
 				);

@@ -52,6 +52,20 @@ describe('validatePlacements', () => {
 		]);
 	});
 
+	it('accepts catalog-sized fault lines and fences, however thin', () => {
+		const { valid, problems } = validatePlacements(
+			[item({ symbolId: 'fault-line' }), item({ symbolId: 'fence', x: 40 })],
+			bay
+		);
+		expect(problems).toEqual([]);
+		expect(valid).toHaveLength(2);
+	});
+
+	it('still refuses an explicit size too small to see', () => {
+		const { problems } = validatePlacements([item({ symbolId: 'wall', depthFt: 0.01 })], bay);
+		expect(problems).toHaveLength(1);
+	});
+
 	it('normalises rotation and fills a footprint size from the catalog', () => {
 		const { valid } = validatePlacements([item({ symbolId: 'wall', rotation: -90 })], bay);
 		const wall = getEntry('wall');

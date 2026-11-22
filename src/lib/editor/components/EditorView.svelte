@@ -29,6 +29,8 @@
 
 	/** Editor shortcuts; keys typed into fields are left to the field (see commandForKey). */
 	function onKeydown(e: KeyboardEvent) {
+		// While a dialog (e.g. the theme picker) is open, keys belong to it, not the stage.
+		if (document.querySelector('dialog:modal')) return;
 		const active = document.activeElement as HTMLElement | null;
 		const command = commandForKey(e, {
 			tagName: active?.tagName ?? 'BODY',

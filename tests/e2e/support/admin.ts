@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { requireLocal } from '../../../src/lib/server/testing/local-only';
 
 /** The auth admin API on the local stack (secret key), for setting up e2e scenarios. */
 export function adminClient() {
-	const url = process.env.SUPABASE_URL;
+	const url = requireLocal(process.env.SUPABASE_URL);
 	const key = process.env.SUPABASE_SECRET_KEY;
-	if (!url || !key) throw new Error('Supabase env is not set; run e2e with pnpm test:e2e');
+	if (!key) throw new Error('Supabase env is not set; run e2e with pnpm test:e2e');
 	return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { getDb } from '#lib/store/index.js';
+	import { clearJournal, writeJournal } from '#lib/store/journal.js';
 	import { savePlanDocument } from '#lib/store/plans.js';
 	import type { PlanRecord } from '#lib/store/records.js';
 	import { EditorState, type NudgeDir } from '../editor-state.svelte.js';
@@ -16,8 +17,12 @@
 	const editor = untrack(
 		() =>
 			new EditorState(plan, {
-				save: async (doc) => {
-					await savePlanDocument(getDb(), plan.id, doc);
+				save: async (doc, at) => {
+					await savePlanDocument(getDb(), plan.id, doc, at);
+				},
+				journal: {
+					write: (doc, at) => writeJournal(localStorage, plan.id, doc, at),
+					clear: () => clearJournal(localStorage, plan.id)
 				}
 			})
 	);
@@ -46,8 +51,11 @@
 				editor.clearSelection();
 				return;
 			case 'undo':
+				editor.undo();
+				break;
 			case 'redo':
-				return; // Wired up with the undo/redo controls.
+				editor.redo();
+				break;
 			default:
 				if (!editor.selection.length) return;
 				editor.nudge(command.slice('nudge-'.length) as NudgeDir);

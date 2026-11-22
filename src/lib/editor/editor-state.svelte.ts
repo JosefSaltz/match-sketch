@@ -9,7 +9,7 @@ import {
 } from '../geometry/transform';
 import { fitViewport, screenToWorld, zoomAt, type Viewport } from '../geometry/viewport';
 import { emptyPlanDocument, type PlanDisplay, type PlanDocument } from '../model/plan';
-import type { PlanRecord } from '../store/records';
+import { now, type PlanRecord } from '../store/records';
 import { createHistory, type History } from './history';
 import {
 	addObject,
@@ -21,6 +21,9 @@ import {
 	setObjectProps,
 	type ObjectPatch
 } from './ops';
+import { SaveQueue, type SaveStatus } from './save-queue';
+
+export type { SaveStatus };
 
 export type NudgeDir = 'left' | 'right' | 'up' | 'down';
 
@@ -35,8 +38,12 @@ type HandleDrag =
 /** Rotation snaps to this many degrees unless Shift is held. */
 export const ROTATE_SNAP_DEG = 15;
 
-export type SaveStatus = 'saved' | 'saving' | 'error';
-export type EditorDeps = { save: (doc: PlanDocument) => Promise<void> };
+export type EditorDeps = {
+	/** Writes the document to IndexedDB, stamped with the time of the edit. */
+	save: (doc: PlanDocument, at: string) => Promise<void>;
+	/** A synchronous copy of the newest edit that survives a reload (see store/journal). */
+	journal?: { write: (doc: PlanDocument, at: string) => void; clear: () => void };
+};
 
 const FIT_PADDING_PX = 48;
 
@@ -70,12 +77,22 @@ export class EditorState {
 	selectedObjects = $derived(this.doc.objects.filter((o) => this.selection.includes(o.id)));
 	armedSymbolId = $state<string | null>(null);
 	saveStatus = $state<SaveStatus>('saved');
+	canUndo = $state(false);
+	canRedo = $state(false);
+	#queue: SaveQueue<{ doc: PlanDocument; at: string }>;
 
 	constructor(plan: PlanRecord, deps: EditorDeps) {
 		this.plan = plan;
 		this.#deps = deps;
 		this.#history = createHistory(plan.document);
 		this.#current = plan.document;
+		this.#queue = new SaveQueue(
+			({ doc, at }) => deps.save(doc, at),
+			(status) => {
+				this.saveStatus = status;
+				if (status === 'saved') deps.journal?.clear();
+			}
+		);
 	}
 
 	/** The plan's own copy of the bay dimensions. */
@@ -85,12 +102,43 @@ export class EditorState {
 
 	commit(next: PlanDocument): void {
 		// A change from elsewhere (e.g. a key press) ends any drag, so its release can't undo it.
+		this.#endDrags();
+		this.#history.push(next);
+		this.#show(next);
+	}
+
+	undo(): void {
+		if (!this.#history.canUndo) return;
+		this.#endDrags();
+		this.#show(this.#history.undo());
+	}
+
+	redo(): void {
+		if (!this.#history.canRedo) return;
+		this.#endDrags();
+		this.#show(this.#history.redo());
+	}
+
+	/** Makes `doc` current and saves it right away: journal first (synchronous), then IndexedDB. */
+	#show(doc: PlanDocument): void {
+		this.#current = doc;
+		this.preview = null;
+		this.canUndo = this.#history.canUndo;
+		this.canRedo = this.#history.canRedo;
+		// Undo can remove selected objects; keep only those that still exist.
+		const kept = this.selection.filter((id) => doc.objects.some((o) => o.id === id));
+		if (kept.length !== this.selection.length) this.selection = kept;
+		// One timestamp per edit, shared by the journal and the stored plan, so recovery can tell
+		// which is newer even when an earlier save lands after this edit was journaled.
+		const at = now();
+		this.#deps.journal?.write(doc, at);
+		this.#queue.save({ doc, at });
+	}
+
+	#endDrags(): void {
 		this.#move = null;
 		this.#handle = null;
-		this.#history.push(next);
-		this.#current = next;
 		this.preview = null;
-		void this.#save(next);
 	}
 
 	setPreview(doc: PlanDocument | null): void {
@@ -115,16 +163,6 @@ export class EditorState {
 		this.selection = [id];
 		this.armedSymbolId = null;
 		return id;
-	}
-
-	async #save(doc: PlanDocument): Promise<void> {
-		this.saveStatus = 'saving';
-		try {
-			await this.#deps.save(doc);
-			this.saveStatus = 'saved';
-		} catch {
-			this.saveStatus = 'error';
-		}
 	}
 
 	/** Back to fitting the whole bay; stays fitted through resizes until the next zoom or pan. */

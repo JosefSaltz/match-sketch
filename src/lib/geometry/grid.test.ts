@@ -52,3 +52,11 @@ describe('visibleGridLines', () => {
 		expect(lines.ys.length).toBeLessThanOrEqual(4);
 	});
 });
+
+describe('scaleBar on tiny bays (Review Focus #2)', () => {
+	it('uses lengths below one unit when a whole unit is too long', () => {
+		const bar = scaleBar(430, 'yd');
+		expect(bar.px).toBeLessThanOrEqual(120);
+		expect(bar.label).toBe('0.05 yd');
+	});
+});

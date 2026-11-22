@@ -3,7 +3,10 @@ import { formatNumber, toFeet, type LengthUnit } from './units';
 import { screenToWorld, type Viewport } from './viewport';
 
 const GRID_MULTIPLIERS = [1, 5, 10, 50, 100, 500, 1000];
-const NICE_LENGTHS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+// Sub-unit lengths keep the bar short on tiny bays and at high zoom.
+const NICE_LENGTHS = [
+	0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000
+];
 const EPSILON = 1e-9;
 
 /**
@@ -31,7 +34,7 @@ export function scaleBar(
 	const lengthFt = toFeet(chosen, unit);
 	return {
 		lengthFt,
-		label: `${formatNumber(chosen)} ${unit}`,
+		label: `${chosen < 1 ? String(chosen) : formatNumber(chosen)} ${unit}`,
 		px: Math.round(lengthFt * pxPerFt * 100) / 100
 	};
 }

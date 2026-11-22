@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { worldToScreen, screenToWorld, fitViewport, zoomAt } from './viewport';
+import {
+	worldToScreen,
+	screenToWorld,
+	fitViewport,
+	zoomAt,
+	zoomLimitsFor,
+	ZOOM_LIMITS
+} from './viewport';
 
 const vp = { scale: 10, offsetX: 50, offsetY: 400 };
 
@@ -26,5 +33,17 @@ describe('viewport', () => {
 
 	it('clamps zoom to the limits', () => {
 		expect(zoomAt(vp, { x: 0, y: 0 }, 1000).scale).toBe(200);
+	});
+});
+
+describe('zoomLimitsFor', () => {
+	it('lets a tiny bay zoom in past its fit scale', () => {
+		expect(zoomLimitsFor(430).max).toBeGreaterThanOrEqual(430 * 4);
+	});
+	it('keeps the default limits for ordinary bays', () => {
+		expect(zoomLimitsFor(5)).toEqual(ZOOM_LIMITS);
+	});
+	it('lets a huge bay zoom out past its fit scale', () => {
+		expect(zoomLimitsFor(0.1).min).toBeLessThanOrEqual(0.1 / 4);
 	});
 });

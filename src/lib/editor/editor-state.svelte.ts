@@ -7,7 +7,13 @@ import {
 	rotateWorld,
 	type Corner
 } from '../geometry/transform';
-import { fitViewport, screenToWorld, zoomAt, type Viewport } from '../geometry/viewport';
+import {
+	fitViewport,
+	screenToWorld,
+	zoomAt,
+	zoomLimitsFor,
+	type Viewport
+} from '../geometry/viewport';
 import { emptyPlanDocument, type PlanDisplay, type PlanDocument } from '../model/plan';
 import { now, type PlanRecord } from '../store/records';
 import { createHistory, type History } from './history';
@@ -172,7 +178,8 @@ export class EditorState {
 
 	zoomBy(factor: number, at?: Point): void {
 		const p = at ?? { x: this.screen.width / 2, y: this.screen.height / 2 };
-		this.#manualViewport = zoomAt(this.viewport, p, factor);
+		const fitScale = fitViewport(this.canvas, this.screen, FIT_PADDING_PX).scale;
+		this.#manualViewport = zoomAt(this.viewport, p, factor, zoomLimitsFor(fitScale));
 	}
 
 	panBy(dxPx: number, dyPx: number): void {

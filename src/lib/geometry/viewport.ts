@@ -8,6 +8,17 @@ export type Viewport = { scale: number; offsetX: number; offsetY: number };
 
 export const ZOOM_LIMITS = { min: 0.05, max: 200 };
 
+/**
+ * Zoom limits for a bay that fits at `fitScale` px/ft: the defaults, widened so a tiny bay can
+ * still zoom in (to 8× its fit) and a huge one can still zoom out (to ¼ of its fit).
+ */
+export function zoomLimitsFor(fitScale: number): { min: number; max: number } {
+	return {
+		min: Math.min(ZOOM_LIMITS.min, fitScale / 4),
+		max: Math.max(ZOOM_LIMITS.max, fitScale * 8)
+	};
+}
+
 export function worldToScreen(p: Point, vp: Viewport): Point {
 	return { x: vp.offsetX + p.x * vp.scale, y: vp.offsetY - p.y * vp.scale };
 }

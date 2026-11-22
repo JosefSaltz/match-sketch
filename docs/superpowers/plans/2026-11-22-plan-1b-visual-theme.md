@@ -339,10 +339,10 @@ test.describe('tablet', () => {
 
 - Produces:
   - `sources.json`: a list of entries.
-    - Camo fields: `{ id, name, kind: 'photo' | 'pixel', cleared: boolean, source: { file_page, url, author, license, sha256 }, colors: number, palette: [hex...], crop?: [x0, y0, x1, y1], work_width: number, seam_band: number, tile_width: number }`.
+    - Camo fields: `{ id, name, kind: 'photo', cleared: boolean, source: { file_page, url, author, license, sha256 }, colors: number, palette: [hex...], crop?: [x0, y0, x1, y1], work_width: number, seam_band: number, tile_width: number }`.
     - Plaid fields: `{ id, name, kind: 'plaid', cleared: true, sett: [[hex, threads], ...], thread_px: number }`.
     - Initial camo entries:
-      - `dpm`, `ucp` and `dbdu`, cleared and supported now.
+      - `dpm` and `dbdu`, cleared and supported now. (UCP was dropped by the user.)
       - `m81`, `erdl`, `dcu`, `tiger-stripe` and `desert-night`, with `cleared: false`, their sources and licenses as spec §7 records them, and their kinds (`flat`, `grid`) marked "not yet supported".
     - Plaids:
       - `buffalo-check`: red `#b3141b` / black `#1a1a1a`, equal bands.
@@ -356,7 +356,6 @@ test.describe('tablet', () => {
     - `--preview` writes `tools/patterns/out/review.html` showing each tile on a mock app bar, a repeated area with seam markers, and the reference image.
   - Pipeline (port from the spike scripts; spec §6.6):
     - **Photo:** flat-field the lighting, median denoise, k-means in CIE Lab into `colors` clusters, and remove specks.
-    - **Pixel (UCP):** detect the pixel grid and rebuild the tile pixel-exact; scale up with nearest-neighbor.
     - **Seam:** signed-distance blending over `seam_band` px on each axis.
     - **Palette:** recolor to the entry's `palette`.
     - **Render:** WebP at `tile_width`, ≤ 250 KB.
@@ -376,9 +375,6 @@ def test_plaid_tile_is_periodic_and_uses_only_sett_colors():
     assert set(colors_of(img)) <= {(0xb3, 0x14, 0x1b), (0x1a, 0x1a, 0x1a)}
     assert img.width == img.height == 2 * (8 + 8) * 4
 
-def test_pixel_grid_rebuild_is_exact():
-    src = upscale_nearest(random_pixels(seed=2, cells=(20, 20), colors=3), 7)
-    assert rebuild_pixel_grid(jpeg_roundtrip(src)).cell_px == 7
 
 def test_tile_stays_under_the_size_budget(tmp_path):
     out = render_webp(random_blobs(seed=3, size=(900, 1300), colors=4), PALETTE4, tmp_path / "t.webp", 1600)
@@ -396,18 +392,17 @@ def test_tile_stays_under_the_size_budget(tmp_path):
 
 **Files:**
 
-- Create: `static/themes/{buffalo-check,hunter,range-day,dpm,ucp,dbdu}.webp` (only those the user approves), `tests/e2e/theme-tiles.spec.ts`
+- Create: `static/themes/{buffalo-check,hunter,range-day,dpm,dbdu}.webp` (only those the user approves), `tests/e2e/theme-tiles.spec.ts`
 - Modify: `tools/patterns/sources.json` (calibrated palettes, crops), `src/lib/theme/themes.ts`
 
 **Interfaces:**
 
 - Consumes: the pattern tool (Task 6); `Theme`, `THEMES` (Task 2).
 - Produces:
-  - **Registry:** entries for each approved tile, with `tile.src = '/themes/<id>.webp'`, the display size from the manifest's tile width, and a `credit` id for camo. Names: `dpm` "Woodland DPM", `ucp` "UCP", `dbdu` "Chocolate Chip", `buffalo-check` "Buffalo Check", `hunter` "Hunter", `range-day` "Range Day".
+  - **Registry:** entries for each approved tile, with `tile.src = '/themes/<id>.webp'`, the display size from the manifest's tile width, and a `credit` id for camo. Names: `dpm` "Woodland DPM", `dbdu` "Chocolate Chip", `buffalo-check` "Buffalo Check", `hunter` "Hunter", `range-day` "Range Day".
   - **Display sizes:**
     - Plaids: about 64–128 px per sett repeat.
     - DPM: about 690 px wide.
-    - UCP: about 6 px per pixel cell.
     - 6-color desert: chosen at review.
   - **Default:** `DEFAULT_THEME_ID = 'dpm'` once DPM is approved.
   - **User checkpoint (spec §6.7):**
@@ -443,10 +438,10 @@ test('the default theme is DPM', async ({ page }) => {
 Update Task 4's fallback e2e to expect `dpm`.
 
 - [ ] **Step 2: Run to verify failure** → FAIL (no DPM theme).
-- [ ] **Step 3: Generate, calibrate, and review** with the user: `uv run make_tiles.py dpm ucp dbdu buffalo-check hunter range-day --preview`. Record the calibrated palettes and the 6-color desert crop in `sources.json`, regenerate, and get the user's approval per tile.
+- [ ] **Step 3: Generate, calibrate, and review** with the user: `uv run make_tiles.py dpm dbdu buffalo-check hunter range-day --preview`, then `--ship` the approved ones. Record the calibrated palettes and the 6-color desert crop in `sources.json`, regenerate, and get the user's approval per tile.
 - [ ] **Step 4: Add** the approved tiles and registry entries; switch the default to `dpm`.
 - [ ] **Step 5: Run** the whole suite. The registry unit test confirms every tile file exists → PASS.
-- [ ] **Step 6: Commit** — `feat(theme): add plaid themes` and `feat(theme): add authentic camo themes (DPM, UCP, 6-color desert)` (the latter lists only what was approved), and `chore(tooling): record calibrated palettes` if the manifest changed separately.
+- [ ] **Step 6: Commit** — `feat(theme): add plaid themes` and `feat(theme): add authentic camo themes (DPM, 6-color desert)` (the latter lists only what was approved), and `chore(tooling): record calibrated palettes` if the manifest changed separately.
 
 ---
 

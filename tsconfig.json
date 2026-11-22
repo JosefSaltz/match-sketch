@@ -13,5 +13,6 @@
 		"tests",
 		"scripts",
 		"drizzle.config.ts"
-	]
+	],
+	"exclude": ["src/service-worker"]
 }

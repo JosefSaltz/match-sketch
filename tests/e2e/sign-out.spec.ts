@@ -38,21 +38,26 @@ test('signing out clears the device; signing back in brings the plans back', asy
 	await adminClient().auth.admin.deleteUser(otherId);
 });
 
-test('signing out with unsynced changes warns first', async ({ page }) => {
-	await page.route('**/api/sync/**', (route) => route.abort());
-	await makePlan(page);
-	await page.getByRole('button', { name: 'Sign out' }).click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toContainText(
-		"2 changes on this device haven't synced. Signing out deletes them."
-	);
-	await dialog.getByRole('button', { name: 'Cancel' }).click();
-	await expect(page.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
-	await expect(plansOn(page)).toHaveCount(1);
+test.describe('with requests routed', () => {
+	// page.route can't see requests that a service worker handles.
+	test.use({ serviceWorkers: 'block' });
 
-	await page.getByRole('button', { name: 'Sign out' }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Sign out anyway' }).click();
-	await expect(page).toHaveURL(/\/sign-in/);
+	test('signing out with unsynced changes warns first', async ({ page }) => {
+		await page.route('**/api/sync/**', (route) => route.abort());
+		await makePlan(page);
+		await page.getByRole('button', { name: 'Sign out' }).click();
+		const dialog = page.getByRole('dialog');
+		await expect(dialog).toContainText(
+			"2 changes on this device haven't synced. Signing out deletes them."
+		);
+		await dialog.getByRole('button', { name: 'Cancel' }).click();
+		await expect(page.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
+		await expect(plansOn(page)).toHaveCount(1);
+
+		await page.getByRole('button', { name: 'Sign out' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Sign out anyway' }).click();
+		await expect(page).toHaveURL(/\/sign-in/);
+	});
 });
 
 test("the device's theme survives signing out", async ({ page }) => {

@@ -56,3 +56,14 @@ export async function themeBaseRgb(page: Page): Promise<string> {
 	const channel = (i: number) => parseInt(hex.slice(i, i + 2), 16);
 	return `rgb(${channel(1)}, ${channel(3)}, ${channel(5)})`;
 }
+
+/** From the home page: "New match" with a name (and date, YYYY-MM-DD); lands on the match. */
+export async function createMatch(page: Page, name: string, date?: string): Promise<string> {
+	await page.getByRole('button', { name: 'New match' }).click();
+	const dialog = page.getByRole('dialog');
+	await dialog.getByLabel('Name').fill(name);
+	if (date) await dialog.getByLabel('Date').fill(date);
+	await dialog.getByRole('button', { name: 'Create match' }).click();
+	await expect(page).toHaveURL(/\/matches\/[0-9a-f-]{36}$/);
+	return page.url().split('/').at(-1)!;
+}

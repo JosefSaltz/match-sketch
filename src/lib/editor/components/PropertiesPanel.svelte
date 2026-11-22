@@ -119,6 +119,27 @@
 		if (stored?.type === 'text') input.value = stored.text;
 	}
 
+	const breakShown = $derived(editor.depth ? shown(editor.depth.fromFt) : '');
+
+	/**
+	 * Sets or clears the scale break (spec §7.4): a depth inside the bay turns it on, an empty
+	 * field turns it off, anything else puts the stored value back.
+	 */
+	function commitBreak(e: FieldEvent) {
+		const input = e.currentTarget;
+		const raw = input.value.trim();
+		const current = editor.depth?.fromFt ?? null;
+		if (raw === '') {
+			if (current !== null) editor.setScaleBreak(null);
+		} else {
+			const ft = toFeet(Number(raw), unit);
+			if (Number.isFinite(ft) && ft > 0 && ft < editor.canvas.depthFt && ft !== current) {
+				editor.setScaleBreak(ft);
+			}
+		}
+		input.value = editor.depth ? shown(editor.depth.fromFt) : '';
+	}
+
 	/** Enter leaves the field, which commits it through its change event. */
 	function blurOnEnter(e: KeyboardEvent & { currentTarget: HTMLInputElement }) {
 		if (e.key === 'Enter') e.currentTarget.blur();
@@ -213,5 +234,24 @@
 		</div>
 	{:else}
 		<p class="m-0 text-muted">Select an object to edit it</p>
+		<section class="mt-6 grid gap-2" aria-labelledby="{uid}-drawing">
+			<h3 id="{uid}-drawing" class="m-0 text-base font-semibold">Drawing</h3>
+			<label for="{uid}-break" class="text-sm text-muted">Not to scale beyond</label>
+			<input
+				id="{uid}-break"
+				type="number"
+				min="0"
+				step="any"
+				placeholder="Off"
+				class={controlClass}
+				value={breakShown}
+				onchange={commitBreak}
+				onkeydown={blurOnEnter}
+			/>
+			<p class="m-0 text-xs text-muted">
+				In {unit === 'yd' ? 'yards' : 'feet'}. Everything farther downrange is drawn in a short
+				strip, each object tagged with its true distance. Leave empty for true scale.
+			</p>
+		</section>
 	{/if}
 </div>

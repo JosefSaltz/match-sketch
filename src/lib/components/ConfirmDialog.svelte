@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '#lib/ui/Button.svelte';
 	import Dialog from './Dialog.svelte';
 
 	type Props = {
@@ -12,24 +13,9 @@
 </script>
 
 <Dialog {title} onclose={oncancel}>
-	<p>{message}</p>
-	<div class="actions">
-		<button type="button" onclick={oncancel}>Cancel</button>
-		<button type="button" class="danger" onclick={onconfirm}>{confirmLabel}</button>
+	<p class="m-0">{message}</p>
+	<div class="flex flex-wrap justify-end gap-3">
+		<Button onclick={oncancel}>Cancel</Button>
+		<Button variant="danger" onclick={onconfirm}>{confirmLabel}</Button>
 	</div>
 </Dialog>
-
-<style>
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: var(--space-2);
-	}
-	.danger {
-		background: var(--color-danger);
-		color: #fff;
-		border: 1px solid var(--color-danger);
-		border-radius: var(--radius);
-		padding: var(--space-2) var(--space-4);
-	}
-</style>

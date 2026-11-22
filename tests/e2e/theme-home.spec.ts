@@ -15,7 +15,7 @@ test('plans show as cards with a patterned header', async ({ page }) => {
 	await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });
 	await createPlanFromCanvas(page, 'Bay A');
 	await page.goto('/');
-	const card = page.getByRole('region', { name: 'Plans' }).getByRole('listitem');
+	const card = page.getByRole('region', { name: 'Unassigned plans' }).getByRole('listitem');
 	await expect(card.locator('header')).toHaveCSS('background-color', await themeBaseRgb(page));
 	await expect(card).toContainText('Untitled stage');
 	await expect(card).toContainText('50 × 25 yd');

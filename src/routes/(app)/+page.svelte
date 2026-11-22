@@ -4,6 +4,7 @@
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
@@ -78,63 +79,77 @@
 	<title>{APP_NAME}</title>
 </svelte:head>
 
-<main class="home">
-	<h1><Wordmark /></h1>
-
-	<section aria-labelledby="plans-heading">
-		<div class="section-head">
-			<h2 id="plans-heading">Plans</h2>
-			<a class="button" href={resolve('plans/new')}>New plan</a>
+<div class="min-h-full bg-surface">
+	<header class="bg-theme border-b-[3px] border-black">
+		<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-4">
+			<h1 class="m-0 mr-auto"><Wordmark /></h1>
+			<Button href={resolve('plans/new')}>New plan</Button>
+			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
 		</div>
-		{#if plans.length}
-			<ul class="rows">
-				{#each plans as plan (plan.id)}
-					<li class="row plan-row">
-						<span class="name">{planTitle(plan)}</span>
-						<span class="meta">{formatDimensions(plan.widthFt, plan.depthFt, plan.unit)}</span>
-						<span class="meta">Edited {edited(plan.updatedAt)}</span>
-						<span class="row-actions">
-							<a class="button" href={resolve('/(app)/plans/[id]', { id: plan.id })}>Open</a>
-							<button type="button" onclick={() => duplicate(plan)}>Duplicate</button>
-							<button type="button" onclick={() => (deletingPlan = plan)}>Delete</button>
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="empty">No plans yet. Start one with “New plan”.</p>
-		{/if}
-	</section>
+	</header>
 
-	<section aria-labelledby="canvases-heading">
-		<div class="section-head">
-			<h2 id="canvases-heading">Canvases</h2>
-			<button type="button" onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</button>
-		</div>
-		{#if canvases.length}
-			<ul class="rows">
-				{#each canvases as canvas (canvas.id)}
-					<li class="row">
-						<span class="name">{canvas.name}</span>
-						<span class="meta">
-							{formatDimensions(canvas.widthFt, canvas.depthFt, canvas.unit)}
-						</span>
-						<span class="row-actions">
-							<button type="button" onclick={() => (canvasDialog = { mode: 'edit', canvas })}>
-								Edit
-							</button>
-							<button type="button" onclick={() => (deletingCanvas = canvas)}>Delete</button>
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="empty">
-				No saved canvases yet. Save a bay's dimensions here to reuse them in plans.
-			</p>
-		{/if}
-	</section>
-</main>
+	<main class="mx-auto grid max-w-6xl gap-10 px-4 py-8">
+		<section aria-labelledby="plans-heading" class="grid gap-4">
+			<h2 id="plans-heading" class="m-0 font-display text-2xl tracking-wide uppercase">Plans</h2>
+			{#if plans.length}
+				<ul class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-5 p-0">
+					{#each plans as plan (plan.id)}
+						<li
+							class="overflow-hidden rounded-xl border-[3px] border-black bg-white shadow-[3px_3px_0_#000]"
+						>
+							<header class="bg-theme border-b-[3px] border-black px-3 py-2.5">
+								<h3 class="m-0 font-display text-base tracking-wide uppercase text-outline-sm">
+									{planTitle(plan)}
+								</h3>
+							</header>
+							<div class="grid gap-3 p-3">
+								<p class="m-0 grid text-sm text-muted">
+									<span>{formatDimensions(plan.widthFt, plan.depthFt, plan.unit)}</span>
+									<span>Edited {edited(plan.updatedAt)}</span>
+								</p>
+								<div class="flex flex-wrap gap-2">
+									<Button variant="primary" href={resolve('/(app)/plans/[id]', { id: plan.id })}>
+										Open
+									</Button>
+									<Button onclick={() => duplicate(plan)}>Duplicate</Button>
+									<Button variant="danger" onclick={() => (deletingPlan = plan)}>Delete</Button>
+								</div>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="m-0 text-muted">No plans yet. Start one with “New plan”.</p>
+			{/if}
+		</section>
+
+		<section aria-labelledby="canvases-heading" class="grid gap-4">
+			<h2 id="canvases-heading" class="m-0 font-display text-2xl tracking-wide uppercase">
+				Canvases
+			</h2>
+			{#if canvases.length}
+				<ul
+					class="m-0 list-none divide-y-2 divide-border overflow-hidden rounded-xl border-[3px] border-black bg-white p-0 shadow-[3px_3px_0_#000]"
+				>
+					{#each canvases as canvas (canvas.id)}
+						<li class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+							<span class="font-semibold">{canvas.name}</span>
+							<span class="mr-auto text-muted">
+								{formatDimensions(canvas.widthFt, canvas.depthFt, canvas.unit)}
+							</span>
+							<Button onclick={() => (canvasDialog = { mode: 'edit', canvas })}>Edit</Button>
+							<Button variant="danger" onclick={() => (deletingCanvas = canvas)}>Delete</Button>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="m-0 text-muted">
+					No saved canvases yet. Save a bay's dimensions here to reuse them in plans.
+				</p>
+			{/if}
+		</section>
+	</main>
+</div>
 
 {#if canvasDialog}
 	{@const editing = canvasDialog.mode === 'edit' ? canvasDialog.canvas : null}
@@ -174,61 +189,3 @@
 		oncancel={() => (deletingCanvas = null)}
 	/>
 {/if}
-
-<style>
-	.home {
-		max-width: 64rem;
-		margin: 0 auto;
-		padding: var(--space-6) var(--space-4);
-	}
-	section {
-		margin-top: var(--space-8);
-	}
-	.section-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		border-bottom: 1px solid var(--color-border);
-		padding-bottom: var(--space-2);
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.2rem;
-	}
-	.rows {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-	}
-	.row {
-		display: grid;
-		grid-template-columns: 1fr auto auto;
-		align-items: center;
-		gap: var(--space-4);
-		padding: var(--space-3) 0;
-		border-bottom: 1px solid var(--color-border);
-	}
-	.name {
-		font-weight: 600;
-	}
-	.meta,
-	.empty {
-		color: var(--color-muted);
-	}
-	.plan-row {
-		grid-template-columns: 1fr auto auto auto;
-	}
-	.button {
-		display: inline-block;
-		padding: 1px 6px;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius);
-		color: var(--color-text);
-		text-decoration: none;
-		background: var(--color-surface);
-	}
-	.row-actions {
-		display: flex;
-		gap: var(--space-2);
-	}
-</style>

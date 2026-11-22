@@ -11,7 +11,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | #   | Plan                                        | Status                    | File                                |
 | --- | ------------------------------------------- | ------------------------- | ----------------------------------- |
 | 1   | Local editor                                | Done (2026-11-22)         | `2026-11-21-plan-1-local-editor.md` |
-| 1b  | Visual theme (Tailwind, themes, camo tiles) | Written, ready to execute | `2026-11-22-plan-1b-visual-theme.md` |
+| 1b  | Visual theme (Tailwind, themes, camo tiles) | Done (2026-11-22)         | `2026-11-22-plan-1b-visual-theme.md` |
 | —   | Scale break spike (throwaway)               | Not started               | —                                   |
 | 2   | Brief, tally, measure, annotations, matches | Not written               | —                                   |
 | 3   | Symbol library art                          | Not written               | —                                   |
@@ -28,7 +28,7 @@ Update this table as plans are written and finished.
 
 - **Spec:** `docs/superpowers/specs/2026-11-21-theme-design.md`.
 - **Builds:** Tailwind 4 migration of every screen; the theme registry, picker and per-user setting; the varsity wordmark, buttons and panel headers; the pattern tool (`tools/patterns/`) and the cleared camo, solid and plaid tiles; the credits dialog.
-- **User checkpoints:** each camo tile is approved in a side-by-side preview before it ships; uncleared sources stay out of the repo (spec §8).
+- **User checkpoints:** each camo tile is approved in a side-by-side preview before it ships. The user cleared every reference to ship (spec §8); UCP was dropped and Flecktarn waits for a reference.
 
 ## Scale break spike (after Plan 1)
 

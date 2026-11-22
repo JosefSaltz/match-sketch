@@ -1,6 +1,6 @@
 import type { MatchSketchDB } from '../store/db';
 import type { Transport } from './engine';
-import { createLoop, initialSyncState, type Loop, type SyncState } from './loop';
+import { createLoop, initialSyncState, SYNC_LOCK, type Loop, type SyncState } from './loop';
 
 /** The app's sync status, shown by SyncStatus.svelte and read by pages after a pull. */
 export const syncState: SyncState = $state(
@@ -47,8 +47,18 @@ export function dismissConflicts(): Promise<void> {
 	return current?.dismissConflicts() ?? Promise.resolve();
 }
 
-/** Stops syncing (sign-out clears the device next). */
-export function stopSync(): void {
-	current?.stop();
+/** Stops syncing and waits for a round that is still running (sign-out clears the device next). */
+export async function stopSync(): Promise<void> {
+	const loop = current;
 	current = null;
+	loop?.stop();
+	await loop?.settled();
+}
+
+/**
+ * Runs `fn` while no tab is in a sync round: sync rounds hold the same lock, so sign-out can
+ * clear the device without a round writing the account's records back afterwards.
+ */
+export function withSyncLock<T>(fn: () => Promise<T>): Promise<T> {
+	return navigator.locks ? navigator.locks.request(SYNC_LOCK, fn) : fn();
 }

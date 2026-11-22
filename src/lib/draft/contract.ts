@@ -36,10 +36,33 @@ export type Placement = {
 	depthFt?: number;
 };
 
+/** Longest text field sent to the model; the procedure and notes are the long ones. */
+const MAX_FIELD = 4000;
+const field = z.string().max(MAX_FIELD);
+
+/**
+ * The brief as a draft request may carry it: every field the prompt uses is bounded, so one
+ * request can't send an arbitrarily large (and expensive) prompt.
+ */
+const DraftBriefSchema = StageBriefSchema.extend({
+	matchName: z.string().max(200),
+	stageNumber: z.string().max(20),
+	stageName: z.string().max(200),
+	startPosition: field,
+	gunReady: field,
+	procedure: field,
+	roundCount: z.string().max(500),
+	parTime: z.string().max(200),
+	targetsOverride: z.string().max(500).nullable(),
+	notes: z
+		.array(z.object({ id: z.string().max(100), title: z.string().max(200), body: field }))
+		.max(10)
+});
+
 export const DraftRequestSchema = z.object({
 	planId: z.uuid(),
-	description: z.string().trim().min(1).max(4000),
-	brief: StageBriefSchema,
+	description: z.string().trim().min(1).max(MAX_FIELD),
+	brief: DraftBriefSchema,
 	canvas: z.object({
 		widthFt: z.number().positive(),
 		depthFt: z.number().positive(),

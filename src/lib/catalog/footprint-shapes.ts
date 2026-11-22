@@ -38,6 +38,31 @@ export type Shape = {
 	paint: Paint;
 };
 
+/**
+ * SVG attributes for each paint, with `ink` as the line color. On screen ink is `currentColor`
+ * (so selection can recolor it); print passes a fixed color and gets `none` for the clickable
+ * clear fill, which PDF conversion doesn't need.
+ */
+export function paintAttrs(
+	paint: Paint,
+	ink: string,
+	forPrint = false
+): Record<string, string | number> {
+	const line = { stroke: ink, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+	switch (paint) {
+		case 'fill':
+			return { ...line, fill: ink, 'fill-opacity': 0.75, 'stroke-width': 1.5 };
+		case 'tint':
+			return { ...line, fill: '#e9ecef', 'stroke-width': 2 };
+		case 'hit':
+			return { ...line, fill: forPrint ? 'none' : 'transparent', 'stroke-width': 2 };
+		case 'ink':
+			return { ...line, fill: 'none', 'stroke-width': 2 };
+		case 'detail':
+			return { ...line, fill: 'none', 'stroke-width': 1.25 };
+	}
+}
+
 /** Thin bars (lines, walls) never draw thinner than this. */
 export const LINE_MIN_PX = 3;
 

@@ -1,5 +1,6 @@
 import { getDb } from '#lib/store/index.js';
-import { getSetting, THEME_SETTING } from '#lib/store/settings.js';
+import { sounds } from '#lib/audio/sounds.svelte.js';
+import { getSetting, SOUNDS_SETTING, THEME_SETTING } from '#lib/store/settings.js';
 import { applyTheme } from '#lib/theme/apply.js';
 import { currentTheme } from '#lib/theme/current.svelte.js';
 import { getTheme } from '#lib/theme/themes.js';
@@ -14,5 +15,6 @@ export const load: LayoutLoad = async () => {
 	const theme = getTheme(await getSetting(getDb(), THEME_SETTING));
 	applyTheme(theme, document.documentElement);
 	currentTheme.id = theme.id;
+	sounds.on = (await getSetting(getDb(), SOUNDS_SETTING)) !== 'off';
 	return { themeId: theme.id };
 };

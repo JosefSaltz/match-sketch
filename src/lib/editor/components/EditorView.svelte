@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { playClick } from '#lib/audio/click.js';
+	import { sounds } from '#lib/audio/sounds.svelte.js';
 	import { getDb } from '#lib/store/index.js';
 	import { clearJournal, writeJournal } from '#lib/store/journal.js';
 	import { savePlanDocument } from '#lib/store/plans.js';
@@ -19,6 +21,9 @@
 			new EditorState(
 				plan,
 				{
+					onGridCross: () => {
+						if (sounds.on) playClick();
+					},
 					save: async (doc, at) => {
 						await savePlanDocument(getDb(), plan.id, doc, at);
 					},

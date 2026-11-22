@@ -3,6 +3,8 @@ import { now } from './records';
 
 /** The app theme chosen on this device (a theme id). */
 export const THEME_SETTING = 'theme';
+/** Drag clicks on this device: 'on' (default) or 'off'. */
+export const SOUNDS_SETTING = 'sounds';
 
 export async function getSetting(db: MatchSketchDB, key: string): Promise<string | undefined> {
 	return (await db.settings.get(key))?.value;

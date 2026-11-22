@@ -16,7 +16,7 @@ import {
 	type Viewport
 } from '../geometry/viewport';
 import { depthMapFor, toDrawn, toTrue, type DepthMap } from '../geometry/depth-map';
-import type { GridChoice } from '../geometry/grid';
+import { gridChoice, gridSpacing, type GridChoice } from '../geometry/grid';
 import {
 	emptyPlanDocument,
 	type Anchor,
@@ -48,6 +48,7 @@ import {
 } from './ops';
 import { SaveQueue, type SaveStatus } from './save-queue';
 import { DragSwing } from './swing.svelte';
+import { clickStepFt, gridCell } from './grid-cross';
 
 export type { SaveStatus };
 
@@ -70,6 +71,8 @@ type MoveDrag = {
 	startScreen: Point;
 	slopPx: number;
 	started: boolean;
+	/** The grid cell the grabbed item was last in, for drag clicks. */
+	cell?: string;
 };
 
 /** An in-progress drag of a resize or rotate handle, previewed until release. */
@@ -102,6 +105,8 @@ export const ROTATE_SNAP_DEG = 15;
 export type EditorDeps = {
 	/** Writes the document to IndexedDB, stamped with the time of the edit. */
 	save: (doc: PlanDocument, at: string) => Promise<void>;
+	/** Called when a dragged item crosses a grid line (the editor plays a click). */
+	onGridCross?: () => void;
 	/** A synchronous copy of the newest edit that survives a reload (see store/journal). */
 	journal?: { write: (doc: PlanDocument, at: string) => void; clear: () => void };
 };
@@ -549,6 +554,21 @@ export class EditorState {
 		this.preview =
 			delta.x === 0 && delta.y === 0 ? null : moveItems(m.base, m.ids, delta, this.canvas);
 		this.swing.move(m.ids, screenPt);
+		this.#clickOnCross(m, anchor, target);
+	}
+
+	/** Tells the editor when the grabbed item crosses into another grid cell. */
+	#clickOnCross(m: MoveDrag, from: Point, at: Point): void {
+		const step = clickStepFt({
+			snapFt: this.snapStep(),
+			grid: gridChoice(this.doc.display),
+			fineFt: gridSpacing(this.snapStep() ?? 1, this.viewport.scale)
+		});
+		if (!step) return;
+		m.cell ??= gridCell(from, step);
+		const cell = gridCell(at, step);
+		if (cell !== m.cell) this.#deps.onGridCross?.();
+		m.cell = cell;
 	}
 
 	#handle: HandleDrag | null = null;

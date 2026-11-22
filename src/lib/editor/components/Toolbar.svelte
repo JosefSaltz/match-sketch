@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { sounds } from '#lib/audio/sounds.svelte.js';
 	import { gridChoice, guideOptions } from '#lib/geometry/grid.js';
+	import { getDb } from '#lib/store/index.js';
+	import { setSetting, SOUNDS_SETTING } from '#lib/store/settings.js';
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
@@ -31,6 +34,12 @@
 		'focus-ring min-h-11 cursor-pointer rounded-[10px] border-[3px] border-black bg-white px-2 text-sm font-semibold shadow-[3px_3px_0_#000]';
 
 	let pickingTheme = $state(false);
+
+	/** Drag clicks on or off for this device (remembered like the theme). */
+	function toggleSounds() {
+		sounds.on = !sounds.on;
+		setSetting(getDb(), SOUNDS_SETTING, sounds.on ? 'on' : 'off').catch(console.error);
+	}
 </script>
 
 <header
@@ -140,6 +149,15 @@
 		</Button>
 		<Button onclick={() => editor.fit()}>Fit</Button>
 	</div>
+	<Button
+		variant="icon"
+		aria-label="Sounds"
+		aria-pressed={sounds.on}
+		title={sounds.on ? 'Drag clicks on' : 'Drag clicks off'}
+		onclick={toggleSounds}
+	>
+		{sounds.on ? '🔊' : '🔇'}
+	</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
@@ -42,9 +43,16 @@
 		if (adding) unassigned = (await listPlans(getDb())).filter((p) => p.matchId === null);
 	}
 
+	/** The last pull revision acted on; plain, so handling it doesn't re-run the effect. */
+	let handled = syncState.revision;
+
+	// After a pull, re-run the load: the match itself, or its stages, may have changed (or the
+	// match only just arrived on this device).
 	$effect(() => {
-		void syncState.revision;
-		untrack(() => void refresh());
+		const revision = syncState.revision;
+		if (revision === handled) return;
+		handled = revision;
+		untrack(() => void invalidateAll());
 	});
 
 	type FieldEvent = Event & { currentTarget: HTMLInputElement };

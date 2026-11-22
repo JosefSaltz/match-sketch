@@ -9,6 +9,7 @@
 	let { editor }: { editor: EditorState } = $props();
 
 	const uid = $props.id();
+	const SAVE_LABEL = { saving: 'Saving…', saved: 'Saved', error: 'Not saved — retrying' } as const;
 	const SNAP_OPTIONS: { value: SnapSetting; label: string }[] = [
 		{ value: 'off', label: 'Off' },
 		{ value: '1ft', label: '1 ft' },
@@ -29,6 +30,18 @@
 	<span class="title">{title}</span>
 	<span class="dims">
 		{formatDimensions(editor.canvas.widthFt, editor.canvas.depthFt, editor.plan.unit)}
+	</span>
+	<div class="group" role="group" aria-label="History">
+		<button type="button" onclick={() => editor.undo()} disabled={!editor.canUndo}>Undo</button>
+		<button type="button" onclick={() => editor.redo()} disabled={!editor.canRedo}>Redo</button>
+	</div>
+	<span
+		class={['save', editor.saveStatus]}
+		data-testid="save-status"
+		role="status"
+		aria-live="polite"
+	>
+		{SAVE_LABEL[editor.saveStatus]}
 	</span>
 	<span class="spacer"></span>
 	<div class="field">
@@ -88,6 +101,14 @@
 	.group {
 		display: flex;
 		gap: var(--space-1);
+	}
+	.save {
+		font-size: 0.875rem;
+		color: var(--color-muted);
+	}
+	.save.error {
+		color: var(--color-danger);
+		font-weight: 600;
 	}
 	.field {
 		display: flex;

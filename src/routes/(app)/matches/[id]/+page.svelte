@@ -56,14 +56,22 @@
 		});
 	}
 
+	/** Order saves in flight; the list is `aria-busy` until they land. */
+	let savingOrder = $state(0);
+
 	async function saveOrder(next: PlanRecord[]) {
 		if (!match) return;
 		plans = next;
-		await reorderMatchPlans(
-			getDb(),
-			match.id,
-			next.map((p) => p.id)
-		);
+		savingOrder++;
+		try {
+			await reorderMatchPlans(
+				getDb(),
+				match.id,
+				next.map((p) => p.id)
+			);
+		} finally {
+			savingOrder--;
+		}
 	}
 
 	async function openAdd() {
@@ -178,6 +186,7 @@
 				</div>
 				{#if plans.length}
 					<ol
+						aria-busy={savingOrder > 0}
 						class="m-0 list-none divide-y-2 divide-border overflow-hidden rounded-xl border-[3px] border-black bg-white p-0 shadow-[3px_3px_0_#000]"
 					>
 						{#each plans as plan, i (plan.id)}

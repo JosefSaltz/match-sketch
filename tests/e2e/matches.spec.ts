@@ -113,6 +113,11 @@ test.describe('match screen', () => {
 		await page.mouse.move(h.x + h.width / 2, top.y + 4, { steps: 10 });
 		await page.mouse.up();
 		await expect(stages(page).nth(0)).toContainText('Stage 1 — Charlie');
+		// The new order is written in the background; reload only once it has landed.
+		await expect(page.getByRole('region', { name: 'Stages' }).getByRole('list')).toHaveAttribute(
+			'aria-busy',
+			'false'
+		);
 		await page.reload();
 		await expect(stages(page).nth(0)).toContainText('Stage 1 — Charlie');
 		await expect(stages(page).nth(1)).toContainText('Stage 2 — Bravo');

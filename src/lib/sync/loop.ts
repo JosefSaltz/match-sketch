@@ -67,7 +67,10 @@ export type Loop = {
 	ready: Promise<void>;
 	syncNow(): Promise<void>;
 	dismissConflicts(): Promise<void>;
+	/** Stops scheduling rounds; a round already running finishes (see `settled`). */
 	stop(): void;
+	/** Resolves when no round is running, e.g. before sign-out clears the device. */
+	settled(): Promise<void>;
 };
 
 /**
@@ -195,6 +198,7 @@ export function createLoop(state: SyncState, options: LoopOptions): Loop {
 			win?.removeEventListener('offline', onOffline);
 			doc?.removeEventListener('visibilitychange', onVisible);
 			for (const off of unhook) off();
-		}
+		},
+		settled: () => running ?? Promise.resolve()
 	};
 }

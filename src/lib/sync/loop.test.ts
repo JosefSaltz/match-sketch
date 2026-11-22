@@ -143,6 +143,28 @@ describe('the sync loop', () => {
 		expect(calls.pull).toBe(1);
 	});
 
+	it('lets sign-out wait for a round that is still running', async () => {
+		const { timers } = manualTimers();
+		let release!: () => void;
+		const transport: Transport = {
+			push: () => Promise.resolve([]),
+			pull: () =>
+				new Promise((resolve) => {
+					release = () => resolve({ records: [], cursor: 0, more: false });
+				})
+		};
+		const loop = start(transport, timers);
+		await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+		loop.stop();
+		let settled = false;
+		const waiting = loop.settled().then(() => (settled = true));
+		await new Promise((r) => setTimeout(r, 20));
+		expect(settled).toBe(false);
+		release();
+		await waiting;
+		expect(settled).toBe(true);
+	});
+
 	it("pauses for another account's data and says so", async () => {
 		const { timers } = manualTimers();
 		const { transport, calls } = fakeTransport();

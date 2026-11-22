@@ -12,7 +12,7 @@
 	import CreditsDialog from '#lib/theme/CreditsDialog.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import SyncStatus from '#lib/sync/SyncStatus.svelte';
-	import { stopSync, syncNow, syncState } from '#lib/sync/loop.svelte.js';
+	import { stopSync, syncNow, syncState, withSyncLock } from '#lib/sync/loop.svelte.js';
 	import { clearLocalData, unsyncedCount, unsyncedWarning } from '#lib/sync/device.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
@@ -119,17 +119,21 @@
 
 	/** Clears this device's local data and session, then does a full page load so no account state survives. */
 	async function finishSignOut() {
-		stopSync();
-		await clearLocalData(getDb(), localStorage);
-		try {
-			// Local scope signs out only this device; offline, the stored session is cleared directly.
-			await signOutDevice(
-				() => getSupabase().auth.signOut({ scope: 'local' }),
-				() => clearStoredSession(document)
-			);
-		} catch {
-			// Signing out must always finish.
-		}
+		await stopSync();
+		// Holding the sync lock means no tab is mid-round, so nothing writes the account's records
+		// back after the clear; once the session is gone, other tabs' rounds are refused.
+		await withSyncLock(async () => {
+			try {
+				// Local scope signs out only this device; offline, the stored session is cleared directly.
+				await signOutDevice(
+					() => getSupabase().auth.signOut({ scope: 'local' }),
+					() => clearStoredSession(document)
+				);
+			} catch {
+				// Signing out must always finish.
+			}
+			await clearLocalData(getDb(), localStorage);
+		});
 		location.assign(resolve('/sign-in'));
 	}
 

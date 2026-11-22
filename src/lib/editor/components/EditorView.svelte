@@ -5,6 +5,7 @@
 	import type { PlanRecord } from '#lib/store/records.js';
 	import { EditorState } from '../editor-state.svelte.js';
 	import EditorCanvas from './EditorCanvas.svelte';
+	import Palette from './Palette.svelte';
 	import Toolbar from './Toolbar.svelte';
 
 	let { plan }: { plan: PlanRecord } = $props();
@@ -23,7 +24,7 @@
 <div class="editor">
 	<Toolbar {editor} />
 	<div class="workspace">
-		<aside class="palette" aria-label="Symbols"></aside>
+		<Palette {editor} />
 		<EditorCanvas {editor} />
 		<aside class="properties" aria-label="Properties"></aside>
 	</div>
@@ -37,12 +38,8 @@
 	}
 	.workspace {
 		display: grid;
-		grid-template-columns: 15rem 1fr 17rem;
+		grid-template-columns: 16rem 1fr 17rem;
 		min-height: 0;
-	}
-	.palette {
-		border-right: 1px solid var(--color-border);
-		overflow-y: auto;
 	}
 	.properties {
 		border-left: 1px solid var(--color-border);

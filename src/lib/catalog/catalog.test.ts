@@ -23,6 +23,25 @@ describe('catalog', () => {
 		expect(searchCatalog('').length).toBe(CATALOG.length);
 	});
 
+	it('finds targets by common aliases', () => {
+		expect(searchCatalog('IPSC').map((e) => e.id)).toContain('paper');
+		expect(searchCatalog('knock-down plate').map((e) => e.id)).toEqual(['plate-kd']);
+	});
+
+	it('shares no alias between entries, nor uses another entry’s name as one', () => {
+		const owner = new Map<string, string>();
+		for (const e of CATALOG) owner.set(e.name.toLowerCase(), e.id);
+		const seen = new Map<string, string>();
+		for (const e of CATALOG) {
+			for (const a of e.aliases) {
+				const k = a.toLowerCase();
+				expect(seen.get(k) ?? e.id, `alias "${a}"`).toBe(e.id);
+				expect(owner.get(k) ?? e.id, `alias "${a}" is another entry's name`).toBe(e.id);
+				seen.set(k, e.id);
+			}
+		}
+	});
+
 	it('searches family names', () => {
 		expect(searchCatalog('Poppers').map((e) => e.id)).toEqual(POPPERS);
 	});
@@ -37,6 +56,17 @@ describe('families', () => {
 			expect(categoryOf.get(e.family) ?? e.category).toBe(e.category);
 			categoryOf.set(e.family, e.category);
 		}
+	});
+
+	it('has the full target set, every target in a family', () => {
+		const targets = CATALOG.filter((e) => e.category === 'target');
+		expect(targets).toHaveLength(19);
+		for (const e of targets) {
+			expect(e.family, e.id).toBeDefined();
+			expect(e.countable, e.id).toBe(true);
+			expect(e.kind === 'symbol' && e.anchor, e.id).toBe('base');
+		}
+		expect(Object.keys(FAMILIES)).toEqual(['paper', 'poppers', 'steel', 'movers']);
 	});
 
 	it('groups the popper variants as countable base-anchored targets', () => {
@@ -66,7 +96,7 @@ describe('paletteGroups', () => {
 		const targets = paletteGroups('')[0];
 		expect(
 			targets.items.map((i) => (i.kind === 'family' ? `family:${i.family.id}` : i.entry.id))
-		).toEqual(['paper', 'family:poppers', 'steel-static']);
+		).toEqual(['family:paper', 'family:poppers', 'family:steel', 'family:movers']);
 		const family = targets.items[1];
 		expect(family.kind === 'family' && family.entries.map((e) => e.id)).toEqual(POPPERS);
 	});
@@ -74,9 +104,11 @@ describe('paletteGroups', () => {
 	it('keeps only matches and drops empty categories', () => {
 		const groups = paletteGroups('static');
 		expect(groups.map((g) => g.category)).toEqual(['target']);
-		const [family, steel] = groups[0].items;
-		expect(family.kind === 'family' && family.entries.map((e) => e.id)).toEqual(['popper-static']);
-		expect(steel.kind === 'entry' && steel.entry.id).toBe('steel-static');
+		const [poppers, steel] = groups[0].items;
+		expect(poppers.kind === 'family' && poppers.entries.map((e) => e.id)).toEqual([
+			'popper-static'
+		]);
+		expect(steel.kind === 'family' && steel.entries.map((e) => e.id)).toEqual(['steel-static']);
 		expect(paletteGroups('zzz')).toEqual([]);
 	});
 });

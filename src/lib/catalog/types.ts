@@ -13,6 +13,8 @@ type BaseEntry = {
 	family?: string;
 	/** Plural display name for counts (e.g. the Targets tally); defaults to `name` + "s". */
 	plural?: string;
+	/** Keep the name's case in running text (the tally), e.g. "KD plate", "Texas star". */
+	keepCase?: boolean;
 	/** Targets: one object can stand for several (e.g. "KD ×4"). */
 	countable: boolean;
 	autoLabel?: AutoLabel;

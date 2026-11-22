@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getSupabase } from '#lib/auth/client.js';
 	import { safeNext } from '#lib/auth/session.js';
@@ -33,9 +34,10 @@
 							: error.message;
 				return;
 			}
-			// safeNext only returns a same-site path, which resolve() can't type-check.
+			// safeNext only returns a same-site path, which resolve() can't type-check. A path that
+			// matches no page makes goto throw; signing in still worked, so go home instead.
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
-			await goto(safeNext(page.url.searchParams.get('next')));
+			await goto(safeNext(page.url.searchParams.get('next'))).catch(() => goto(resolve('/(app)')));
 		} catch (e) {
 			message =
 				e instanceof TypeError ? OFFLINE_MESSAGE : e instanceof Error ? e.message : String(e);

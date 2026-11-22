@@ -15,6 +15,20 @@
       "when": 1795362585728,
       "tag": "20261122154945_profile_for_new_users",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795368186555,
+      "tag": "20261122172306_synced_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795368186851,
+      "tag": "20261122172307_sync_change_seq",
+      "breakpoints": true
     }
   ]
 }

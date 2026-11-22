@@ -82,3 +82,44 @@ test('placed objects keep their symbols and places across a reload', async ({ pa
 	// The start box marks its downrange edge.
 	await expect(page.locator('[data-symbol-id="start-box"] path')).toHaveCount(1);
 });
+
+test('every footprint can be selected by clicking inside it', async ({ page }) => {
+	// Final review: line-drawn footprints (door, low barrier, a wall's port) must stay clickable.
+	const footprints = [
+		'wall',
+		'wall-port',
+		'half-wall-port',
+		'v-wall',
+		'door',
+		'car',
+		'table',
+		'pallet',
+		'chopper-seat',
+		'plank',
+		'stairs',
+		'platform',
+		'wobble',
+		'barrier',
+		'berm',
+		'fence',
+		'shooting-box',
+		'start-box',
+		'fault-line'
+	];
+	const missed: string[] = [];
+	for (const id of footprints) {
+		await dragFromPalette(page, id, await bayPoint(page, 0.5, 0.5));
+		const obj = page.locator(`[data-symbol-id="${id}"]`);
+		await expect(obj).toHaveCount(1);
+		const empty = await bayPoint(page, 0.05, 0.05);
+		await page.mouse.click(empty.x, empty.y);
+		await expect(page.getByTestId('selection')).toHaveCount(0);
+		const b = (await obj.boundingBox())!;
+		await page.mouse.click(b.x + b.width * 0.62, b.y + b.height * 0.35);
+		if ((await page.getByTestId('selection').count()) !== 1) missed.push(id);
+		// Undo the placement so the next one lands on clear ground.
+		await page.getByRole('button', { name: 'Undo' }).click();
+		await expect(page.getByTestId('object')).toHaveCount(0);
+	}
+	expect(missed).toEqual([]);
+});

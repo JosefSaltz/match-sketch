@@ -13,11 +13,16 @@ export function sessionState(result: {
 	return isAuthRetryableFetchError(result.error) ? 'signed-in' : 'signed-out';
 }
 
+/** A path that a browser would read as another host (`//host`, `/\\host`). */
+const protocolRelative = (path: string) => path.startsWith('//') || path.startsWith('/\\');
+
 /** `next` if it is a path on this site (and not the sign-in page itself), else `'/'`. */
 export function safeNext(next: string | null | undefined): string {
-	if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return '/';
+	if (!next || !next.startsWith('/') || protocolRelative(next)) return '/';
 	const url = new URL(next, 'http://same.origin');
 	if (url.origin !== 'http://same.origin') return '/';
 	if (url.pathname === '/sign-in') return '/';
-	return url.pathname + url.search + url.hash;
+	const path = url.pathname + url.search + url.hash;
+	// Normalising dot segments can turn `/.//host` into `//host`; check the result too.
+	return protocolRelative(path) ? '/' : path;
 }

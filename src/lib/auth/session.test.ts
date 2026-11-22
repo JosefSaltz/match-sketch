@@ -39,7 +39,11 @@ describe('safeNext (Review Focus #1)', () => {
 		'javascript:alert(1)',
 		'plans/abc',
 		'/sign-in?next=/',
-		'/sign-in'
+		'/sign-in',
+		'/.//evil.example',
+		'/x/..//evil.example',
+		'/%2e//evil.example',
+		'/./\\evil.example'
 	])('sends %s home', (next) => {
 		expect(safeNext(next)).toBe('/');
 	});

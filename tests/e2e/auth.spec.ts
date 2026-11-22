@@ -34,3 +34,10 @@ test('a next link to another site lands on home (Review Focus #1)', async ({ pag
 	await signIn(page, MD);
 	await expect(page).toHaveURL('/');
 });
+
+test('a next link to a page that does not exist lands on home', async ({ page }) => {
+	await page.goto('/sign-in?next=%2Fno-such-page');
+	await signIn(page, MD);
+	await expect(page).toHaveURL('/');
+	await expect(page.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
+});

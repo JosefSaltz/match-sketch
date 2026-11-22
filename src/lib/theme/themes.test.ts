@@ -29,6 +29,22 @@ describe('theme registry', () => {
 		expect(broken).toEqual([]);
 	});
 
+	it('offers three plaids and seven camo patterns, each camo credited', () => {
+		expect(THEMES.filter((t) => t.family === 'plaid')).toHaveLength(3);
+		const camo = THEMES.filter((t) => t.family === 'camo');
+		expect(camo.map((t) => t.id)).toEqual([
+			'dpm',
+			'm81',
+			'erdl',
+			'tiger-stripe',
+			'dbdu',
+			'dcu',
+			'desert-night'
+		]);
+		for (const t of camo) expect(t.credit).toBe(t.id);
+		expect(DEFAULT_THEME_ID).toBe('dpm');
+	});
+
 	it('falls back to the default for unknown or missing ids (Review Focus #2)', () => {
 		expect(getTheme(DEFAULT_THEME_ID).id).toBe(DEFAULT_THEME_ID);
 		expect(getTheme('no-such-theme').id).toBe(DEFAULT_THEME_ID);

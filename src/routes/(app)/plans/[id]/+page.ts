@@ -1,6 +1,7 @@
 import type { MatchContext } from '#lib/editor/editor-state.svelte.js';
 import { getDb } from '#lib/store/index.js';
 import { recoverUnsavedEdits } from '#lib/store/journal.js';
+import { keepAsConflictedCopy } from '#lib/sync/engine.js';
 import { getMatch, listMatchPlans } from '#lib/store/matches.js';
 import { getPlan } from '#lib/store/plans.js';
 import type { PageLoad } from './$types';
@@ -18,7 +19,12 @@ export const load: PageLoad = async ({ params }) => {
 		: null;
 	// An edit made just before a reload may only have reached the journal; apply it first.
 	return {
-		plan: plan ? await recoverUnsavedEdits(db, localStorage, plan) : null,
+		plan: plan
+			? await recoverUnsavedEdits(db, localStorage, plan, async (document) => {
+					// An unsaved edit made on a version a pull has since replaced: keep it as a copy.
+					await keepAsConflictedCopy(db, plan.id, document, new Date());
+				})
+			: null,
 		match: matchContext
 	};
 };

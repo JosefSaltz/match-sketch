@@ -1,3 +1,4 @@
+import type { PlanDocument } from '../model/plan';
 import type { MatchSketchDB } from '../store/db';
 import { nextStageOrder } from '../store/matches';
 import {
@@ -123,6 +124,38 @@ async function applyConflict(
 	return { copy, needsReload };
 }
 
+async function registerConflicts(db: MatchSketchDB, copies: ConflictCopy[]): Promise<void> {
+	if (copies.length === 0) return;
+	const all = [...(await pendingConflicts(db)), ...copies];
+	await setSetting(db, SYNC_CONFLICTS, JSON.stringify(all));
+}
+
+/**
+ * Saves `document` as a conflicted copy of plan `planId`: for an edit made in an open editor on a
+ * version a pull or conflict has since replaced, so neither version is lost (spec §7.9).
+ */
+export async function keepAsConflictedCopy(
+	db: MatchSketchDB,
+	planId: string,
+	document: PlanDocument,
+	at: Date
+): Promise<ConflictCopy | null> {
+	const stored = await db.plans.get(planId);
+	if (!stored) return null;
+	const name = conflictName(document.brief.stageName.trim() || 'Untitled stage', at);
+	const copy: PlanRecord = {
+		...stored,
+		...newSyncMeta(),
+		updatedAt: timestamp(),
+		stageOrder: stored.matchId ? await nextStageOrder(db, stored.matchId) : null,
+		document: { ...document, brief: { ...document.brief, stageName: name } }
+	};
+	await db.plans.add(copy);
+	const conflict: ConflictCopy = { table: 'plans', id: copy.id, name };
+	await registerConflicts(db, [conflict]);
+	return conflict;
+}
+
 /**
  * Applies a pulled record unless the device has changes of its own (push decides those) or
  * already has this version (its own push coming back).
@@ -228,9 +261,6 @@ export async function syncOnce(
 		if (!page.more) break;
 	}
 
-	if (outcome.conflicts.length > 0) {
-		const all = [...(await pendingConflicts(db)), ...outcome.conflicts];
-		await setSetting(db, SYNC_CONFLICTS, JSON.stringify(all));
-	}
+	await registerConflicts(db, outcome.conflicts);
 	return outcome;
 }

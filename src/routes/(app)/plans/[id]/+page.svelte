@@ -34,7 +34,7 @@
 
 {#if data.plan}
 	{#key `${data.plan.id}:${data.plan.version}`}
-		<EditorView plan={data.plan} match={data.match} />
+		<EditorView plan={data.plan} match={data.match} onstale={() => void invalidateAll()} />
 	{/key}
 {:else}
 	<main class="mx-auto max-w-2xl px-4 py-8">

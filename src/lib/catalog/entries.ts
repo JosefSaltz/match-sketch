@@ -73,6 +73,7 @@ export const ENTRIES: readonly CatalogEntry[] = [
 	{
 		id: 'steel-static',
 		name: 'Static steel',
+		plural: 'Static steel',
 		aliases: ['steel plate', 'plate'],
 		category: 'target',
 		countable: true,

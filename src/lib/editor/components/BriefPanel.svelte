@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { targetsTally } from '#lib/brief/tally.js';
 	import type { StageBrief } from '#lib/model/plan.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
@@ -9,6 +10,7 @@
 
 	const uid = $props.id();
 	const brief = $derived(editor.doc.brief);
+	const tally = $derived(targetsTally(editor.doc.objects));
 
 	type TextKey = Exclude<keyof StageBrief, 'targetsOverride' | 'notes'>;
 	type Row = { key: TextKey; label: string; rows?: number };
@@ -26,6 +28,14 @@
 	const AFTER_TARGETS: Row[] = [{ key: 'parTime', label: 'Par time' }];
 
 	type InputEvent = Event & { currentTarget: HTMLInputElement | HTMLTextAreaElement };
+
+	/** An override that ends up blank goes back to the computed tally (same undo step). */
+	function finishOverride() {
+		if (brief.targetsOverride?.trim() === '') {
+			editor.setBrief({ targetsOverride: null }, 'targetsOverride');
+		}
+		editor.endTyping();
+	}
 
 	/** Every keystroke is saved; one field visit is one undo step (EditorState.setBrief). */
 	function typeInto(key: TextKey, e: InputEvent) {
@@ -62,6 +72,34 @@
 	{#each BEFORE_TARGETS as row (row.key)}
 		{@render textRow(row)}
 	{/each}
+	{#if brief.targetsOverride === null}
+		<div class="grid gap-1">
+			<span class="text-sm text-muted">Targets</span>
+			<p
+				class="m-0 min-h-11 rounded-lg border-2 border-border px-3 py-2"
+				data-testid="targets-tally"
+			>
+				{tally || 'No targets yet'}
+			</p>
+			<Button onclick={() => editor.setBrief({ targetsOverride: tally })}>Override</Button>
+		</div>
+	{:else}
+		<div class="grid gap-2">
+			<Field label="Targets" id="{uid}-targets">
+				{#snippet children({ id })}
+					<textarea
+						{id}
+						rows="3"
+						class="{controlClass} py-2"
+						value={brief.targetsOverride}
+						oninput={(e) =>
+							editor.setBrief({ targetsOverride: e.currentTarget.value }, 'targetsOverride')}
+						onblur={finishOverride}></textarea>
+				{/snippet}
+			</Field>
+			<Button onclick={() => editor.setBrief({ targetsOverride: null })}>Use computed tally</Button>
+		</div>
+	{/if}
 	{#each AFTER_TARGETS as row (row.key)}
 		{@render textRow(row)}
 	{/each}

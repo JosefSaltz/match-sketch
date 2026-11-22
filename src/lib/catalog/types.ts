@@ -9,6 +9,8 @@ type BaseEntry = {
 	category: Category;
 	/** Groups variants of one target type in the palette (e.g. `poppers`); a `FAMILIES` id. */
 	family?: string;
+	/** Plural display name for counts (e.g. the Targets tally); defaults to `name` + "s". */
+	plural?: string;
 	/** Targets: one object can stand for several (e.g. "KD ×4"). */
 	countable: boolean;
 	autoLabel?: AutoLabel;

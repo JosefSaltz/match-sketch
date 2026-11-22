@@ -11,8 +11,10 @@
 
 	const uid = $props.id();
 	const unit = $derived(editor.plan.unit);
-	const count = $derived(editor.selectedObjects.length);
-	const obj = $derived(count === 1 ? editor.selectedObjects[0] : null);
+	const objectCount = $derived(editor.selectedObjects.length);
+	const count = $derived(objectCount + editor.selectedAnnotations.length);
+	const obj = $derived(count === 1 && objectCount === 1 ? editor.selectedObjects[0] : null);
+	const ann = $derived(count === 1 && objectCount === 0 ? editor.selectedAnnotations[0] : null);
 	const entry = $derived(obj ? getEntry(obj.symbolId) : undefined);
 
 	/** A length in the plan's unit, to two decimals at most. */
@@ -109,6 +111,13 @@
 		input.value = stored(id)?.label ?? '';
 	}
 
+	function commitText(e: FieldEvent, id: string) {
+		const input = e.currentTarget;
+		editor.setText(id, input.value);
+		const stored = editor.doc.annotations.find((a) => a.id === id);
+		if (stored?.type === 'text') input.value = stored.text;
+	}
+
 	/** Enter leaves the field, which commits it through its change event. */
 	function blurOnEnter(e: KeyboardEvent & { currentTarget: HTMLInputElement }) {
 		if (e.key === 'Enter') e.currentTarget.blur();
@@ -155,10 +164,33 @@
 			<Button onclick={() => editor.bringToFront(o.id)}>Bring to front</Button>
 			<Button onclick={() => editor.sendToBack(o.id)}>Send to back</Button>
 		</div>
+	{:else if ann?.type === 'text'}
+		{@const a = ann}
+		<h3 class="m-0 mb-3 text-base font-semibold">Text label</h3>
+		<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+			<label for="{uid}-text" class="text-sm text-muted">Text</label>
+			<input
+				id="{uid}-text"
+				type="text"
+				maxlength="200"
+				class={controlClass}
+				value={a.text}
+				onchange={(e) => commitText(e, a.id)}
+				onkeydown={blurOnEnter}
+			/>
+		</div>
+		<div class="mt-4 grid grid-cols-2 gap-2">
+			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+		</div>
 	{:else if count > 1}
-		<h3 class="m-0 mb-3 text-base font-semibold">{count} objects selected</h3>
+		<h3 class="m-0 mb-3 text-base font-semibold">
+			{count}
+			{objectCount === count ? 'objects' : 'items'} selected
+		</h3>
 		<div class="grid grid-cols-2 gap-2">
-			<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+			{#if objectCount > 0}
+				<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+			{/if}
 			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
 		</div>
 	{:else}

@@ -11,3 +11,8 @@ bun.lockb
 # Design docs and execution scratch
 docs/superpowers/
 .superpowers/
+
+# Vendored agent skills and tool configs (machine-written)
+.claude/skills/
+skills-lock.json
+.mcp.json

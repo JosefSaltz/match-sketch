@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { gridChoice, guideOptions } from '#lib/geometry/grid.js';
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
@@ -91,6 +92,24 @@
 		>
 			{#each SNAP_OPTIONS as o (o.value)}
 				<option value={o.value}>{o.label}</option>
+			{/each}
+		</select>
+	</div>
+	<div class={FIELD}>
+		<label for="{uid}-grid" class={LABEL}>Grid</label>
+		<select
+			id="{uid}-grid"
+			class={SELECT}
+			value={String(gridChoice(editor.doc.display))}
+			onchange={(e) => {
+				const v = e.currentTarget.value;
+				editor.setGrid(v === 'off' || v === 'fine' ? v : Number(v));
+			}}
+		>
+			<option value="off">Off</option>
+			<option value="fine">Fine</option>
+			{#each guideOptions(editor.plan.unit) as o (o.ft)}
+				<option value={String(o.ft)}>{o.label}</option>
 			{/each}
 		</select>
 	</div>

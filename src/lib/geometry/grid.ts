@@ -59,3 +59,18 @@ export function visibleGridLines(
 		ys: along(bottomRight.y, topLeft.y, canvas.depthFt)
 	};
 }
+
+/** How the stage's grid is drawn: off, the fine grid that follows Snap, or guides every N ft. */
+export type GridChoice = 'off' | 'fine' | number;
+
+export function gridChoice(display: { showGrid: boolean; gridFt?: number }): GridChoice {
+	if (!display.showGrid) return 'off';
+	return display.gridFt ?? 'fine';
+}
+
+const GUIDE_STEPS = [5, 10, 25, 50];
+
+/** Guide spacings offered for a plan's unit: every 5, 10, 25 or 50 of it. */
+export function guideOptions(unit: LengthUnit): { ft: number; label: string }[] {
+	return GUIDE_STEPS.map((v) => ({ ft: toFeet(v, unit), label: `Every ${v} ${unit}` }));
+}

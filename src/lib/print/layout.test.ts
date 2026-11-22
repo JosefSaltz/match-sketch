@@ -136,6 +136,59 @@ describe('layoutPlan', () => {
 	});
 });
 
+describe('layoutPlan edge cases (final review)', () => {
+	const stage = (pages: PrintPage[]) => {
+		const p = pages[0];
+		if (p.kind !== 'stage') throw new Error('expected a stage page');
+		return p;
+	};
+
+	it('shrinks a long stage name to fit the header', () => {
+		const title = 'Moving Targets Through The Shoot House Of Horrors And Back Again Twice';
+		const p = stage(layoutPlan(input({ title }), measure));
+		expect(p.header.titleFontPx).toBeLessThan(24);
+		const room = p.header.rect.x + p.header.rect.width - p.header.titleX - 8;
+		expect(measure(p.header.title.toUpperCase(), p.header.titleFontPx, true)).toBeLessThanOrEqual(
+			room
+		);
+	});
+
+	it('widens the number block for a long stage number', () => {
+		const p = stage(layoutPlan(input({ stageNumber: 'Classifier 99-11' }), measure));
+		const h = p.header;
+		expect(h.numberBlockWidth).toBeGreaterThanOrEqual(
+			measure('Classifier 99-11', h.numberFontPx, true) + 12
+		);
+		expect(h.titleX).toBeGreaterThan(h.rect.x + h.numberBlockWidth);
+	});
+
+	it('lets the facts strip grow to show a long fact in full', () => {
+		const gunReady = 'Rifle loaded, chamber empty, safety on, held at port arms. '.repeat(4).trim();
+		const p = stage(layoutPlan(input({ brief: { ...brief, gunReady } }), measure));
+		const shown = p.facts[1].block.lines.join(' ');
+		expect(shown).not.toContain('…');
+		expect(shown.replace(/\s+/g, ' ')).toBe(gunReady);
+	});
+
+	it('prints a fact too long for page 1 in full on the next page, and says so', () => {
+		const gunReady = 'Shotgun empty, staged on the table in SA-2 with the action open. '
+			.repeat(30)
+			.trim();
+		const pages = layoutPlan(input({ brief: { ...brief, gunReady } }), measure);
+		const first = stage(pages);
+		expect(first.pointer).toMatch(/on page 2$/);
+		const rest = pages
+			.filter((p) => p.kind === 'continued')
+			.flatMap((p) =>
+				p.kind === 'continued' ? [...p.headings, ...p.facts, ...p.procedure, ...p.notes] : []
+			)
+			.flatMap((b) => b.lines)
+			.join(' ');
+		expect(rest).toContain('STAGE FACTS');
+		expect(rest.replace(/\s+/g, ' ')).toContain(gunReady.slice(-60));
+	});
+});
+
 describe('tileGrid', () => {
 	const area = { width: 730, height: 900 };
 
@@ -150,6 +203,16 @@ describe('tileGrid', () => {
 		for (let i = 1; i < ys.length; i++) {
 			expect(ys[i]).toBeLessThanOrEqual(ys[i - 1] + tiles[0].height - overlapFt + 1e-6);
 		}
+	});
+
+	it('leaves a paper margin around the bay so edge objects print whole', () => {
+		const tiles = tileGrid({ widthFt: 120, depthFt: 900 }, null, area, 30, 24, 56);
+		const marginFt = (56 / 96) * 30;
+		expect(Math.min(...tiles.map((t) => t.y))).toBeCloseTo(-marginFt);
+		expect(Math.max(...tiles.map((t) => t.y + t.height))).toBeGreaterThanOrEqual(
+			900 + marginFt - 1e-6
+		);
+		expect(Math.min(...tiles.map((t) => t.x))).toBeLessThanOrEqual(-marginFt + 1e-6);
 	});
 
 	it('uses one tile when the bay fits', () => {

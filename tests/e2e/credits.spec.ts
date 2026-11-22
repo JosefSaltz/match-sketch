@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('credits show the OGL statement and the font license', async ({ page }) => {
 	await page.goto('/');

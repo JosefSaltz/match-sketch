@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createCanvas, createPlanFromCanvas } from './helpers';
 
 test('plan from a saved canvas opens the editor at the right shape', async ({ page }) => {

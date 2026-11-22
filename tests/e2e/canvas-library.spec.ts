@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createCanvas } from './helpers';
 
 test('create a canvas and keep it after reload', async ({ page }) => {

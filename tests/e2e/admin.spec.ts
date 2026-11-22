@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as mdTest } from './fixtures';
 import { ADMIN, MD, SIGNED_OUT, signIn } from './support/accounts';
 import { uniqueEmail } from './support/admin';
 import { messagesTo } from './support/mailpit';
@@ -58,8 +59,8 @@ test.describe('as the admin', () => {
 	});
 });
 
-test.describe('as an MD', () => {
-	test('home has no admin link and the admin page says admins only', async ({ page }) => {
+mdTest.describe('as an MD', () => {
+	mdTest('home has no admin link and the admin page says admins only', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
 		await expect(page.getByRole('link', { name: 'Admin' })).toHaveCount(0);
@@ -67,7 +68,7 @@ test.describe('as an MD', () => {
 		await expect(page.getByText('Admins only')).toBeVisible();
 	});
 
-	test('posting the invite action directly is refused (Review Focus #3)', async ({ page }) => {
+	mdTest('posting the invite action directly is refused (Review Focus #3)', async ({ page }) => {
 		await page.goto('/');
 		const email = uniqueEmail('sneaky');
 		const response = await postInvite(page, email);

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
 
 /** Downloads the preview's PDF and returns its text (PDF objects are plain text here). */

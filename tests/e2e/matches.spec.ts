@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { createCanvas, createMatch, createPlanFromCanvas } from './helpers';
 
 const myMatches = (page: Page) => page.getByRole('region', { name: 'My matches' });

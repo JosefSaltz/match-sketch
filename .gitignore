@@ -37,5 +37,3 @@ tools/patterns/.venv/
 **/__pycache__/
 tools/patterns/.pytest_cache/
 
-# Playwright signed-in state (tests/e2e/auth.setup.ts)
-tests/e2e/.auth/

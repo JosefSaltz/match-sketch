@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { getEntry } from '#lib/catalog/index.js';
-	import { fromFeet, toFeet } from '#lib/geometry/units.js';
+	import { formatLength, fromFeet, toFeet } from '#lib/geometry/units.js';
 	import type { PlanObject } from '#lib/model/plan.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import Button from '#lib/ui/Button.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
+	import { measureFt } from '../annotations.js';
 	import type { ObjectPatch } from '../ops.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -179,6 +180,23 @@
 				onkeydown={blurOnEnter}
 			/>
 		</div>
+		<div class="mt-4 grid grid-cols-2 gap-2">
+			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+		</div>
+	{:else if ann}
+		{@const ft = measureFt(editor.doc, ann)}
+		<h3 class="m-0 mb-3 text-base font-semibold">
+			{ann.type === 'arrow' ? 'Movement arrow' : 'Measure line'}
+		</h3>
+		{#if ann.type === 'measure'}
+			<p class="m-0 flex gap-3">
+				<span class="text-sm text-muted">Distance</span>
+				<span class="font-semibold" data-testid="measure-distance">
+					{ft === null ? '—' : formatLength(ft, unit)}
+				</span>
+			</p>
+		{/if}
+		<p class="mt-2 mb-0 text-xs text-muted">Drag an end onto an object to attach it.</p>
 		<div class="mt-4 grid grid-cols-2 gap-2">
 			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
 		</div>

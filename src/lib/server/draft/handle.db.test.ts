@@ -6,6 +6,7 @@ import { createDatabase } from '../db/client';
 import { aiDrafts } from '../db/schema';
 import { testAdminClient, testDatabaseUrl, uniqueEmail } from '../testing/supabase';
 import { handleDraft } from './handle';
+import { DRAFT_RESERVE_USD } from './limits';
 import type { DraftClient } from './service';
 
 const admin = testAdminClient();
@@ -43,31 +44,29 @@ const output: DraftOutput = {
 /** A client that answers every call with `output` after `delayMs`. */
 function stubClient(delayMs = 0): DraftClient {
 	return {
-		beta: {
-			messages: {
-				parse: () =>
-					new Promise((resolve) =>
-						setTimeout(
-							() =>
-								resolve({
-									model: 'claude-opus-5-5',
-									stop_reason: 'end_turn',
-									content: [],
-									parsed_output: output,
-									usage: {
-										input_tokens: 1000,
-										output_tokens: 500,
-										cache_read_input_tokens: 0,
-										cache_creation_input_tokens: 0
-									}
-								}),
-							delayMs
-						)
-					)
-			}
-		}
-	} as unknown as DraftClient;
+		send: () =>
+			new Promise((resolve) =>
+				setTimeout(
+					() =>
+						resolve({
+							model: 'claude-opus-5-5',
+							stop_reason: 'end_turn',
+							content: [{ type: 'text', text: JSON.stringify(output) }],
+							usage: {
+								input_tokens: 1000,
+								output_tokens: 500,
+								cache_read_input_tokens: 0,
+								cache_creation_input_tokens: 0
+							}
+						} as never),
+					delayMs
+				)
+			)
+	};
 }
+
+/** A client whose call fails before any usage is known. */
+const failingClient: DraftClient = { send: () => Promise.reject(new Error('socket hang up')) };
 
 function body() {
 	return {
@@ -112,6 +111,21 @@ describe('handleDraft', () => {
 			model: 'claude-opus-5-5'
 		});
 		expect(row.costUsd).toBeCloseTo((1000 * 4 + 500 * 20) / 1e6, 6);
+	});
+
+	it('charges a call that failed without usage at the worst case', async () => {
+		const owner = await createOwner();
+		const res = await handleDraft({
+			db,
+			ownerId: owner,
+			body: body(),
+			client: failingClient,
+			...limits
+		});
+		expect(res.body).toMatchObject({ status: 'failed' });
+		const [row] = await db.select().from(aiDrafts).where(eq(aiDrafts.ownerId, owner));
+		expect(row).toMatchObject({ status: 'failed', error: 'socket hang up' });
+		expect(row.costUsd).toBeCloseTo(DRAFT_RESERVE_USD, 6);
 	});
 
 	it('refuses a bad request and says when drafting is not set up', async () => {

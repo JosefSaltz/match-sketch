@@ -3,14 +3,15 @@ import { ANTHROPIC_API_KEY, DRAFT_DAILY_CAP, DRAFT_DAILY_SPEND_USD } from '$app/
 import { requireApiUser } from '#lib/server/auth.js';
 import { serverDb } from '#lib/server/db/index.js';
 import { handleDraft } from '#lib/server/draft/handle.js';
+import { anthropicDraftClient, type DraftClient } from '#lib/server/draft/service.js';
 import type { RequestHandler } from './$types';
 
-let client: Anthropic | null | undefined;
+let client: DraftClient | null | undefined;
 
 /** The Claude client, or null when ANTHROPIC_API_KEY isn't set (drafting is then "not set up"). */
-function claude(): Anthropic | null {
+function claude(): DraftClient | null {
 	client ??= ANTHROPIC_API_KEY
-		? new Anthropic({ apiKey: ANTHROPIC_API_KEY, timeout: 120_000, maxRetries: 1 })
+		? anthropicDraftClient(new Anthropic({ apiKey: ANTHROPIC_API_KEY }))
 		: null;
 	return client;
 }

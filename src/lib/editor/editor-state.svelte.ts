@@ -15,6 +15,7 @@ import {
 	zoomLimitsFor,
 	type Viewport
 } from '../geometry/viewport';
+import { depthMapFor, type DepthMap } from '../geometry/depth-map';
 import {
 	emptyPlanDocument,
 	type Anchor,
@@ -127,9 +128,13 @@ export class EditorState {
 
 	/** Set once the user zooms or pans; until then the view fits the bay (and refits on resize). */
 	#manualViewport = $state.raw<Viewport | null>(null);
-	viewport: Viewport = $derived(
-		this.#manualViewport ?? fitViewport(this.canvas, this.screen, FIT_PADDING_PX)
-	);
+	/** The plan's scale break as a depth map (spec §7.4), or null. */
+	depth: DepthMap | null = $derived(depthMapFor(this.doc.scaleBreaks, this.canvas.depthFt));
+	/** A manual zoom/pan keeps its scale and offsets but always draws through the current break. */
+	viewport: Viewport = $derived({
+		...(this.#manualViewport ?? fitViewport(this.canvas, this.screen, FIT_PADDING_PX, this.depth)),
+		depth: this.depth
+	});
 
 	selection = $state.raw<string[]>([]);
 	/** The selected objects, in document order. */
@@ -364,7 +369,7 @@ export class EditorState {
 
 	zoomBy(factor: number, at?: Point): void {
 		const p = at ?? { x: this.screen.width / 2, y: this.screen.height / 2 };
-		const fitScale = fitViewport(this.canvas, this.screen, FIT_PADDING_PX).scale;
+		const fitScale = fitViewport(this.canvas, this.screen, FIT_PADDING_PX, this.depth).scale;
 		this.#manualViewport = zoomAt(this.viewport, p, factor, zoomLimitsFor(fitScale));
 	}
 
@@ -470,6 +475,13 @@ export class EditorState {
 
 	removeNoteSection(id: string): void {
 		this.setBrief({ notes: this.#current.brief.notes.filter((n) => n.id !== id) });
+	}
+
+	/** Draws everything beyond `fromFt` (true feet) as a not-to-scale strip; `null` turns it off. */
+	setScaleBreak(fromFt: number | null): void {
+		const doc = this.#current;
+		const scaleBreaks = fromFt === null ? [] : [{ fromFt, toFt: this.canvas.depthFt }];
+		this.commit({ ...doc, scaleBreaks });
 	}
 
 	setDisplay(patch: Partial<PlanDisplay>): void {

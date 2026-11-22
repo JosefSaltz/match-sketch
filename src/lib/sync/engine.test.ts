@@ -125,6 +125,15 @@ describe('syncOnce: conflicts', () => {
 		expect(JSON.parse((await getSetting(db, SYNC_CONFLICTS)) ?? '[]')).toEqual(outcome.conflicts);
 	});
 
+	it('reports the record a conflict replaced, so an open editor shows the new version', async () => {
+		const plan = await namedPlan('Open in the editor');
+		await syncOnce(db, server, () => at);
+		server.edit(server.rows.get(plan.id)!.record as WireRecord);
+		await savePlanDocument(db, plan.id, emptyPlanDocument());
+		const outcome = await syncOnce(db, server, () => at);
+		expect(outcome.changed).toContainEqual({ table: 'plans', id: plan.id });
+	});
+
 	it('names conflicted canvas and match copies the same way', async () => {
 		const canvas = await createCanvas(db, bay);
 		const match = await createMatch(db, { name: 'SOF', date: '2026-05-02' });

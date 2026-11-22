@@ -21,7 +21,7 @@
 	import { formatMatchDate, stageCount } from '#lib/matches/format.js';
 	import MatchForm from '#lib/matches/MatchForm.svelte';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
-	import { createMatch, deleteMatch, listMatches } from '#lib/store/matches.js';
+	import { createMatch, deleteMatch, listMatches, unassignedPlans } from '#lib/store/matches.js';
 	import { getDb } from '#lib/store/index.js';
 	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
 	import {
@@ -44,7 +44,7 @@
 	let creatingMatch = $state(false);
 	let deletingMatch = $state<MatchRecord | null>(null);
 	/** Plans not in a match; plans in a match are listed on its screen. */
-	const unassigned = $derived(plans.filter((p) => p.matchId === null));
+	const unassigned = $derived(unassignedPlans(plans, matches));
 	/** How many stages a match has (its plans that aren't deleted). */
 	const stagesIn = (matchId: string) => plans.filter((p) => p.matchId === matchId).length;
 	let deletingPlan = $state<PlanRecord | null>(null);

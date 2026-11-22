@@ -10,9 +10,17 @@ import {
 	listMatches,
 	listMatchPlans,
 	reorderMatchPlans,
+	unassignedPlans,
 	updateMatch
 } from './matches';
-import { createPlan, deletePlan, duplicatePlan, getPlan, savePlanDocument } from './plans';
+import {
+	createPlan,
+	deletePlan,
+	duplicatePlan,
+	getPlan,
+	listPlans,
+	savePlanDocument
+} from './plans';
 import { effectiveStageNumber, MatchInputSchema, planTitle, type PlanRecord } from './records';
 
 let db: MatchSketchDB;
@@ -117,5 +125,20 @@ describe('match repository', () => {
 		await savePlanDocument(db, a.id, emptyPlanDocument());
 		const copy = await duplicatePlan(db, a.id);
 		expect(ids(await listMatchPlans(db, m.id))).toEqual([a.id, b.id, copy.id]);
+	});
+});
+
+describe('unassignedPlans', () => {
+	it('treats a plan whose match was deleted (on another device) as unassigned', async () => {
+		const bay = { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' as const };
+		const live = await createMatch(db, { name: 'Live', date: '' });
+		const inLive = await createPlan(db, { canvas: bay, sourceCanvasId: null, matchId: live.id });
+		const loose = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		const orphan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		await db.plans.update(orphan.id, { matchId: crypto.randomUUID(), stageOrder: 0 });
+		const plans = await listPlans(db);
+		const ids = unassignedPlans(plans, await listMatches(db)).map((p) => p.id);
+		expect(ids.sort()).toEqual([loose.id, orphan.id].sort());
+		expect(ids).not.toContain(inLive.id);
 	});
 });

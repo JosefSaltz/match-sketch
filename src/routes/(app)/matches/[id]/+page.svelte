@@ -9,8 +9,10 @@
 	import { getDb } from '#lib/store/index.js';
 	import {
 		assignPlan,
+		listMatches,
 		listMatchPlans,
 		reorderMatchPlans,
+		unassignedPlans,
 		updateMatch
 	} from '#lib/store/matches.js';
 	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
@@ -37,10 +39,15 @@
 	const order = $derived(plans.map((p) => p.id));
 	const stageNumber = (p: PlanRecord) => effectiveStageNumber(p, order);
 
+	/** Plans that can join this match: in no live match (see unassignedPlans). */
+	async function loadUnassigned(): Promise<PlanRecord[]> {
+		return unassignedPlans(await listPlans(getDb()), await listMatches(getDb()));
+	}
+
 	async function refresh() {
 		if (!match) return;
 		plans = await listMatchPlans(getDb(), match.id);
-		if (adding) unassigned = (await listPlans(getDb())).filter((p) => p.matchId === null);
+		if (adding) unassigned = await loadUnassigned();
 	}
 
 	/** The last pull revision acted on; plain, so handling it doesn't re-run the effect. */
@@ -92,7 +99,7 @@
 	}
 
 	async function openAdd() {
-		unassigned = (await listPlans(getDb())).filter((p) => p.matchId === null);
+		unassigned = await loadUnassigned();
 		adding = true;
 	}
 

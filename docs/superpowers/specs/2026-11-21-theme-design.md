@@ -1,6 +1,6 @@
 # Match Sketch — Visual Theme Design
 
-Date: 2026-11-21. Status: draft for the user's review.
+Date: 2026-11-21. Status: approved by the user (2026-11-22).
 Parent spec: `2026-11-21-match-sketch-design.md` (this document adds the app's look; it does not change the stage drawing or print rules there).
 
 ## 1. What this is and why

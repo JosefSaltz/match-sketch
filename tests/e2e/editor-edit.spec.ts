@@ -202,3 +202,18 @@ test.describe('touch jitter', () => {
 		await expect(page.getByTestId('selection')).toHaveCount(0);
 	});
 });
+
+test('editor shortcuts stay off while a dialog is open', async ({ page }) => {
+	await page.getByTestId('object').click();
+	const x0 = await props(page).getByLabel('X').inputValue();
+	await page.getByRole('button', { name: 'Theme' }).click();
+	await expect(page.getByRole('dialog', { name: 'Theme' })).toBeVisible();
+	await page.keyboard.press('ArrowRight');
+	await page.keyboard.press('Backspace');
+	await page.keyboard.press('Control+d');
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByTestId('object')).toHaveCount(1);
+	await expect(page.getByTestId('selection')).toHaveCount(1);
+	await expect(props(page).getByLabel('X')).toHaveValue(x0);
+});

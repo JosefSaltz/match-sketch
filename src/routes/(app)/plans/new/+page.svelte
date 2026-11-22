@@ -12,6 +12,9 @@
 	import Field from '#lib/ui/Field.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
+	import ThemePicker from '#lib/theme/ThemePicker.svelte';
+
+	let pickingTheme = $state(false);
 
 	let canvases = $state<CanvasRecord[]>([]);
 	let loaded = $state(false);
@@ -55,11 +58,13 @@
 <div class="min-h-full bg-surface">
 	<header class="bg-theme border-b-[3px] border-black">
 		<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-4">
-			<a href={resolve('')} class="focus-ring inline-flex min-h-11 items-center rounded-lg">
+			<a href={resolve('')} class="focus-ring mr-auto inline-flex min-h-11 items-center rounded-lg">
 				<Wordmark />
 			</a>
+			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 		</div>
 	</header>
+	<ThemePicker bind:open={pickingTheme} />
 
 	<main class="mx-auto grid max-w-xl gap-5 px-4 py-8">
 		<h1 class="m-0 font-display text-2xl tracking-wide uppercase">New plan</h1>

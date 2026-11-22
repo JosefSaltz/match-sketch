@@ -70,11 +70,12 @@ Each user picks a **theme** for the app: a solid color, a plaid, or an authentic
 - **Display font: Graduate** (varsity/college-jersey block).
 - **Wordmark ("bigger and heavier"):** "MATCH SKETCH" drawn as inline SVG text in Graduate at 30 px: a 9 px black outline with round joins (HTML text outlines grow spikes at sharp corners), white letters thickened by a 1.6 px white stroke, and a 5 px offset black block shadow. It has an accessible name.
 - **Theme families:** solid, plaid, camo. Plaids are generated from thread-count recipes (arbitrary designs are fine); camo must be authentic.
-- **Camo lineup** (all unrestricted, real issued patterns): M81 Woodland, ERDL, Tiger Stripe (Vietnam-era), 6-color desert ("Chocolate Chip"), 3-color desert (DCU), UCP, Flecktarn, Woodland DPM, and **Desert Night Camouflage** (the user's favorite).
+- **Camo lineup** (all unrestricted, real issued patterns): M81 Woodland, ERDL, Tiger Stripe (Vietnam-era), 6-color desert ("Chocolate Chip"), 3-color desert (DCU), Flecktarn, Woodland DPM, and **Desert Night Camouflage** (the user's favorite).
 - **Color richness:** camo colors are calibrated to look like real fabric, not muted digital swatches. The user picked the richest of three M81 options. **M81 palette:** khaki `#c8ae5c`, green `#336530`, brown `#644c2a`, black `#202927`. Every camo theme is calibrated to the same richness.
 - **Tiger stripe target look:** the classic Vietnam-era pattern (olive base, black stripes, small brown and khaki brushstrokes) from the 750 px reference image the user supplied, not the Malaysian variant. The spike traced it into a seamless tile the user approved.
 - **Desert Night Camouflage:** **green** palette (light `#939881`, dark `#262a1d`, from the user's first reference; the issued spec calls for a light-green ground). The grid is rebuilt as exact geometry (square cells, about 64% of the period, measured from the user's fabric photo); the rubble shapes are real blobs traced from that photo, **spread evenly** over a large wrap-around tile (64 × 40 cells, about 10% coverage, random quarter-turns and flips) because the photo's own layout looked clustered and repeated too often. Display cell size about 12 px. The user approved this version.
 - **Licensing decisions are deferred** by the user (see §8).
+- **UCP is dropped** (user, 2026-11-22: "I hate ucp").
 
 ## 6. How it works
 
@@ -142,7 +143,6 @@ A Python tool under `tools/patterns/` (run with `uv`; not part of the app build)
 3. **Repeat:** if the source contains a full repeat (detected by autocorrelation, e.g. the ERDL swatch repeats every 1144 px vertically), use it; otherwise make a seamless tile by morphing shapes across each wrap seam (per-color signed distance fields blended over a band).
 4. **Calibration:** each pattern's colors are replaced by its calibrated palette (named colors in the manifest), tuned by eye against real-fabric photos to the agreed richness.
 5. **Geometric patterns (DNC):** measure the grid (period, cell size) from the source and redraw it exactly; extract the rubble as dark areas thicker than a grid line (distance to the nearest light pixel above a crossing's half-diagonal), keep each blob as a shape, and scatter the library evenly (Poisson-disk on a torus) over a tile that is a whole number of cells, so it is seamless by construction.
-6. **Pixel patterns (UCP):** skip tracing and smoothing; detect the pixel grid and rebuild the tile pixel-exact, then scale with nearest-neighbor so the squares stay crisp.
 7. **Output:** a seamless vector master (SVG, traced with `vtracer`, kept in the tool's output) and the shipped asset: a WebP tile in `static/themes/<id>.webp`, sized for 2× screens, target ≤ 250 KB.
 8. **Plaids:** the same tool renders plaids from thread-count recipes (stripe colors and widths, mirrored setts) with a twill texture, into WebP tiles.
 
@@ -171,7 +171,6 @@ This is its own plan, **Plan 1b: Visual theme**, written after Plan 1 finishes (
 | M81 Woodland | Commons: `Brown-dominant "highland" ERDL camouflage pattern swatch.png` (M81 is brown-dominant ERDL enlarged 60%) | Public domain tag | **Proven in spike** |
 | ERDL | Same swatch, original scale; green-dominant variant also on Commons | Public domain tag | Ready |
 | Woodland DPM | Commons: `DPM Combat 95 Camouflage Material MOD 45149982.jpg` (UK MOD fabric photo) | OGL v1.0 (attribution) | **Proven in spike** |
-| UCP | Commons: `Universal Camouflage Pattern swatch.jpg` (US Army) | Public domain | Ready (pixel pattern) |
 | 6-color desert | Commons: `Man modelling DBDU in 1976.jpg` (US Army Natick) | Public domain | Needs a crop of the garment |
 | 3-color desert (DCU) | Commons: `DCU camo swatch.png`, 800 px | Public domain tag | Ready, low resolution |
 | Tiger Stripe | User-supplied reference (750 px), origin unknown | **Unknown** | **Proven in spike**; rights deferred (§8) |
@@ -190,7 +189,7 @@ Note: some Commons "public domain" swatches credit third-party sellers' artwork.
 4. **Desert Night:** confirm whether the user took the fabric photo (if so, it is clean).
 5. **Flecktarn:** still needs a higher-resolution authentic source.
 
-**Designer's call while deferred:** the pattern tool may generate tiles from uncleared sources locally, but those tiles are **not committed** to the public repo, and their themes stay out of the shipped registry, until the user clears them. A theme moves to "shipped" by adding its tile and flipping its registry entry, with no other code change. The plan delivers the theme system with the cleared camo (DPM, UCP, 6-color desert), all solids and plaids, and the others as they clear.
+**Designer's call while deferred:** the pattern tool may generate tiles from uncleared sources locally, but those tiles are **not committed** to the public repo, and their themes stay out of the shipped registry, until the user clears them. A theme moves to "shipped" by adding its tile and flipping its registry entry, with no other code change. The plan delivers the theme system with the cleared camo (DPM, 6-color desert), all solids and plaids, and the others as they clear.
 
 ## 9. Calls made by the designer (correctable)
 

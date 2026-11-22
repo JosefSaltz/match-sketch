@@ -30,7 +30,7 @@ Each user picks a **theme** for the app: a solid color, a plaid, or an authentic
 ### Anti-goals (a failure even if it works)
 
 - Camo that looks fake or "inspired by". The user rejected procedurally generated camo for this reason.
-- Shipping artwork we have no right to ship. The repo is **public**, so every committed asset must be public domain, openly licensed for commercial use, our own work, or licensed for use in an app.
+- Shipping restricted patterns (below). Reference provenance is the user's risk to take (§8); sources are still recorded and credited.
 - Using restricted patterns: MultiCam (Crye Precision), OCP (US Army, government use only), MARPAT (USMC), AOR1/AOR2 (US Navy), CADPAT (Canada), MTP (UK).
 - Text that is hard to read because it sits on a busy pattern.
 - Heavy assets that slow the app: each pattern tile should stay well under 250 KB.
@@ -74,7 +74,7 @@ Each user picks a **theme** for the app: a solid color, a plaid, or an authentic
 - **Color richness:** camo colors are calibrated to look like real fabric, not muted digital swatches. The user picked the richest of three M81 options. **M81 palette:** khaki `#c8ae5c`, green `#336530`, brown `#644c2a`, black `#202927`. Every camo theme is calibrated to the same richness.
 - **Tiger stripe target look:** the classic Vietnam-era pattern (olive base, black stripes, small brown and khaki brushstrokes) from the 750 px reference image the user supplied, not the Malaysian variant. The spike traced it into a seamless tile the user approved.
 - **Desert Night Camouflage:** **green** palette (light `#939881`, dark `#262a1d`, from the user's first reference; the issued spec calls for a light-green ground). The grid is rebuilt as exact geometry (square cells, about 64% of the period, measured from the user's fabric photo); the rubble shapes are real blobs traced from that photo, **spread evenly** over a large wrap-around tile (64 × 40 cells, about 10% coverage, random quarter-turns and flips) because the photo's own layout looked clustered and repeated too often. Display cell size about 12 px. The user approved this version.
-- **Licensing decisions are deferred** by the user (see §8).
+- **Reference rights:** the user accepts the provenance risk; every reference ships (see §8).
 - **UCP is dropped** (user, 2026-11-22: "I hate ucp").
 
 ## 6. How it works
@@ -179,23 +179,17 @@ This is its own plan, **Plan 1b: Visual theme**, written after Plan 1 finishes (
 
 Note: some Commons "public domain" swatches credit third-party sellers' artwork. The underlying patterns are US government works and a faithful copy adds no new authorship, so the risk is judged low; every source is still recorded in the credits.
 
-## 8. Open with the user (blocking single themes, not the plan)
+## 8. Reference rights (decided)
 
-**Licensing is deferred by the user ("we'll run the licensing risk later").** Until each item is decided:
+On 2026-11-22 the user decided: **"Stop worrying about known origins for the references and ship them."** Every reference the user supplies, and every public swatch with uncertain provenance (M81/ERDL, DCU), is cleared to ship. Sources are still recorded in `tools/patterns/sources.json` and shown in the credits dialog. The restricted patterns in §2 stay excluded; that is a separate rule.
 
-1. **M81 / ERDL:** the Commons swatch is tagged public domain but credits a Spoonflower designer. Options put to the user: accept the low risk, ask the designer for permission (designer's pick), or photograph real M81 fabric.
-2. **DCU:** same question; the swatch credits a shop's product photo.
-3. **Tiger stripe:** the user's reference image has an unknown origin (likely someone's digital redraw); license it at full resolution, or find a licensable equivalent.
-4. **Desert Night:** confirm whether the user took the fabric photo (if so, it is clean).
-5. **Flecktarn:** still needs a higher-resolution authentic source.
-
-**Designer's call while deferred:** the pattern tool may generate tiles from uncleared sources locally, but those tiles are **not committed** to the public repo, and their themes stay out of the shipped registry, until the user clears them. A theme moves to "shipped" by adding its tile and flipping its registry entry, with no other code change. The plan delivers the theme system with the cleared camo (DPM, 6-color desert), all solids and plaids, and the others as they clear.
+Still open: **Flecktarn** has no usable reference yet.
 
 ## 9. Calls made by the designer (correctable)
 
 - **Solids:** Coyote `#81613c`, Ranger Green `#4a5240`, Wolf Grey `#5e6366`, Blackout `#1f1f1f`, Blaze `#e8590c`.
 - **Plaids:** Buffalo Check (red/black), Hunter (green/navy with a yellow line), Range Day (tan/olive with an orange line), all original setts.
-- Default theme M81 Woodland once its source is cleared; **DPM until then**. Theme stored per device until accounts exist.
+- Default theme **Woodland DPM** (spec §6.2 said M81 once cleared; kept DPM since it is the cleanest-licensed and already the default). Theme stored per device until accounts exist.
 - ERDL ships as its own theme from the same artwork at the original scale with ERDL's calibrated palette.
 - Tile display scale per theme is tuned so a 64 px bar shows a recognizable slice of the pattern (M81 about 1500 px wide per tile).
 

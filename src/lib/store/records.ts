@@ -31,6 +31,19 @@ export type PlanRecord = SyncMeta & {
 	document: PlanDocument;
 };
 
+/** A match groups stage plans; its plans point at it with `matchId` and are ordered by `stageOrder`. */
+export type MatchRecord = SyncMeta & {
+	name: string;
+	/** `YYYY-MM-DD`, or '' when the match has no date yet. */
+	date: string;
+};
+
+export const MatchInputSchema = z.object({
+	name: z.string().trim().min(1).max(80),
+	date: z.union([z.literal(''), z.iso.date()])
+});
+export type MatchInput = z.infer<typeof MatchInputSchema>;
+
 export const MIN_CANVAS_FT = 3;
 export const MAX_CANVAS_FT = 3000;
 
@@ -57,8 +70,25 @@ export function newSyncMeta(): SyncMeta {
 	return { id: crypto.randomUUID(), version: 0, updatedAt: now(), deletedAt: null, dirty: 1 };
 }
 
-export function planTitle(plan: Pick<PlanRecord, 'document'>): string {
-	const n = plan.document.brief.stageNumber.trim();
+/**
+ * The stage number to show: the one typed in the brief, else the plan's 1-based place in its
+ * match's order (`matchOrder`: plan ids in stage order), else ''.
+ */
+export function effectiveStageNumber(
+	plan: Pick<PlanRecord, 'id' | 'document'>,
+	matchOrder: string[] | null
+): string {
+	const typed = plan.document.brief.stageNumber.trim();
+	if (typed) return typed;
+	const i = matchOrder ? matchOrder.indexOf(plan.id) : -1;
+	return i >= 0 ? String(i + 1) : '';
+}
+
+export function planTitle(
+	plan: Pick<PlanRecord, 'document'>,
+	stageNumber: string = plan.document.brief.stageNumber
+): string {
+	const n = stageNumber.trim();
 	const name = plan.document.brief.stageName.trim();
 	if (n && name) return `Stage ${n} — ${name}`;
 	if (n) return `Stage ${n}`;

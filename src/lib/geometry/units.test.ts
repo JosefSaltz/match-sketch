@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toFeet, fromFeet, formatLength } from './units';
+import { toFeet, fromFeet, formatLength, formatDimensions } from './units';
 
 describe('units', () => {
 	it('converts between yards and feet', () => {
@@ -14,5 +14,10 @@ describe('units', () => {
 		expect(formatLength(10, 'yd')).toBe('3.3 yd');
 		expect(formatLength(12, 'ft')).toBe('12 ft');
 		expect(formatLength(0.25, 'ft')).toBe('0.3 ft');
+	});
+
+	it('formats bay dimensions in the display unit', () => {
+		expect(formatDimensions(150, 75, 'yd')).toBe('50 × 25 yd');
+		expect(formatDimensions(30, 7.5, 'ft')).toBe('30 × 7.5 ft');
 	});
 });

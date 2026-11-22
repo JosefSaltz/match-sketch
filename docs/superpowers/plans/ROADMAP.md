@@ -17,7 +17,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 2   | Brief, tally, measure, annotations, matches | Done (2026-11-22)         | `2026-11-22-plan-2-brief-annotations-matches.md` |
 | 3   | Symbol library art                          | Done (2026-11-22)         | `2026-11-22-plan-3-symbol-library.md` |
 | 4   | Print & PDF                                 | Done (2026-11-22)         | `2026-11-22-plan-4-print-pdf.md` |
-| 5a  | Accounts                                    | In progress               | `2026-11-22-plan-5a-accounts.md`    |
+| 5a  | Accounts                                    | Done (2026-11-22)         | `2026-11-22-plan-5a-accounts.md`    |
 | 5b  | Sync & offline                              | Not written               | —                                   |
 | 6   | Draft from text                             | Not written               | —                                   |
 | 7   | Walkthrough presentation                    | Idea recorded             | spec §7.10                          |

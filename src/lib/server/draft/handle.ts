@@ -1,7 +1,7 @@
 import { DraftRequestSchema } from '../../draft/contract';
 import type { Database } from '../db/client';
 import { estimateCostUsd } from './cost';
-import { reserveDraft, settleDraft } from './limits';
+import { DRAFT_RESERVE_USD, reserveDraft, settleDraft } from './limits';
 import { draftLayout, type DraftClient, type DraftEffort } from './service';
 
 /** The effort the eval settled on (tools/draft-eval/README.md). */
@@ -71,7 +71,11 @@ export async function handleDraft(options: {
 			inputTokens: outcome.usage.inputTokens,
 			outputTokens: outcome.usage.outputTokens,
 			cacheReadTokens: outcome.usage.cacheReadTokens,
-			costUsd: estimateCostUsd(outcome.model, outcome.usage),
+			// A call that failed without usage may still have been billed: assume the worst.
+			costUsd: Math.max(
+				estimateCostUsd(outcome.model, outcome.usage),
+				outcome.unmetered ? DRAFT_RESERVE_USD : 0
+			),
 			error: outcome.error,
 			response: outcome.result
 		});

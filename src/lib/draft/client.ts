@@ -1,7 +1,10 @@
 import type { DraftRequest, DraftResult } from './contract';
 
-/** A draft can take a minute or so (two model calls); past this the editor stops waiting. */
-export const DRAFT_TIMEOUT_MS = 120_000;
+/**
+ * A draft can take a few minutes (two model calls). The server gives up at its own deadline
+ * (DRAFT_DEADLINE_MS, 4 minutes); the editor waits a little longer so it always hears the answer.
+ */
+export const DRAFT_TIMEOUT_MS = 300_000;
 
 export type DraftReply = { ok: true; result: DraftResult } | { ok: false; message: string };
 

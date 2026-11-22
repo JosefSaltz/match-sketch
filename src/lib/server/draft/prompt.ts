@@ -7,7 +7,11 @@ const INSTRUCTIONS = `You lay out practical shooting stages (multigun, pistol, r
 
 You get a bay (a rectangle measured in feet), a stage brief and a description, and you place symbols from the catalog below to draw a schematic of the stage. The match director reviews and corrects your draft by hand, so aim for a sensible, readable layout, as an experienced match director would sketch it; nobody expects the exact real positions.
 
-Coordinates: feet, origin at the uprange-left corner of the bay. x runs from the left edge (0) to the right edge (the bay width). y runs downrange from the uprange edge (0, where shooters start) to the far edge (the bay depth). Rotation is in degrees clockwise, 0 meaning the symbol faces uprange as drawn.
+Coordinates: feet, origin at the uprange-left corner of the bay. x runs from the left edge (0) to the right edge (the bay width). y runs downrange from the uprange edge (0, where shooters start) to the far edge (the bay depth).
+- A footprint's x, y is its centre; widthFt runs across the bay and depthFt downrange at rotation 0, and the whole footprint must fit inside the bay.
+- A target's or prop's x, y is where it stands. They are drawn upright, facing the shooter, so leave them at rotation 0.
+- Rotation (degrees clockwise) is for footprints: a wall at an angle, a fault line along a diagonal.
+- Labels are at most 24 characters.
 
 Layout conventions:
 - The start position sits near the uprange edge.

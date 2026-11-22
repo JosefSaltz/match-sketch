@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { depthMapFor } from '#lib/geometry/depth-map.js';
+	import { scaleBar } from '#lib/geometry/grid.js';
 	import type { PlanRecord } from '#lib/store/records.js';
 	import type { PrintPage, TextBlock } from './layout.js';
 	import { PRINT_FONT } from './measure.js';
@@ -57,9 +58,9 @@
 			stroke-width="2.5"
 		/>
 		{#if numbered}
-			<rect x={r.x} y={r.y} width="84" height={r.height} fill={INK} />
+			<rect x={r.x} y={r.y} width={page.header.numberBlockWidth} height={r.height} fill={INK} />
 			<text
-				x={r.x + 42}
+				x={r.x + page.header.numberBlockWidth / 2}
 				y={r.y + 17}
 				font-family={PRINT_FONT}
 				font-size="10"
@@ -70,10 +71,10 @@
 				STAGE
 			</text>
 			<text
-				x={r.x + 42}
+				x={r.x + page.header.numberBlockWidth / 2}
 				y={r.y + 50}
 				font-family={PRINT_FONT}
-				font-size="32"
+				font-size={page.header.numberFontPx}
 				font-weight="bold"
 				text-anchor="middle"
 				fill="#fff"
@@ -82,23 +83,17 @@
 			</text>
 		{/if}
 		<text
-			x={r.x + (numbered ? 98 : 12)}
+			x={page.header.titleX}
 			y={r.y + 31}
 			font-family={PRINT_FONT}
-			font-size="24"
+			font-size={page.header.titleFontPx}
 			font-weight="bold"
 			fill={INK}
 		>
 			{page.header.title.toUpperCase()}
 		</text>
 		{#if page.header.sub}
-			<text
-				x={r.x + (numbered ? 98 : 12)}
-				y={r.y + 49}
-				font-family={PRINT_FONT}
-				font-size="12"
-				fill="#333"
-			>
+			<text x={page.header.titleX} y={r.y + 49} font-family={PRINT_FONT} font-size="12" fill="#333">
 				{page.header.sub}
 			</text>
 		{/if}
@@ -127,6 +122,7 @@
 	{#if page.kind === 'stage'}
 		{@const d = page.diagram}
 		<rect
+			data-testid="print-diagram-frame"
 			x={d.x}
 			y={d.y}
 			width={d.width}
@@ -175,11 +171,13 @@
 		{/if}
 	{:else if page.kind === 'continued'}
 		{#each page.headings as b, i (i)}{@render block(b, '#444')}{/each}
+		{#each page.facts as b, i (i)}{@render block(b)}{/each}
 		{#each page.procedure as b, i (i)}{@render block(b)}{/each}
 		{#each page.notes as b, i (i)}{@render block(b)}{/each}
 	{:else}
 		{@const d = page.diagram}
 		<rect
+			data-testid="print-diagram-frame"
 			x={d.x}
 			y={d.y}
 			width={d.width}
@@ -189,6 +187,18 @@
 			stroke-width="1.5"
 		/>
 		<PrintDiagram {doc} {canvas} unit={plan.unit} area={d} view={page.tile} {symbolPx} {depth} />
+		<!-- Tiles fill their frame, so the scale bar and downrange arrow sit in the header. -->
+		{@const r = page.header.rect}
+		{@const bar = scaleBar(d.width / page.tile.width, plan.unit, 110)}
+		<g data-print-scalebar transform="translate({r.x + r.width - 120 - bar.px} {r.y + 20})">
+			<path d="M0 0H{bar.px}M0 -5V0M{bar.px} -5V0" fill="none" stroke={INK} stroke-width="1.5" />
+			<text x="0" y="-8" font-family={PRINT_FONT} font-size="9" fill={INK}>{bar.label}</text>
+		</g>
+		<g transform="translate({r.x + r.width - 86} {r.y})">
+			<line x1="0" x2="0" y1="24" y2="8" stroke="#555" stroke-width="1.5" />
+			<path d="M-5 14 L0 6 L5 14" fill="none" stroke="#555" stroke-width="1.5" />
+			<text x="8" y="20" font-family={PRINT_FONT} font-size="9" fill="#555">Downrange</text>
+		</g>
 	{/if}
 
 	<line

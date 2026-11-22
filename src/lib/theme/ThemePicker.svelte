@@ -2,12 +2,14 @@
 	import Dialog from '#lib/components/Dialog.svelte';
 	import { getDb } from '#lib/store/index.js';
 	import Button from '#lib/ui/Button.svelte';
+	import CreditsDialog from './CreditsDialog.svelte';
 	import { setSetting, THEME_SETTING } from '#lib/store/settings.js';
 	import { applyTheme } from './apply.js';
 	import { currentTheme } from './current.svelte.js';
 	import { THEMES, type Theme, type ThemeFamily } from './themes.js';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
+	let showingCredits = $state(false);
 
 	const uid = $props.id();
 	const FAMILIES: { family: ThemeFamily; label: string }[] = [
@@ -59,8 +61,10 @@
 				</div>
 			</div>
 		{/each}
-		<div class="flex justify-end">
+		<div class="flex justify-end gap-3">
+			<Button onclick={() => (showingCredits = true)}>Credits</Button>
 			<Button onclick={() => (open = false)}>Done</Button>
 		</div>
 	</Dialog>
 {/if}
+<CreditsDialog bind:open={showingCredits} />

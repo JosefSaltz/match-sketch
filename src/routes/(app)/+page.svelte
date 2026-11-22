@@ -4,6 +4,7 @@
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import CreditsDialog from '#lib/theme/CreditsDialog.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
@@ -20,6 +21,7 @@
 	import { resolve } from '$app/paths';
 
 	let pickingTheme = $state(false);
+	let showingCredits = $state(false);
 
 	let plans = $state<PlanRecord[]>([]);
 	let deletingPlan = $state<PlanRecord | null>(null);
@@ -154,7 +156,12 @@
 			{/if}
 		</section>
 	</main>
+
+	<footer class="mx-auto flex max-w-6xl justify-end px-4 pb-8">
+		<Button onclick={() => (showingCredits = true)}>About & credits</Button>
+	</footer>
 </div>
+<CreditsDialog bind:open={showingCredits} />
 
 {#if canvasDialog}
 	{@const editing = canvasDialog.mode === 'edit' ? canvasDialog.canvas : null}

@@ -13,6 +13,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
 import type { PlanDocument } from '../../model/plan';
@@ -122,6 +123,8 @@ export const plans = pgTable(
 );
 
 export const draftStatus = pgEnum('draft_status', [
+	/** Running: the row reserves the draft's worst-case cost until it is settled. */
+	'pending',
 	'ok',
 	'repaired',
 	'partial',
@@ -156,6 +159,11 @@ export const aiDrafts = pgTable(
 	},
 	(t) => [
 		index('ai_drafts_owner_created').on(t.ownerId, t.createdAt),
-		index('ai_drafts_created').on(t.createdAt)
+		index('ai_drafts_created').on(t.createdAt),
+		// One running draft per user. (Created in its own migration: a new enum value can't be
+		// used in the transaction that adds it.)
+		uniqueIndex('ai_drafts_one_pending')
+			.on(t.ownerId)
+			.where(sql`${t.status} = 'pending'`)
 	]
 ).enableRLS();

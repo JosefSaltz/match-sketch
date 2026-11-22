@@ -2,7 +2,16 @@ import { sql } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createDatabase } from '../db/client';
 import { testAdminClient, testDatabaseUrl, uniqueEmail } from '../testing/supabase';
-import { draftsToday, logDraft, spendToday, withDraftLock, type DraftLogRow } from './limits';
+import {
+	DRAFT_RESERVE_USD,
+	draftsToday,
+	logDraft,
+	MAX_RUNNING_DRAFTS,
+	reserveDraft,
+	settleDraft,
+	spendToday,
+	type DraftLogRow
+} from './limits';
 
 const admin = testAdminClient();
 const database = createDatabase(testDatabaseUrl());
@@ -78,18 +87,63 @@ describe('draft limits', () => {
 		expect(await spendToday(db)).toBeCloseTo(before + 0.75, 6);
 	});
 
-	it('lets one draft run per user at a time', async () => {
+	const reserve = (ownerId: string, over: Partial<{ cap: number; ceilingUsd: number }> = {}) =>
+		reserveDraft(db, {
+			ownerId,
+			planId: crypto.randomUUID(),
+			request: {},
+			cap: 20,
+			ceilingUsd: 1e9,
+			...over
+		});
+
+	it('lets one draft run per user at a time, without holding a connection while it runs', async () => {
 		const owner = await createOwner();
-		let release!: () => void;
-		const first = withDraftLock(
-			db,
-			owner,
-			() => new Promise<string>((r) => (release = () => r('first')))
+		const first = await reserve(owner);
+		expect(first.kind).toBe('reserved');
+		expect((await reserve(owner)).kind).toBe('busy');
+		if (first.kind === 'reserved') await settleDraft(db, first.id, settled());
+		expect((await reserve(owner)).kind).toBe('reserved');
+	});
+
+	it('counts a running draft against the spend ceiling before it finishes', async () => {
+		const a = await createOwner();
+		const b = await createOwner();
+		const ceilingUsd = (await spendToday(db)) + DRAFT_RESERVE_USD / 2;
+		expect((await reserve(a, { ceilingUsd })).kind).toBe('reserved');
+		expect((await reserve(b, { ceilingUsd })).kind).toBe('paused');
+	});
+
+	it('releases a draft left pending by a crash', async () => {
+		const owner = await createOwner();
+		const stuck = await reserve(owner);
+		if (stuck.kind !== 'reserved') throw new Error('not reserved');
+		await db.execute(
+			sql`update public.ai_drafts set created_at = now() - interval '11 minutes' where id = ${stuck.id}`
 		);
-		await new Promise((r) => setTimeout(r, 50));
-		expect(await withDraftLock(db, owner, () => Promise.resolve('second'))).toBeNull();
-		release();
-		expect(await first).toBe('first');
-		expect(await withDraftLock(db, owner, () => Promise.resolve('third'))).toBe('third');
+		expect((await reserve(owner)).kind).toBe('reserved');
+	});
+
+	it(`runs at most ${MAX_RUNNING_DRAFTS} drafts at once across the site`, async () => {
+		const owners = await Promise.all(
+			Array.from({ length: MAX_RUNNING_DRAFTS + 1 }, () => createOwner())
+		);
+		const kinds = [];
+		for (const owner of owners) kinds.push((await reserve(owner)).kind);
+		expect(kinds.filter((k) => k === 'reserved')).toHaveLength(MAX_RUNNING_DRAFTS);
+		expect(kinds.at(-1)).toBe('site-busy');
 	});
 });
+
+function settled() {
+	return {
+		model: 'claude-opus-5-5',
+		status: 'ok' as const,
+		inputTokens: 10,
+		outputTokens: 10,
+		cacheReadTokens: 0,
+		costUsd: 0.001,
+		error: null,
+		response: {}
+	};
+}

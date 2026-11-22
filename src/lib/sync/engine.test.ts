@@ -5,7 +5,13 @@ import { createCanvas, updateCanvas } from '../store/canvases';
 import { createDb, type MatchSketchDB } from '../store/db';
 import { createMatch, updateMatch } from '../store/matches';
 import { createPlan, deletePlan, getPlan, savePlanDocument } from '../store/plans';
-import { getSetting, SYNC_CONFLICTS, SYNC_CURSOR } from '../store/settings';
+import {
+	getSetting,
+	setSetting,
+	SYNC_CONFLICTS,
+	SYNC_CURSOR,
+	SYNC_CURSOR_SCHEMA
+} from '../store/settings';
 import { conflictName, syncOnce, type Transport } from './engine';
 import type { PullResponse, PushItem, PushResult, ServerRecord, WireRecord } from './wire';
 
@@ -207,6 +213,43 @@ describe('syncOnce: pull', () => {
 		expect(outcome.needsReload).toBe(true);
 		expect((await getPlan(db, plan.id))?.version).toBe(1);
 		expect(Number(await getSetting(db, SYNC_CURSOR))).toBe(server.seq);
+	});
+
+	it('makes no conflicted copy against a plan from a newer app, and keeps the local edit', async () => {
+		const plan = await namedPlan('Mine');
+		await syncOnce(db, server, () => at);
+		const record = server.rows.get(plan.id)!.record;
+		server.rows.set(plan.id, {
+			record: {
+				...record,
+				version: 2,
+				schemaVersion: 2,
+				document: { future: true }
+			} as ServerRecord,
+			seq: ++server.seq
+		});
+		const edit = emptyPlanDocument();
+		edit.brief.stageName = 'Mine, edited';
+		await savePlanDocument(db, plan.id, edit);
+		const outcome = await syncOnce(db, server, () => at);
+		expect(outcome.needsReload).toBe(true);
+		expect(outcome.conflicts).toEqual([]);
+		expect(await db.plans.count()).toBe(1);
+		expect(await getPlan(db, plan.id)).toMatchObject({
+			dirty: 1,
+			document: { brief: { stageName: 'Mine, edited' } }
+		});
+	});
+
+	it('pulls everything again after the app learns a newer plan schema', async () => {
+		const plan = await namedPlan('Old app skipped me');
+		await syncOnce(db, server, () => at);
+		expect(Number(await getSetting(db, SYNC_CURSOR))).toBe(server.seq);
+		// The cursor was stored by an app that understood an older schema.
+		await setSetting(db, SYNC_CURSOR_SCHEMA, '0');
+		await db.plans.delete(plan.id);
+		await syncOnce(db, server, () => at);
+		expect(await getPlan(db, plan.id)).toBeDefined();
 	});
 
 	it('pushes a deletion', async () => {

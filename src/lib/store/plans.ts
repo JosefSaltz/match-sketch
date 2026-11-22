@@ -39,13 +39,15 @@ export async function getPlan(db: MatchSketchDB, id: string): Promise<PlanRecord
  * Validates and saves a plan's document. The write is issued before any other await so that
  * an edit followed immediately by a reload still lands.
  */
+/** Saves a plan's document. `at` is when the edit was made (defaults to now). */
 export async function savePlanDocument(
 	db: MatchSketchDB,
 	id: string,
-	document: PlanDocument
+	document: PlanDocument,
+	at: string = now()
 ): Promise<PlanRecord> {
 	const parsed = PlanDocumentSchema.parse(document);
-	const updated = await db.plans.update(id, { document: parsed, updatedAt: now(), dirty: 1 });
+	const updated = await db.plans.update(id, { document: parsed, updatedAt: at, dirty: 1 });
 	if (!updated) throw new Error(`Plan ${id} not found`);
 	const plan = await getPlan(db, id);
 	if (!plan) throw new Error(`Plan ${id} not found`);

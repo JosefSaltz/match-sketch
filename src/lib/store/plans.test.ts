@@ -19,6 +19,14 @@ beforeEach(() => {
 });
 
 describe('plan repository', () => {
+	it('stamps a saved document with the edit time when one is given', async () => {
+		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
+		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const at = '2026-11-21T12:34:56.789Z';
+		const saved = await savePlanDocument(db, p.id, emptyPlanDocument(), at);
+		expect(saved.updatedAt).toBe(at);
+	});
+
 	it('copies canvas dimensions into a new plan', async () => {
 		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
 		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });

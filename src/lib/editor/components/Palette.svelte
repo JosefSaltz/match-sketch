@@ -90,6 +90,8 @@
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key !== 'Escape') return;
+		// Escape in a dialog closes the dialog; it shouldn't also disarm the palette.
+		if (document.querySelector('dialog:modal')) return;
 		if (press) {
 			justDragged = press.dragging;
 			cancelDrag();

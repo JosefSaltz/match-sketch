@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+	import { onSignOutElsewhere } from '#lib/auth/sign-out-broadcast.js';
 	import { getDb } from '#lib/store/index.js';
 	import { startSync, syncState } from '#lib/sync/loop.svelte.js';
 	import ReloadBanner from '#lib/sync/ReloadBanner.svelte';
@@ -13,6 +15,9 @@
 		if (!accountId) return;
 		return startSync({ db: getDb(), accountId, transport: fetchTransport() });
 	});
+
+	// Another tab signed this device out and cleared it: leave too, with a full page load.
+	$effect(() => onSignOutElsewhere(() => location.assign(resolve('/sign-in'))));
 </script>
 
 <ReloadBanner />

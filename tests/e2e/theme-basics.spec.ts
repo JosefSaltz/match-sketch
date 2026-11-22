@@ -9,11 +9,14 @@ test('the home page shows the wordmark in Graduate', async ({ page }) => {
 });
 
 test('no request leaves the app origin', async ({ page, baseURL }) => {
-	// Review Focus #5: fonts and tiles are self-hosted so the app works offline.
+	// Review Focus #5: fonts and tiles are self-hosted so the app works offline. The only other
+	// origin is the app's own Supabase backend (auth and the user's profile).
+	const backend = new URL(process.env.SUPABASE_URL!).origin;
 	const outside: string[] = [];
 	page.on('request', (r) => {
 		const url = r.url();
-		if (!url.startsWith(baseURL!) && !url.startsWith('data:')) outside.push(url);
+		const own = url.startsWith(baseURL!) || url.startsWith(backend) || url.startsWith('data:');
+		if (!own) outside.push(url);
 	});
 	await page.goto('/');
 	await createCanvas(page, { name: 'Bay A', width: '50', depth: '25', unit: 'Yards' });

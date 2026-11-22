@@ -1,3 +1,4 @@
+import { getEntry } from '../catalog';
 import type { PlanDocument, PlanObject } from '../model/plan';
 import type { Placement } from './contract';
 
@@ -7,7 +8,12 @@ import type { Placement } from './contract';
  * break and display settings stay. One commit, so one undo step.
  */
 export function applyDraft(doc: PlanDocument, placements: Placement[]): PlanDocument {
-	const objects: PlanObject[] = placements.map((p, z) => ({
+	// Footprints (walls, boxes, berms) go underneath, so they never hide a target or prop.
+	const ordered = [
+		...placements.filter((p) => getEntry(p.symbolId)?.kind === 'footprint'),
+		...placements.filter((p) => getEntry(p.symbolId)?.kind !== 'footprint')
+	];
+	const objects: PlanObject[] = ordered.map((p, z) => ({
 		id: crypto.randomUUID(),
 		symbolId: p.symbolId,
 		x: p.x,

@@ -108,6 +108,11 @@ describe('applyDraft', () => {
 		const { valid } = validatePlacements([item(), item({ symbolId: 'barrel', x: 40 })], bay);
 		const next = applyDraft(doc, valid);
 		expect(next.objects.map((o) => o.symbolId)).toEqual(['paper', 'barrel']);
+		const layered = applyDraft(
+			doc,
+			validatePlacements([item(), item({ symbolId: 'platform', x: 40 })], bay).valid
+		);
+		expect(layered.objects.map((o) => o.symbolId)).toEqual(['platform', 'paper']);
 		expect(next.objects.every((o) => o.id !== old)).toBe(true);
 		expect(next.objects.map((o) => o.z)).toEqual([0, 1]);
 		expect(next.annotations.map((a) => a.type)).toEqual(['text']);

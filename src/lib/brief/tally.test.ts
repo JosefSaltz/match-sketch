@@ -31,6 +31,24 @@ describe('targetsTally', () => {
 	});
 });
 
+describe('targetsTally with the full set', () => {
+	it('keeps the case of proper names and abbreviations', () => {
+		expect(
+			targetsTally([
+				obj('texas-star'),
+				obj('plate-kd', { count: 2 }),
+				obj('no-shoot', { count: 3 })
+			])
+		).toBe('3 no-shoots, 2 KD plates, 1 Texas star');
+	});
+
+	it('uses the special plurals', () => {
+		expect(targetsTally([obj('ducks', { count: 2 }), obj('paper-hard-cover', { count: 2 })])).toBe(
+			'2 papers with hard cover, 2 ducks in a row'
+		);
+	});
+});
+
 describe('targetsText', () => {
 	it('an override wins over the tally', () => {
 		const doc = emptyPlanDocument();

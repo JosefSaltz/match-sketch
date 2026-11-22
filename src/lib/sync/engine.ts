@@ -123,7 +123,10 @@ async function applyConflict(
 	return { copy, needsReload };
 }
 
-/** Applies a pulled record unless the device has changes of its own (push decides those). */
+/**
+ * Applies a pulled record unless the device has changes of its own (push decides those) or
+ * already has this version (its own push coming back).
+ */
 export async function applyPulled(
 	db: MatchSketchDB,
 	server: ServerRecord
@@ -137,7 +140,7 @@ export async function applyPulled(
 	const table = tableOf(db, server.table);
 	return db.transaction('rw', table, async () => {
 		const current = await table.get(server.id);
-		if (current?.dirty === 1) return 'kept-local';
+		if (current && (current.dirty === 1 || current.version >= server.version)) return 'kept-local';
 		await table.put(local);
 		return 'applied';
 	});

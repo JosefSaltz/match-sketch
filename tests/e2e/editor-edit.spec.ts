@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
 
-const props = (page: Page) => page.getByRole('complementary', { name: 'Properties' });
+const props = (page: Page) => page.getByRole('tabpanel', { name: 'Properties' });
 
 test.beforeEach(async ({ page }) => {
 	await page.goto('/');

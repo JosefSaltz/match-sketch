@@ -4,7 +4,6 @@
 	import type { PlanObject } from '#lib/model/plan.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import Button from '#lib/ui/Button.svelte';
-	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
 	import type { ObjectPatch } from '../ops.js';
 
@@ -116,55 +115,53 @@
 	}
 </script>
 
-<aside class="flex min-h-0 flex-col border-l-[3px] border-black bg-white" aria-label="Properties">
-	<PanelHeader title="Properties" />
-	<div class="flex-1 overflow-y-auto p-3">
-		{#if obj}
-			{@const o = obj}
-			<h3 class="m-0 mb-3 text-base font-semibold">{entry?.name ?? o.symbolId}</h3>
-			<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
-				<label for="{uid}-label" class="text-sm text-muted">Label</label>
+<!-- The Properties tab of the side panel; SidePanel provides the scrolling tab panel. -->
+<div>
+	{#if obj}
+		{@const o = obj}
+		<h3 class="m-0 mb-3 text-base font-semibold">{entry?.name ?? o.symbolId}</h3>
+		<div class="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+			<label for="{uid}-label" class="text-sm text-muted">Label</label>
+			<input
+				id="{uid}-label"
+				type="text"
+				maxlength="24"
+				class={controlClass}
+				value={o.label ?? ''}
+				onchange={(e) => commitLabel(e, o.id)}
+				onkeydown={blurOnEnter}
+			/>
+			{#each fields as field (field.key)}
+				<label for="{uid}-{field.key}" class="text-sm text-muted">{field.label}</label>
 				<input
-					id="{uid}-label"
-					type="text"
-					maxlength="24"
+					id="{uid}-{field.key}"
+					type="number"
+					min={field.min}
+					max={field.max}
+					step={field.step ?? 'any'}
 					class={controlClass}
-					value={o.label ?? ''}
-					onchange={(e) => commitLabel(e, o.id)}
+					value={field.read(o)}
+					onchange={(e) => commitNumber(e, o.id, field)}
 					onkeydown={blurOnEnter}
 				/>
-				{#each fields as field (field.key)}
-					<label for="{uid}-{field.key}" class="text-sm text-muted">{field.label}</label>
-					<input
-						id="{uid}-{field.key}"
-						type="number"
-						min={field.min}
-						max={field.max}
-						step={field.step ?? 'any'}
-						class={controlClass}
-						value={field.read(o)}
-						onchange={(e) => commitNumber(e, o.id, field)}
-						onkeydown={blurOnEnter}
-					/>
-				{/each}
-			</div>
-			<p class="mt-2 mb-0 text-xs text-muted">
-				Positions and sizes in {unit === 'yd' ? 'yards' : 'feet'}.
-			</p>
-			<div class="mt-4 grid grid-cols-2 gap-2">
-				<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
-				<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
-				<Button onclick={() => editor.bringToFront(o.id)}>Bring to front</Button>
-				<Button onclick={() => editor.sendToBack(o.id)}>Send to back</Button>
-			</div>
-		{:else if count > 1}
-			<h3 class="m-0 mb-3 text-base font-semibold">{count} objects selected</h3>
-			<div class="grid grid-cols-2 gap-2">
-				<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
-				<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
-			</div>
-		{:else}
-			<p class="m-0 text-muted">Select an object to edit it</p>
-		{/if}
-	</div>
-</aside>
+			{/each}
+		</div>
+		<p class="mt-2 mb-0 text-xs text-muted">
+			Positions and sizes in {unit === 'yd' ? 'yards' : 'feet'}.
+		</p>
+		<div class="mt-4 grid grid-cols-2 gap-2">
+			<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+			<Button onclick={() => editor.bringToFront(o.id)}>Bring to front</Button>
+			<Button onclick={() => editor.sendToBack(o.id)}>Send to back</Button>
+		</div>
+	{:else if count > 1}
+		<h3 class="m-0 mb-3 text-base font-semibold">{count} objects selected</h3>
+		<div class="grid grid-cols-2 gap-2">
+			<Button onclick={() => editor.duplicateSelected()}>Duplicate</Button>
+			<Button variant="danger" onclick={() => editor.deleteSelected()}>Delete</Button>
+		</div>
+	{:else}
+		<p class="m-0 text-muted">Select an object to edit it</p>
+	{/if}
+</div>

@@ -9,6 +9,7 @@
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
+	import Thumbnail from '#lib/print/Thumbnail.svelte';
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
 	import { formatMatchDate, stageCount } from '#lib/matches/format.js';
 	import MatchForm from '#lib/matches/MatchForm.svelte';
@@ -190,6 +191,7 @@
 								</h3>
 							</header>
 							<div class="grid gap-3 p-3">
+								<Thumbnail {plan} />
 								<p class="m-0 grid text-sm text-muted">
 									<span>{formatDimensions(plan.widthFt, plan.depthFt, plan.unit)}</span>
 									<span>Edited {edited(plan.updatedAt)}</span>

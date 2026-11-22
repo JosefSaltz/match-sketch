@@ -1,0 +1,13 @@
+[project]
+name = "match-sketch-patterns"
+version = "0.1.0"
+description = "Turns licensed camouflage references and plaid setts into seamless theme tiles."
+requires-python = ">=3.12"
+dependencies = ["numpy>=2.1", "pillow>=11", "scipy>=1.14", "vtracer>=0.6"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -17,3 +17,7 @@ docs/superpowers/
 skills-lock.json
 .mcp.json
 .claude/settings.local.json
+
+# Pattern tool caches
+tools/patterns/.venv/
+tools/patterns/.pytest_cache/

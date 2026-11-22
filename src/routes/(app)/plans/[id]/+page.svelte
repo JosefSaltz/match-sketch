@@ -17,9 +17,10 @@
 		if (revision === handled) return;
 		handled = revision;
 		const plan = data.plan;
-		if (plan && syncState.changed.some((c) => c.table === 'plans' && c.id === plan.id)) {
-			untrack(() => void invalidateAll());
-		}
+		// Re-read when a pull changed this plan, or when the plan wasn't here yet (a link opened
+		// on a device before its first pull).
+		const changed = syncState.changed.some((c) => c.table === 'plans' && c.id === plan?.id);
+		if (!plan || changed) untrack(() => void invalidateAll());
 	});
 </script>
 

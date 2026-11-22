@@ -202,6 +202,8 @@ export async function syncOnce(
 				const { copy, needsReload } = await applyConflict(db, sent, result.server, now());
 				if (copy) outcome.conflicts.push(copy);
 				outcome.needsReload ||= needsReload;
+				// The device's record now holds the other version; open screens must re-read it.
+				if (!needsReload) outcome.changed.push({ table: sent.table, id: sent.record.id });
 			} else {
 				outcome.stuck += 1;
 			}

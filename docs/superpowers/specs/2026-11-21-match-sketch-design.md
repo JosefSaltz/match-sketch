@@ -154,7 +154,12 @@ Problem: in multigun, shooting areas sit within ~30 yd while rifle targets can b
 
 Idea: the MD can add a horizontal **break band** at a chosen depth range (e.g. 40 yd → 150 yd). The band is drawn compressed with a map-style break symbol and its true distance labeled. Objects beyond the band keep their true `y` in data but render shifted closer, and each shows its true distance.
 
-Status: build a quick prototype early in implementation, show it to the user, and decide whether it ships in the MVP. The data model stores breaks as an optional list on the plan, so adding or dropping the feature doesn't change saved plans.
+Status: **kept (2026-11-22), as variant C of the prototype ("far zone squeezed").** The prototype (branch `spike/scale-break`) compared five drawings of a 40 × 300 yd multigun bay; the user chose C:
+
+- The MD sets one depth (e.g. 30 yd). Everything beyond it, to the end of the bay, is drawn as a shaded strip of fixed depth (about 25 yd at the plan's scale), with a map-style torn edge where it starts and the label "Not to scale beyond 30 yd".
+- Inside the strip, objects keep their true left-right position and their downrange order; each one is tagged with its true distance (e.g. "150 yd"), and the strip's edge carries true-distance ticks.
+- Data stays in true feet: one entry in `scaleBreaks` (`fromFt` = the chosen depth, `toFt` = the bay's depth). Dragging inside the strip maps back to true feet.
+- One band cut out of the middle (variants A, B) barely helped when rifle targets are spread over 100–300 yd, and a band in every gap (D) was noisier.
 
 ### 7.5 Draft from text
 
@@ -189,7 +194,7 @@ The procedure text in real plans usually says _what_ and _in what order_ but rar
 
 ### 7.7 Symbol library
 
-- **Style:** one consistent line style; shapes distinguishable in black and white; limited accent colors (e.g. tan for paper, steel gray, red for no-shoot hits) that degrade to fills/patterns when printed in grayscale; legible at roughly 0.35–0.5 in printed.
+- **Style (chosen 2026-11-22: direction A, "Pictogram"):** even 5-unit strokes in a 100-unit viewBox (round caps and joins), soft tinted fills — paper tan `#d2ad72`, steel gray `#8d96a0`, props light gray `#e9ecef`, no-shoot white with a red X `#c0392b` — and ink in `currentColor`. Footprints drawn from above use fixed 2 px lines. Directions B (bold silhouette) and C (draftsman) were not chosen. General rule: one consistent line style; shapes distinguishable in black and white; limited accent colors (e.g. tan for paper, steel gray, red for no-shoot hits) that degrade to fills/patterns when printed in grayscale; legible at roughly 0.35–0.5 in printed.
 - **Catalog entry:** id, display name, aliases (e.g. "pepper popper", "popper"), category, optional family (groups variants of one target type in the palette, e.g. Poppers), kind (footprint/symbol), default size, the SVG, and optional label anchor point. The catalog is a TypeScript module plus SVG files in the repo, versioned with the app; adding a discipline set is adding catalog entries.
 - **First set (from the reference plans):**
   - _Targets:_ paper (large), paper (small), paper with hard cover, no-shoot, swinger (swinging paper), poppers (knock-down, static, trigger, auto-reset), KD (knock-down plate), static steel, flasher, spinner, Texas star, whirly-gig, ducks in a row, plate rack, bottle, stop plate.
@@ -251,9 +256,9 @@ To settle when Plan 7 is written (not before):
 
 ## 9. Open with the user (to settle during implementation, not blocking the plan)
 
-- Page visual design: to be worked out with mockups (§7.6).
-- Scale break: keep or drop after the prototype (§7.4).
-- Symbol style: review early symbol sketches before the full set is drawn (§7.7).
+- Page visual design: **decided 2026-11-22 — layout B** (portrait; stage header; the diagram first and large; a strip of five facts — start position, gun ready, round count, targets, par time; then the procedure beside the notes). Header text in a plain heavy sans, as mocked up.
+- Scale break: **kept, variant C** (§7.4).
+- Symbol style: **direction A** (§7.7).
 - Real DRRC bay sizes for the eval set (§7.5).
 
 ## 10. After the MVP

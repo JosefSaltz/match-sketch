@@ -7,6 +7,8 @@ type BaseEntry = {
 	name: string;
 	aliases: string[];
 	category: Category;
+	/** Groups variants of one target type in the palette (e.g. `poppers`); a `FAMILIES` id. */
+	family?: string;
 	/** Targets: one object can stand for several (e.g. "KD ×4"). */
 	countable: boolean;
 	autoLabel?: AutoLabel;
@@ -22,3 +24,6 @@ export type FootprintEntry = BaseEntry & {
 };
 
 export type CatalogEntry = SymbolEntry | FootprintEntry;
+
+/** Variants of one target type, listed together in the palette. */
+export type SymbolFamily = { id: string; name: string };

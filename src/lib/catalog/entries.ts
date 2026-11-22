@@ -1,10 +1,18 @@
-import type { CatalogEntry } from './types';
+import type { CatalogEntry, SymbolFamily } from './types';
 import paperSvg from './svg/paper.svg?raw';
 import popperSvg from './svg/popper.svg?raw';
+import popperStaticSvg from './svg/popper-static.svg?raw';
+import popperTriggerSvg from './svg/popper-trigger.svg?raw';
+import popperAutoResetSvg from './svg/popper-auto-reset.svg?raw';
 import steelStaticSvg from './svg/steel-static.svg?raw';
 import barrelSvg from './svg/barrel.svg?raw';
 import dumpBoxSvg from './svg/dump-box.svg?raw';
 import shootingPositionSvg from './svg/shooting-position.svg?raw';
+
+/** Families used by the entries below. Plan 3 adds the rest (paper, plates, movers…). */
+export const FAMILIES: Readonly<Record<string, SymbolFamily>> = {
+	poppers: { id: 'poppers', name: 'Poppers' }
+};
 
 /** Placeholder set for Plan 1. Plan 3 redraws the art and keeps these ids. */
 export const ENTRIES: readonly CatalogEntry[] = [
@@ -20,12 +28,46 @@ export const ENTRIES: readonly CatalogEntry[] = [
 	},
 	{
 		id: 'popper',
-		name: 'Popper',
-		aliases: ['pepper popper'],
+		name: 'Knock-down popper',
+		aliases: ['popper', 'pepper popper'],
 		category: 'target',
+		family: 'poppers',
 		countable: true,
 		kind: 'symbol',
 		svg: popperSvg,
+		anchor: 'base'
+	},
+	{
+		id: 'popper-static',
+		name: 'Static popper',
+		aliases: [],
+		category: 'target',
+		family: 'poppers',
+		countable: true,
+		kind: 'symbol',
+		svg: popperStaticSvg,
+		anchor: 'base'
+	},
+	{
+		id: 'popper-trigger',
+		name: 'Trigger popper',
+		aliases: ['activator', 'activator popper'],
+		category: 'target',
+		family: 'poppers',
+		countable: true,
+		kind: 'symbol',
+		svg: popperTriggerSvg,
+		anchor: 'base'
+	},
+	{
+		id: 'popper-auto-reset',
+		name: 'Auto-reset popper',
+		aliases: ['auto popper', 'self-resetting popper'],
+		category: 'target',
+		family: 'poppers',
+		countable: true,
+		kind: 'symbol',
+		svg: popperAutoResetSvg,
 		anchor: 'base'
 	},
 	{

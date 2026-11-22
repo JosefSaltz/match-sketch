@@ -7,8 +7,17 @@
 	import { formatDimensions, fromFeet } from '#lib/geometry/units.js';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
 	import { getDb } from '#lib/store/index.js';
-	import type { CanvasInput, CanvasRecord } from '#lib/store/records.js';
+	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
+	import {
+		planTitle,
+		type CanvasInput,
+		type CanvasRecord,
+		type PlanRecord
+	} from '#lib/store/records.js';
+	import { resolve } from '$app/paths';
 
+	let plans = $state<PlanRecord[]>([]);
+	let deletingPlan = $state<PlanRecord | null>(null);
 	let canvases = $state<CanvasRecord[]>([]);
 	let canvasDialog = $state<{ mode: 'create' } | { mode: 'edit'; canvas: CanvasRecord } | null>(
 		null
@@ -19,7 +28,33 @@
 		canvases = await listCanvases(getDb());
 	}
 
-	onMount(refreshCanvases);
+	async function refreshPlans() {
+		plans = await listPlans(getDb());
+	}
+
+	onMount(() => {
+		void refreshPlans();
+		void refreshCanvases();
+	});
+
+	async function duplicate(plan: PlanRecord) {
+		await duplicatePlan(getDb(), plan.id);
+		await refreshPlans();
+	}
+
+	async function confirmDeletePlan() {
+		if (!deletingPlan) return;
+		await deletePlan(getDb(), deletingPlan.id);
+		deletingPlan = null;
+		await refreshPlans();
+	}
+
+	const edited = (iso: string) =>
+		new Date(iso).toLocaleDateString(undefined, {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		});
 
 	async function saveCanvas(input: CanvasInput) {
 		const dialog = canvasDialog;
@@ -48,7 +83,26 @@
 	<section aria-labelledby="plans-heading">
 		<div class="section-head">
 			<h2 id="plans-heading">Plans</h2>
+			<a class="button" href={resolve('plans/new')}>New plan</a>
 		</div>
+		{#if plans.length}
+			<ul class="rows">
+				{#each plans as plan (plan.id)}
+					<li class="row plan-row">
+						<span class="name">{planTitle(plan)}</span>
+						<span class="meta">{formatDimensions(plan.widthFt, plan.depthFt, plan.unit)}</span>
+						<span class="meta">Edited {edited(plan.updatedAt)}</span>
+						<span class="row-actions">
+							<a class="button" href={resolve('/(app)/plans/[id]', { id: plan.id })}>Open</a>
+							<button type="button" onclick={() => duplicate(plan)}>Duplicate</button>
+							<button type="button" onclick={() => (deletingPlan = plan)}>Delete</button>
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="empty">No plans yet. Start one with “New plan”.</p>
+		{/if}
 	</section>
 
 	<section aria-labelledby="canvases-heading">
@@ -100,6 +154,16 @@
 	</Dialog>
 {/if}
 
+{#if deletingPlan}
+	<ConfirmDialog
+		title="Delete plan"
+		message={`Delete plan "${planTitle(deletingPlan)}"?`}
+		confirmLabel="Delete"
+		onconfirm={confirmDeletePlan}
+		oncancel={() => (deletingPlan = null)}
+	/>
+{/if}
+
 {#if deletingCanvas}
 	<ConfirmDialog
 		title="Delete canvas"
@@ -149,6 +213,18 @@
 	.meta,
 	.empty {
 		color: var(--color-muted);
+	}
+	.plan-row {
+		grid-template-columns: 1fr auto auto auto;
+	}
+	.button {
+		display: inline-block;
+		padding: 1px 6px;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		color: var(--color-text);
+		text-decoration: none;
+		background: var(--color-surface);
 	}
 	.row-actions {
 		display: flex;

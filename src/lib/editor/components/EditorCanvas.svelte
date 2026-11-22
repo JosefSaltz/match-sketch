@@ -3,7 +3,7 @@
 	import type { Corner } from '#lib/geometry/transform.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
-	import { movedBeyond, PointerGestures } from '../gestures.js';
+	import { movedBeyond, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
 	import BayLayer from './BayLayer.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
@@ -12,6 +12,7 @@
 	let { editor }: { editor: EditorState } = $props();
 
 	const gestures = new PointerGestures();
+	const TOUCH_SLOP_PX = 8;
 	/** Drawn back to front. */
 	const objects = $derived([...editor.doc.objects].sort((a, b) => a.z - b.z));
 	/** A single pointer pressed while a symbol is armed; placing happens if it lifts in place. */
@@ -60,6 +61,13 @@
 		(document.activeElement as HTMLElement | null)?.blur();
 		const p = local(e);
 		capture(e);
+		// A second finger joins the gesture in progress (pan becomes pinch) instead of grabbing
+		// whatever it lands on.
+		if (gestures.active > 0) {
+			gestures.down(e.pointerId, p);
+			tap = null;
+			return;
+		}
 		const armed = editor.armedSymbolId;
 		const handle = armed ? null : (e.target as Element).closest('[data-handle]');
 		const selected = editor.selection.length === 1 ? editor.selection[0] : null;
@@ -80,7 +88,8 @@
 			else if (editor.selection.length > 1) narrowTo = id;
 			if (editor.selection.includes(id)) {
 				moving = e.pointerId;
-				editor.beginMove(id, p);
+				// Fingers wobble more than a mouse during a tap.
+				editor.beginMove(id, p, e.pointerType === 'mouse' ? TAP_SLOP_PX : TOUCH_SLOP_PX);
 			}
 			return;
 		}

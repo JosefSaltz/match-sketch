@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getEntry } from '#lib/catalog/index.js';
 	import FootprintShape from '#lib/ui/FootprintShape.svelte';
+	import { formatLength } from '#lib/geometry/units.js';
 	import { worldToScreen } from '#lib/geometry/viewport.js';
 	import { SYMBOL_PX, type PlanObject } from '#lib/model/plan.js';
 	import type { EditorState } from '../editor-state.svelte.js';
@@ -38,6 +39,10 @@
 	);
 	const bounds = $derived(rotatedBounds(drawn, obj.rotation));
 	const badgeWidth = $derived(10 + 6 * String(count).length);
+	/** Inside the not-to-scale strip, an object shows its true distance downrange. */
+	const distance = $derived(
+		editor.depth && obj.y > editor.depth.fromFt ? formatLength(obj.y, editor.plan.unit) : null
+	);
 </script>
 
 <g
@@ -88,6 +93,17 @@
 			<text data-testid="object-count" dy="0.35em">×{count}</text>
 		</g>
 	{/if}
+	{#if distance}
+		<text
+			data-testid="object-distance"
+			class="distance"
+			x={bounds.x + bounds.width + 4}
+			y={bounds.y + bounds.height / 2}
+			dy="0.35em"
+		>
+			{distance}
+		</text>
+	{/if}
 	{#if obj.label}
 		<text data-testid="object-label" class="label" y={bounds.y + bounds.height + LABEL_GAP_PX}>
 			{obj.label}
@@ -121,6 +137,15 @@
 		font-size: 10px;
 		font-weight: 700;
 		text-anchor: middle;
+	}
+	.distance {
+		fill: var(--color-text);
+		font-size: 11px;
+		font-weight: 700;
+		paint-order: stroke;
+		stroke: #fff;
+		stroke-width: 3px;
+		stroke-linejoin: round;
 	}
 	.label {
 		fill: var(--color-text);

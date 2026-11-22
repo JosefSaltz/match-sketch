@@ -4,6 +4,9 @@
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
 	import { planTitle } from '#lib/store/records.js';
+	import ThemePicker from '#lib/theme/ThemePicker.svelte';
+	import Button from '#lib/ui/Button.svelte';
+	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -21,33 +24,70 @@
 		{ value: 'medium', label: 'Medium' },
 		{ value: 'large', label: 'Large' }
 	];
+	const FIELD = 'inline-flex items-center gap-2';
+	const LABEL = 'font-display text-xs tracking-wide uppercase text-outline-sm';
+	/** Selects follow the button rule on a patterned bar: white, bordered, touch-sized. */
+	const SELECT =
+		'focus-ring min-h-11 cursor-pointer rounded-[10px] border-[3px] border-black bg-white px-2 text-sm font-semibold shadow-[3px_3px_0_#000]';
 
 	const title = $derived(planTitle({ document: editor.doc }));
+	let pickingTheme = $state(false);
 </script>
 
-<header class="toolbar">
-	<a class="back" href={resolve('')}>← Plans</a>
-	<span class="title">{title}</span>
-	<span class="dims">
-		{formatDimensions(editor.canvas.widthFt, editor.canvas.depthFt, editor.plan.unit)}
-	</span>
-	<div class="group" role="group" aria-label="History">
-		<button type="button" onclick={() => editor.undo()} disabled={!editor.canUndo}>Undo</button>
-		<button type="button" onclick={() => editor.redo()} disabled={!editor.canRedo}>Redo</button>
+<header
+	class="bg-theme flex flex-wrap items-center gap-x-3 gap-y-2 border-b-[3px] border-black px-3 py-2"
+>
+	<a
+		href={resolve('')}
+		class="focus-ring inline-flex min-h-11 shrink-0 items-center rounded-lg"
+		aria-label="Match Sketch"
+	>
+		<Wordmark size="compact" />
+	</a>
+	<div class="mr-auto grid min-w-0 leading-tight">
+		<span class="truncate font-display text-lg tracking-wide uppercase text-outline-md">
+			{title}
+		</span>
+		<span class="font-display text-xs tracking-wide uppercase text-outline-sm">
+			{formatDimensions(editor.canvas.widthFt, editor.canvas.depthFt, editor.plan.unit)}
+		</span>
+	</div>
+	<div class="flex items-center gap-2" role="group" aria-label="History">
+		<Button
+			variant="icon"
+			aria-label="Undo"
+			title="Undo"
+			onclick={() => editor.undo()}
+			disabled={!editor.canUndo}
+		>
+			↶
+		</Button>
+		<Button
+			variant="icon"
+			aria-label="Redo"
+			title="Redo"
+			onclick={() => editor.redo()}
+			disabled={!editor.canRedo}
+		>
+			↷
+		</Button>
 	</div>
 	<span
-		class={['save', editor.saveStatus]}
+		class={[
+			// Fixed width (fits the longest message) so saving never re-wraps the bar and shifts the stage.
+			'inline-flex min-h-8 w-44 items-center justify-center rounded-md border-2 border-black bg-white px-2 text-sm',
+			editor.saveStatus === 'error' ? 'font-semibold text-danger' : 'text-muted'
+		]}
 		data-testid="save-status"
 		role="status"
-		aria-live="polite"
 	>
 		{SAVE_LABEL[editor.saveStatus]}
 	</span>
-	<span class="spacer"></span>
-	<div class="field">
-		<label for="{uid}-snap">Snap</label>
+	<div class={FIELD}>
+		<label for="{uid}-snap" class={LABEL}>Snap</label>
 		<select
 			id="{uid}-snap"
+			class={SELECT}
 			value={editor.doc.display.snap}
 			onchange={(e) => editor.setDisplay({ snap: e.currentTarget.value as SnapSetting })}
 		>
@@ -56,10 +96,11 @@
 			{/each}
 		</select>
 	</div>
-	<div class="field">
-		<label for="{uid}-size">Symbol size</label>
+	<div class={FIELD}>
+		<label for="{uid}-size" class={LABEL}>Symbol size</label>
 		<select
 			id="{uid}-size"
+			class={SELECT}
 			value={editor.doc.display.symbolSize}
 			onchange={(e) => editor.setDisplay({ symbolSize: e.currentTarget.value as SymbolSize })}
 		>
@@ -68,53 +109,20 @@
 			{/each}
 		</select>
 	</div>
-	<div class="group" role="group" aria-label="View">
-		<button type="button" onclick={() => editor.zoomBy(1 / 1.25)}>Zoom out</button>
-		<button type="button" onclick={() => editor.zoomBy(1.25)}>Zoom in</button>
-		<button type="button" onclick={() => editor.fit()}>Fit</button>
+	<div class="flex items-center gap-2" role="group" aria-label="View">
+		<Button
+			variant="icon"
+			aria-label="Zoom out"
+			title="Zoom out"
+			onclick={() => editor.zoomBy(1 / 1.25)}
+		>
+			−
+		</Button>
+		<Button variant="icon" aria-label="Zoom in" title="Zoom in" onclick={() => editor.zoomBy(1.25)}>
+			+
+		</Button>
+		<Button onclick={() => editor.fit()}>Fit</Button>
 	</div>
+	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
-
-<style>
-	.toolbar {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-2) var(--space-4);
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-bg);
-		min-height: 48px;
-	}
-	.back {
-		color: var(--color-text);
-		text-decoration: none;
-	}
-	.title {
-		font-weight: 600;
-	}
-	.dims {
-		color: var(--color-muted);
-	}
-	.spacer {
-		flex: 1;
-	}
-	.group {
-		display: flex;
-		gap: var(--space-1);
-	}
-	.save {
-		font-size: 0.875rem;
-		color: var(--color-muted);
-	}
-	.save.error {
-		color: var(--color-danger);
-		font-weight: 600;
-	}
-	.field {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		font-size: 0.875rem;
-		color: var(--color-muted);
-	}
-</style>
+<ThemePicker bind:open={pickingTheme} />

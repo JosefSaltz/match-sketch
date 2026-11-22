@@ -19,7 +19,12 @@ describe('catalog', () => {
 
 	it('searches names and aliases, case-insensitively', () => {
 		expect(searchCatalog('pepper').map((e) => e.id)).toEqual(['popper']);
-		expect(searchCatalog('WALL').map((e) => e.id)).toEqual(['wall']);
+		expect(searchCatalog('WALL').map((e) => e.id)).toEqual([
+			'wall',
+			'wall-port',
+			'half-wall-port',
+			'v-wall'
+		]);
 		expect(searchCatalog('').length).toBe(CATALOG.length);
 	});
 
@@ -40,6 +45,58 @@ describe('catalog', () => {
 				seen.set(k, e.id);
 			}
 		}
+	});
+
+	it('has the props, drawn from above at a fixed size', () => {
+		const props = CATALOG.filter((e) => e.category === 'prop' && e.id !== 'dump-box');
+		expect(props.map((e) => e.id)).toEqual([
+			'barrel',
+			'barrels-stacked',
+			'tire',
+			'chair',
+			'ammo-can',
+			'bucket',
+			'crate',
+			'tree',
+			'target-stand',
+			'sawhorse'
+		]);
+		for (const e of props) expect(e.kind === 'symbol' && e.anchor, e.id).toBe('center');
+	});
+
+	it('has the structures, drawn to scale with their own styles', () => {
+		const sizes = Object.fromEntries(
+			CATALOG.filter((e) => e.category === 'structure').map((e) => [
+				e.id,
+				e.kind === 'footprint'
+					? `${e.footprint.style} ${e.footprint.widthFt}x${e.footprint.depthFt}`
+					: 'symbol'
+			])
+		);
+		expect(sizes).toEqual({
+			wall: 'solid 8x0.5',
+			'wall-port': 'wall-port 8x0.5',
+			'half-wall-port': 'half-wall-port 8x0.5',
+			'v-wall': 'v-wall 6x3',
+			door: 'door 3x3',
+			car: 'car 6x15',
+			table: 'table 6x3',
+			pallet: 'pallet 4x4',
+			'chopper-seat': 'bench 5x2',
+			plank: 'bench 8x1',
+			stairs: 'stairs 4x6',
+			platform: 'platform 8x8',
+			wobble: 'wobble 4x4',
+			barrier: 'barrier 6x0.5',
+			berm: 'berm 20x6',
+			fence: 'fence 10x0.3'
+		});
+	});
+
+	it('finds structures by their common names', () => {
+		expect(searchCatalog('sticks').map((e) => e.id)).toEqual(['barrier']);
+		expect(searchCatalog('mound').map((e) => e.id)).toEqual(['berm']);
+		expect(searchCatalog('VTAC').map((e) => e.id)).toEqual(['v-wall']);
 	});
 
 	it('searches family names', () => {

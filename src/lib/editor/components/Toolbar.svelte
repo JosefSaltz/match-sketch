@@ -3,7 +3,6 @@
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
-	import { planTitle } from '#lib/store/records.js';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
@@ -30,7 +29,6 @@
 	const SELECT =
 		'focus-ring min-h-11 cursor-pointer rounded-[10px] border-[3px] border-black bg-white px-2 text-sm font-semibold shadow-[3px_3px_0_#000]';
 
-	const title = $derived(planTitle({ document: editor.doc }));
 	let pickingTheme = $state(false);
 </script>
 
@@ -46,7 +44,7 @@
 	</a>
 	<div class="mr-auto grid min-w-0 leading-tight">
 		<span class="truncate font-display text-lg tracking-wide uppercase text-outline-md">
-			{title}
+			{editor.title}
 		</span>
 		<span class="font-display text-xs tracking-wide uppercase text-outline-sm">
 			{formatDimensions(editor.canvas.widthFt, editor.canvas.depthFt, editor.plan.unit)}

@@ -7,6 +7,7 @@
 	import { controlClass } from '#lib/ui/styles.js';
 	import FootprintShape from '#lib/ui/FootprintShape.svelte';
 	import { movedBeyond } from '../gestures.js';
+	import { DragSwing } from '../swing.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -46,6 +47,8 @@
 	/** Set when a press ended as a drag, so the click the browser fires afterwards doesn't arm. */
 	let justDragged = false;
 	let ghost = $state<{ entry: CatalogEntry; x: number; y: number } | null>(null);
+	/** The ghost swings from the pointer as it is carried to the stage. */
+	const ghostSwing = new DragSwing();
 
 	function onItemDown(e: PointerEvent, entry: CatalogEntry) {
 		justDragged = false;
@@ -67,7 +70,10 @@
 		if (press?.pointerId !== e.pointerId) return;
 		const p = { x: e.clientX, y: e.clientY };
 		if (!press.dragging && movedBeyond(press.start, p)) press.dragging = true;
-		if (press.dragging) ghost = { entry: press.entry, ...p };
+		if (press.dragging) {
+			ghost = { entry: press.entry, ...p };
+			ghostSwing.move(['ghost'], p);
+		}
 	}
 
 	function onItemUp(e: PointerEvent) {
@@ -85,6 +91,7 @@
 	function cancelDrag() {
 		press = null;
 		ghost = null;
+		ghostSwing.stop();
 	}
 
 	function onItemClick(e: MouseEvent, entry: CatalogEntry) {
@@ -290,7 +297,10 @@
 {#if ghost}
 	<div
 		class="pointer-events-none fixed top-0 left-0 z-10 opacity-85"
-		style:transform="translate({ghost.x}px, {ghost.y}px) translate(-50%, -50%)"
+		data-testid="palette-ghost"
+		style:transform="translate({ghost.x}px, {ghost.y}px) translate(-50%, -50%) rotate({ghostSwing.angle.toFixed(
+			2
+		)}deg)"
 	>
 		{@render thumb(ghost.entry)}
 	</div>

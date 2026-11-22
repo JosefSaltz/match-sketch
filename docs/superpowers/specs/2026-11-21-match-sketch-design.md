@@ -233,7 +233,7 @@ The user's idea: a "walkthrough" that explains a stage step by step.
 To settle when Plan 7 is written (not before):
 
 - The full set of meanings beyond shoot and move (e.g. activate, avoid/no-shoot, reload point, start position) and their colors.
-- Whether steps are authored freely or built from the stage procedure as structured steps (Plan 2 should keep that possible).
+- Whether steps are authored freely or built from the stage procedure as structured steps (Plan 2 kept the procedure as one text field, line breaks included; Plan 7 can split it into steps by line, or migrate it with a `schemaVersion` bump.)
 - Who views it and where: presenting on the MD's device at the stage briefing; printed as sequence cards (§10); a read-only viewer link for shooters (needs sharing, which is after the MVP today).
 - What else a step can carry: movement arrows (Plan 2 annotations), a zoomed view of part of the bay, notes.
 

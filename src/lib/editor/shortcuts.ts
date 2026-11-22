@@ -9,7 +9,13 @@ export type EditorCommand =
 	| 'nudge-up'
 	| 'nudge-down';
 
-export type KeyLike = { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean };
+export type KeyLike = {
+	key: string;
+	ctrlKey: boolean;
+	metaKey: boolean;
+	shiftKey: boolean;
+	altKey?: boolean;
+};
 export type TargetLike = { tagName: string; isContentEditable: boolean };
 
 const TEXT_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
@@ -27,6 +33,7 @@ const ARROWS: Record<string, EditorCommand> = {
  */
 export function commandForKey(e: KeyLike, target: TargetLike): EditorCommand | null {
 	if (TEXT_TAGS.has(target.tagName.toUpperCase()) || target.isContentEditable) return null;
+	if (e.altKey) return null; // Alt+Arrow is the browser's back/forward.
 	const mod = e.ctrlKey || e.metaKey;
 	const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 	if (mod) {

@@ -6,6 +6,7 @@
 	import BayLayer from './BayLayer.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
+	import SelectionOverlay from './SelectionOverlay.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -14,6 +15,10 @@
 	const objects = $derived([...editor.doc.objects].sort((a, b) => a.z - b.z));
 	/** A single pointer pressed while a symbol is armed; placing happens if it lifts in place. */
 	let tap: { pointerId: number; start: Point } | null = null;
+	/** The pointer dragging the selection, if any. */
+	let moving: number | null = null;
+	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
+	let narrowTo: string | null = null;
 
 	function local(e: {
 		clientX: number;
@@ -46,14 +51,37 @@
 
 	function onDown(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
+		if (moving !== null) return; // Extra pointers are ignored while dragging the selection.
+		// Commit a field being edited before the selection changes under it.
+		(document.activeElement as HTMLElement | null)?.blur();
 		const p = local(e);
 		capture(e);
+		const armed = editor.armedSymbolId;
+		const hit = armed ? null : (e.target as Element).closest('[data-object-id]');
+		if (hit) {
+			// Pressing an object selects it (Shift toggles) and starts moving the selection.
+			const id = hit.getAttribute('data-object-id')!;
+			narrowTo = null;
+			if (e.shiftKey) editor.select([id], 'toggle');
+			else if (!editor.selection.includes(id)) editor.select([id]);
+			else if (editor.selection.length > 1) narrowTo = id;
+			if (editor.selection.includes(id)) {
+				moving = e.pointerId;
+				editor.beginMove(id, p);
+			}
+			return;
+		}
 		gestures.down(e.pointerId, p);
-		tap =
-			editor.armedSymbolId && gestures.active === 1 ? { pointerId: e.pointerId, start: p } : null;
+		tap = armed && gestures.active === 1 ? { pointerId: e.pointerId, start: p } : null;
+		// Pressing empty space clears the selection, then pans.
+		if (!armed && gestures.active === 1 && !e.shiftKey) editor.clearSelection();
 	}
 
 	function onMove(e: PointerEvent) {
+		if (moving === e.pointerId) {
+			editor.updateMove(local(e));
+			return;
+		}
 		const action = gestures.move(e.pointerId, local(e));
 		if (!action) return;
 		if (action.kind === 'pinch') editor.zoomBy(action.factor, action.at);
@@ -61,6 +89,14 @@
 	}
 
 	function onUp(e: PointerEvent) {
+		if (moving === e.pointerId) {
+			const moved = editor.preview !== null;
+			moving = null;
+			editor.endMove();
+			if (!moved && narrowTo) editor.select([narrowTo]);
+			narrowTo = null;
+			return;
+		}
 		const armed = editor.armedSymbolId;
 		if (armed && tap?.pointerId === e.pointerId && !movedBeyond(tap.start, local(e))) {
 			editor.placeAt(armed, local(e));
@@ -69,6 +105,11 @@
 	}
 
 	function onCancel(e: PointerEvent) {
+		if (moving === e.pointerId) {
+			moving = null;
+			narrowTo = null;
+			editor.cancelMove();
+		}
 		if (tap?.pointerId === e.pointerId) tap = null;
 		gestures.up(e.pointerId);
 	}
@@ -95,6 +136,7 @@
 				<ObjectView {editor} {obj} />
 			{/each}
 		</g>
+		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>
 </div>

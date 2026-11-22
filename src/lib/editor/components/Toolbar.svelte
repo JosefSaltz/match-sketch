@@ -1,10 +1,25 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
+	import type { SymbolSize } from '#lib/model/plan.js';
 	import { planTitle } from '#lib/store/records.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
+
+	const uid = $props.id();
+	const SNAP_OPTIONS: { value: SnapSetting; label: string }[] = [
+		{ value: 'off', label: 'Off' },
+		{ value: '1ft', label: '1 ft' },
+		{ value: '1yd', label: '1 yd' },
+		{ value: '5yd', label: '5 yd' }
+	];
+	const SIZE_OPTIONS: { value: SymbolSize; label: string }[] = [
+		{ value: 'small', label: 'Small' },
+		{ value: 'medium', label: 'Medium' },
+		{ value: 'large', label: 'Large' }
+	];
 
 	const title = $derived(planTitle({ document: editor.doc }));
 </script>
@@ -16,6 +31,30 @@
 		{formatDimensions(editor.canvas.widthFt, editor.canvas.depthFt, editor.plan.unit)}
 	</span>
 	<span class="spacer"></span>
+	<div class="field">
+		<label for="{uid}-snap">Snap</label>
+		<select
+			id="{uid}-snap"
+			value={editor.doc.display.snap}
+			onchange={(e) => editor.setDisplay({ snap: e.currentTarget.value as SnapSetting })}
+		>
+			{#each SNAP_OPTIONS as o (o.value)}
+				<option value={o.value}>{o.label}</option>
+			{/each}
+		</select>
+	</div>
+	<div class="field">
+		<label for="{uid}-size">Symbol size</label>
+		<select
+			id="{uid}-size"
+			value={editor.doc.display.symbolSize}
+			onchange={(e) => editor.setDisplay({ symbolSize: e.currentTarget.value as SymbolSize })}
+		>
+			{#each SIZE_OPTIONS as o (o.value)}
+				<option value={o.value}>{o.label}</option>
+			{/each}
+		</select>
+	</div>
 	<div class="group" role="group" aria-label="View">
 		<button type="button" onclick={() => editor.zoomBy(1 / 1.25)}>Zoom out</button>
 		<button type="button" onclick={() => editor.zoomBy(1.25)}>Zoom in</button>
@@ -49,5 +88,12 @@
 	.group {
 		display: flex;
 		gap: var(--space-1);
+	}
+	.field {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		font-size: 0.875rem;
+		color: var(--color-muted);
 	}
 </style>

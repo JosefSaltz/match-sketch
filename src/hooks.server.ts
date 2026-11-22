@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '$app/env/public';
 
@@ -17,7 +18,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 				if (Object.keys(headers).length > 0) event.setHeaders(headers);
 			}
 		}
-	});
+		// createServerClient's generics default to `any`; the app uses the untyped schema.
+	}) as SupabaseClient;
 	return resolve(event, {
 		filterSerializedResponseHeaders: (name) =>
 			name === 'content-range' || name === 'x-supabase-api-version'

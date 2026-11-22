@@ -12,7 +12,8 @@
 	import CreditsDialog from '#lib/theme/CreditsDialog.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import SyncStatus from '#lib/sync/SyncStatus.svelte';
-	import { syncState } from '#lib/sync/loop.svelte.js';
+	import { stopSync, syncNow, syncState } from '#lib/sync/loop.svelte.js';
+	import { clearLocalData, unsyncedCount, unsyncedWarning } from '#lib/sync/device.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import Thumbnail from '#lib/print/Thumbnail.svelte';
@@ -97,16 +98,39 @@
 		});
 	});
 
+	let signingOut = $state(false);
+	let signOutWarning = $state<string | null>(null);
+
+	/** Gives pending changes a chance to sync, then warns if any remain before clearing the device. */
 	async function signOut() {
-		// Local scope signs out only this device; offline, the stored session is cleared directly.
+		signingOut = true;
 		try {
+			await Promise.race([syncNow(), new Promise((r) => setTimeout(r, 3000))]);
+		} catch {
+			// Offline or failed sync: the unsynced count below decides whether to warn.
+		}
+		const count = await unsyncedCount(getDb());
+		if (count > 0) {
+			signOutWarning = unsyncedWarning(count);
+			return;
+		}
+		await finishSignOut();
+	}
+
+	/** Clears this device's local data and session, then does a full page load so no account state survives. */
+	async function finishSignOut() {
+		stopSync();
+		await clearLocalData(getDb(), localStorage);
+		try {
+			// Local scope signs out only this device; offline, the stored session is cleared directly.
 			await signOutDevice(
 				() => getSupabase().auth.signOut({ scope: 'local' }),
 				() => clearStoredSession(document)
 			);
-		} finally {
-			await goto(resolve('/sign-in'));
+		} catch {
+			// Signing out must always finish.
 		}
+		location.assign(resolve('/sign-in'));
 	}
 
 	async function saveMatch(input: MatchInput) {
@@ -188,7 +212,7 @@
 			{#if data.account.email}
 				<span class="text-sm text-muted">{data.account.email}</span>
 			{/if}
-			<Button onclick={signOut}>Sign out</Button>
+			<Button onclick={signOut} disabled={signingOut}>Sign out</Button>
 		</div>
 	</header>
 	<ThemePicker bind:open={pickingTheme} />
@@ -360,6 +384,19 @@
 		confirmLabel="Delete"
 		onconfirm={confirmDeleteMatch}
 		oncancel={() => (deletingMatch = null)}
+	/>
+{/if}
+
+{#if signOutWarning}
+	<ConfirmDialog
+		title="Sign out?"
+		message={signOutWarning}
+		confirmLabel="Sign out anyway"
+		onconfirm={finishSignOut}
+		oncancel={() => {
+			signOutWarning = null;
+			signingOut = false;
+		}}
 	/>
 {/if}
 

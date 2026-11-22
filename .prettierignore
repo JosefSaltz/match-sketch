@@ -21,3 +21,6 @@ skills-lock.json
 # Pattern tool caches
 tools/patterns/.venv/
 tools/patterns/.pytest_cache/
+
+# Drizzle migration snapshots (machine-written)
+supabase/migrations/meta/

@@ -11,6 +11,7 @@
 		"eslint.config.js",
 		"playwright.config.ts",
 		"tests",
-		"scripts"
+		"scripts",
+		"drizzle.config.ts"
 	]
 }

@@ -69,7 +69,8 @@ These steps change the hosted project, so the operator runs them (or approves ea
    - **Sign-ups off:** Sign In / Providers → "Allow new users to sign up" disabled. Email provider stays enabled.
    - **URL Configuration:** Site URL = the app's public URL. Add `https://<domain>/**` to the redirect URLs.
    - **Passwords:** minimum length 8.
-   - **Emails → Invite user:** subject "You're invited to Match Sketch", body from `supabase/templates/invite.html`. The link must stay `{{ .SiteURL }}/accept-invite?token_hash={{ .TokenHash }}&type=invite`.
+   - **Emails → Invite user:** subject "You're invited to Match Sketch", body from `supabase/templates/invite.html`. The link must stay `{{ .SiteURL }}/set-password?token_hash={{ .TokenHash }}&type=invite`.
+   - **Emails → Reset password:** subject "Reset your Match Sketch password", body from `supabase/templates/recovery.html`. The link must stay `{{ .SiteURL }}/set-password?token_hash={{ .TokenHash }}&type=recovery`. MDs reset their own passwords from "Forgot your password?" on the sign-in page; that is also the way back in for an invitee whose link expired.
 3. **Custom SMTP** (dashboard → Authentication → Emails → SMTP settings), e.g. Resend or Postmark. Supabase's built-in sender only delivers to members of the Supabase organization's team, so MDs never receive invites without this. It is also rate-limited.
 4. **Coolify:** set the variables from the table above and deploy (see [Coolify](#coolify)).
 5. **First admin:**

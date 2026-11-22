@@ -4,7 +4,7 @@ import { InviteInputSchema, inviteErrorMessage } from './users';
 describe('inviteErrorMessage', () => {
 	it('explains an address that already has an account', () => {
 		expect(inviteErrorMessage({ code: 'email_exists', message: 'A user with this email…' })).toBe(
-			'That email already has an account.'
+			'That email already has an account. If they can’t sign in, they can use “Forgot your password?” on the sign-in page.'
 		);
 	});
 

@@ -13,6 +13,8 @@
 
 	const OFFLINE_MESSAGE = "Can't reach the server. Check your connection.";
 
+	const mode = page.url.searchParams.get('type') === 'recovery' ? 'recovery' : 'invite';
+
 	// Verifying needs a click, so email scanners that prefetch the link can't use up the token.
 	const tokenHash = page.url.searchParams.get('token_hash') ?? '';
 
@@ -29,11 +31,16 @@
 		try {
 			const { error } = await getSupabase().auth.verifyOtp({
 				token_hash: tokenHash,
-				type: 'invite'
+				type: mode
 			});
 			if (error) {
-				if (isAuthRetryableFetchError(error)) message = OFFLINE_MESSAGE;
-				else step = 'bad';
+				if (isAuthRetryableFetchError(error)) {
+					message = OFFLINE_MESSAGE;
+				} else {
+					// The user may already have verified this link in this browser, for example before a reload.
+					const { data } = await getSupabase().auth.getSession();
+					step = data.session ? 'password' : 'bad';
+				}
 				return;
 			}
 			step = 'password';
@@ -72,7 +79,7 @@
 </script>
 
 <svelte:head>
-	<title>Accept invite · Match Sketch</title>
+	<title>{mode === 'recovery' ? 'Reset password' : 'Accept invite'} · Match Sketch</title>
 </svelte:head>
 
 <div class="grid min-h-full place-items-center bg-surface px-4 py-8">
@@ -83,17 +90,21 @@
 			class="overflow-hidden rounded-xl border-[3px] border-black bg-white shadow-[3px_3px_0_#000]"
 		>
 			{#if step === 'accept'}
-				<PanelHeader title="Accept your invite" />
+				<PanelHeader title={mode === 'recovery' ? 'Reset your password' : 'Accept your invite'} />
 				<div class="grid gap-4 p-4">
 					<p class="m-0 text-sm">
-						You've been invited to Match Sketch. Accept the invite, then choose your password.
+						{#if mode === 'recovery'}
+							Continue to choose a new password for your account.
+						{:else}
+							You've been invited to Match Sketch. Accept the invite, then choose your password.
+						{/if}
 					</p>
 					{#if message}
 						<p class="m-0 text-sm text-danger" role="alert">{message}</p>
 					{/if}
 					<div class="flex justify-end">
 						<Button type="button" variant="primary" disabled={pending} onclick={accept}>
-							Accept invite
+							{mode === 'recovery' ? 'Continue' : 'Accept invite'}
 						</Button>
 					</div>
 				</div>
@@ -134,13 +145,17 @@
 					</div>
 				</form>
 			{:else}
-				<PanelHeader title="Accept your invite" />
+				<PanelHeader title={mode === 'recovery' ? 'Reset your password' : 'Accept your invite'} />
 				<div class="grid gap-4 p-4">
 					<p class="m-0 text-sm text-danger" role="alert">
-						This invite link has expired or was already used. Ask for a new invite.
+						This link has expired or was already used.
 					</p>
-					<div class="flex justify-end">
-						<Button href={resolve('/sign-in')} variant="primary">Sign in</Button>
+					<p class="m-0 text-sm text-muted">Reset your password to get a new link, or sign in.</p>
+					<div class="flex justify-end gap-2">
+						<Button href={resolve('/forgot-password')} variant="primary">
+							Reset your password
+						</Button>
+						<Button href={resolve('/sign-in')} variant="secondary">Sign in</Button>
 					</div>
 				</div>
 			{/if}

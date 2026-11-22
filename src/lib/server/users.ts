@@ -44,7 +44,9 @@ export async function listUsers(admin: SupabaseClient, db: Database): Promise<Us
 
 /** What to tell the admin when an invite fails. */
 export function inviteErrorMessage(error: { code?: string; message: string }): string {
-	if (error.code === 'email_exists') return 'That email already has an account.';
+	if (error.code === 'email_exists') {
+		return 'That email already has an account. If they can’t sign in, they can use “Forgot your password?” on the sign-in page.';
+	}
 	if (error.code === 'over_email_send_rate_limit') {
 		return 'Too many invite emails were sent. Try again in an hour.';
 	}

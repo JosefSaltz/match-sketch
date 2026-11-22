@@ -83,6 +83,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 - Accounts are **invite-only** for the MVP.
 - Stage plans can be grouped into a **match**, and a whole match prints as one document.
 - **Full offline editing** is required.
+- A **walkthrough presentation mode** is planned (added 2026-11-21): authors tie the course-of-fire steps to highlighted props and targets, and viewers page through the steps (§7.10).
 - The symbol library is a **left sidebar**: a scrollable list of thumbnails with names, grouped by category and, inside a category, by **family**, so variants of one target type sit together (e.g. Poppers: knock-down, static, trigger, auto-reset). Decided 2026-11-21, during Plan 1.
 
 ## 6. Calls made by the designer (not discussed in depth; correctable)
@@ -220,6 +221,21 @@ The plan `document` jsonb holds the brief, the objects list, labels, measure lin
 - **Pull:** the client asks for all records changed since its last cursor and applies them, unless the local copy is dirty (then the push/conflict rule decides).
 - **Schema changes:** a client that receives a record with a newer `schema_version` than it understands asks the user to reload to update the app; it doesn't overwrite the record.
 - **Sign-out** clears the local store after warning if there are unsynced changes.
+
+### 7.10 Walkthrough presentation (planned; roadmap Plan 7)
+
+The user's idea: a "walkthrough" that explains a stage step by step.
+
+- **Authoring:** the MD builds an ordered list of steps that follow the course of fire. Each step ties some text (the step of the stage procedure) to **highlights** on the relevant objects: props, targets, shooting areas, fault lines.
+- **Meaning by color:** a highlight's color says what the shooter does with that object, for example **shoot** vs **move**. Colors come from a fixed, legible set with a legend, so meaning is never color-only (shape or label backs it up, per the anti-goals in §2).
+- **Viewing:** viewers page through the walkthrough one step at a time (next/previous, step n of N). The stage drawing stays the same plan; each step only changes what is highlighted and which text shows.
+
+To settle when Plan 7 is written (not before):
+
+- The full set of meanings beyond shoot and move (e.g. activate, avoid/no-shoot, reload point, start position) and their colors.
+- Whether steps are authored freely or built from the stage procedure as structured steps (Plan 2 should keep that possible).
+- Who views it and where: presenting on the MD's device at the stage briefing; printed as sequence cards (§10); a read-only viewer link for shooters (needs sharing, which is after the MVP today).
+- What else a step can carry: movement arrows (Plan 2 annotations), a zoomed view of part of the bay, notes.
 
 ## 8. Left to the builder
 

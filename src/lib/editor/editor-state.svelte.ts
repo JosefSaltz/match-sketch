@@ -16,12 +16,20 @@ import {
 } from '../geometry/viewport';
 import {
 	emptyPlanDocument,
+	type Anchor,
 	type PlanDisplay,
 	type PlanDocument,
 	type StageBrief
 } from '../model/plan';
 import { now, type PlanRecord } from '../store/records';
-import { addAnnotation, itemPosition, setText } from './annotations';
+import {
+	addAnnotation,
+	anchorAt,
+	itemPosition,
+	resolveAnchor,
+	setAnchor,
+	setText
+} from './annotations';
 import { movedBeyond, TAP_SLOP_PX } from './gestures';
 import { createHistory, type History } from './history';
 import {
@@ -60,6 +68,19 @@ type MoveDrag = {
 type HandleDrag =
 	| { kind: 'resize'; id: string; corner: Corner; grab: Point; base: PlanDocument }
 	| { kind: 'rotate'; id: string; base: PlanDocument };
+
+/**
+ * An in-progress drag of an arrow or measure line's end: drawing a new line (`isNew`, moving its
+ * `to` end) or re-anchoring one end of an existing line. The other end stays at `fixed`.
+ */
+type LinkDrag = {
+	id: string;
+	isNew: boolean;
+	type: 'arrow' | 'measure';
+	end: 'from' | 'to';
+	fixed: Anchor;
+	base: PlanDocument;
+};
 
 /** Rotation snaps to this many degrees unless Shift is held. */
 export const ROTATE_SNAP_DEG = 15;
@@ -177,6 +198,7 @@ export class EditorState {
 	#endDrags(): void {
 		this.#move = null;
 		this.#handle = null;
+		this.#link = null;
 		this.preview = null;
 	}
 
@@ -208,6 +230,74 @@ export class EditorState {
 		this.panel = 'properties';
 		this.tool = null;
 		return id;
+	}
+
+	#link: LinkDrag | null = null;
+
+	/** Starts drawing a line with the armed arrow or measure tool; the press is its start. */
+	beginLink(screenPt: Point, hitObjectId: string | null): void {
+		const type = this.tool;
+		if (type !== 'arrow' && type !== 'measure') return;
+		const base = this.#current;
+		const world = screenToWorld(screenPt, this.viewport);
+		this.#link = {
+			id: crypto.randomUUID(),
+			isNew: true,
+			type,
+			end: 'to',
+			fixed: anchorAt(base, hitObjectId, world, this.canvas, this.snapStep()),
+			base
+		};
+	}
+
+	/** Starts dragging one end of an existing line; the other end stays put. */
+	beginEndpoint(id: string, end: 'from' | 'to'): void {
+		const base = this.#current;
+		const a = base.annotations.find((x) => x.id === id);
+		if (!a || a.type === 'text') return;
+		this.#link = { id, isNew: false, type: a.type, end, fixed: end === 'to' ? a.from : a.to, base };
+	}
+
+	/** Previews the line with its moving end on the object under the pointer, or a snapped point. */
+	updateLink(screenPt: Point, hitObjectId: string | null): void {
+		const l = this.#link;
+		if (!l) return;
+		const world = screenToWorld(screenPt, this.viewport);
+		const moving = anchorAt(l.base, hitObjectId, world, this.canvas, this.snapStep());
+		this.preview = l.isNew
+			? addAnnotation(l.base, { id: l.id, type: l.type, from: l.fixed, to: moving })
+			: setAnchor(l.base, l.id, l.end, moving);
+	}
+
+	/**
+	 * Commits the previewed line once. A new line is selected and its tool disarmed. A line whose
+	 * ends land on the same spot (a tap, or both ends on one object) commits nothing.
+	 */
+	endLink(): void {
+		const l = this.#link;
+		const preview = this.preview;
+		this.#link = null;
+		const a = preview?.annotations.find((x) => x.id === l?.id);
+		if (!l || !preview || !a || a.type === 'text') {
+			this.preview = null;
+			return;
+		}
+		const from = resolveAnchor(preview, a.from);
+		const to = resolveAnchor(preview, a.to);
+		if (!from || !to || (from.x === to.x && from.y === to.y)) {
+			this.preview = null;
+			return;
+		}
+		this.commit(preview);
+		if (l.isNew) {
+			this.selection = [l.id];
+			this.tool = null;
+		}
+	}
+
+	cancelLink(): void {
+		this.#link = null;
+		this.preview = null;
 	}
 
 	/** Sets a text label's text; blank text keeps the old text. */

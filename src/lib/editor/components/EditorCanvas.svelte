@@ -22,6 +22,8 @@
 	let moving: number | null = null;
 	/** The pointer dragging a resize or rotate handle, if any. */
 	let handling: number | null = null;
+	/** The pointer drawing a line or dragging a line's end, if any. */
+	let linking: number | null = null;
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -34,6 +36,18 @@
 		const svg = target instanceof SVGSVGElement ? target : (target as SVGElement).ownerSVGElement!;
 		const r = svg.getBoundingClientRect();
 		return { x: e.clientX - r.left, y: e.clientY - r.top };
+	}
+
+	/**
+	 * The object under a pointer. Pointer capture and the dragged handle sit on top of it, so look
+	 * through everything at that point rather than at the event target.
+	 */
+	function objectIdAt(e: { clientX: number; clientY: number }): string | null {
+		for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+			const id = el.closest('[data-object-id]')?.getAttribute('data-object-id');
+			if (id) return id;
+		}
+		return null;
 	}
 
 	/** Wheel zoom needs a non-passive listener so the page doesn't scroll. */
@@ -56,8 +70,8 @@
 
 	function onDown(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
-		// Extra pointers are ignored while dragging the selection or a handle.
-		if (moving !== null || handling !== null) return;
+		// Extra pointers are ignored while dragging the selection, a handle, or a line.
+		if (moving !== null || handling !== null || linking !== null) return;
 		// Commit a field being edited before the selection changes under it.
 		(document.activeElement as HTMLElement | null)?.blur();
 		const p = local(e);
@@ -67,6 +81,21 @@
 		if (gestures.active > 0) {
 			gestures.down(e.pointerId, p);
 			tap = null;
+			return;
+		}
+		// The arrow and measure tools draw a line from the press to the release.
+		if (editor.tool === 'arrow' || editor.tool === 'measure') {
+			linking = e.pointerId;
+			editor.beginLink(p, objectIdAt(e));
+			return;
+		}
+		const lineEnd = (e.target as Element).closest('[data-annotation-handle]');
+		if (lineEnd) {
+			linking = e.pointerId;
+			editor.beginEndpoint(
+				lineEnd.getAttribute('data-link-id')!,
+				lineEnd.getAttribute('data-annotation-handle') as 'from' | 'to'
+			);
 			return;
 		}
 		// Placing: an armed symbol, or the text tool, puts something down on a tap.
@@ -104,6 +133,10 @@
 	}
 
 	function onMove(e: PointerEvent) {
+		if (linking === e.pointerId) {
+			editor.updateLink(local(e), objectIdAt(e));
+			return;
+		}
 		if (handling === e.pointerId) {
 			editor.updateHandle(local(e), { shiftKey: e.shiftKey });
 			return;
@@ -119,6 +152,11 @@
 	}
 
 	function onUp(e: PointerEvent) {
+		if (linking === e.pointerId) {
+			linking = null;
+			editor.endLink();
+			return;
+		}
 		if (handling === e.pointerId) {
 			handling = null;
 			editor.endHandle();
@@ -141,6 +179,10 @@
 	}
 
 	function onCancel(e: PointerEvent) {
+		if (linking === e.pointerId) {
+			linking = null;
+			editor.cancelLink();
+		}
 		if (handling === e.pointerId) {
 			handling = null;
 			editor.cancelHandle();
@@ -171,12 +213,13 @@
 	>
 		<rect class="background" x="0" y="0" width={editor.screenWidth} height={editor.screenHeight} />
 		<BayLayer {editor} />
+		<AnnotationLayer {editor} layer="below" />
 		<g class="objects">
 			{#each objects as obj (obj.id)}
 				<ObjectView {editor} {obj} />
 			{/each}
 		</g>
-		<AnnotationLayer {editor} />
+		<AnnotationLayer {editor} layer="above" />
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>

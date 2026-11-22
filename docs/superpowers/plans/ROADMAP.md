@@ -12,7 +12,8 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | --- | ------------------------------------------- | ------------------------- | ----------------------------------- |
 | 1   | Local editor                                | Done (2026-11-22)         | `2026-11-21-plan-1-local-editor.md` |
 | 1b  | Visual theme (Tailwind, themes, camo tiles) | Done (2026-11-22)         | `2026-11-22-plan-1b-visual-theme.md` |
-| —   | Scale break spike (throwaway)               | Built; awaiting keep/drop | branch `spike/scale-break`          |
+| —   | Scale break spike (throwaway)               | Done: kept, variant C     | branch `spike/scale-break`          |
+| 2b  | Scale break in the editor (variant C)       | Not written               | —                                   |
 | 2   | Brief, tally, measure, annotations, matches | Done (2026-11-22)         | `2026-11-22-plan-2-brief-annotations-matches.md` |
 | 3   | Symbol library art                          | Not written               | —                                   |
 | 4   | Print & PDF                                 | Not written               | —                                   |
@@ -36,6 +37,7 @@ Update this table as plans are written and finished.
 - **Why now:** the user wants to try it before committing. Its outcome decides whether Plan 2 (editor) and Plan 4 (print) include it.
 - **Shape:** one horizontal band at a chosen depth range; objects beyond it render shifted closer with their true distance labeled; data stays in true feet (`document.scaleBreaks` already exists in the Plan 1 schema).
 - **Done when:** the user has seen it and said keep or drop. Record the decision in the spec (§7.4, §9) and here. Spike code is not merged as-is; if kept, it is rebuilt properly in Plan 2 or 4.
+- **Outcome (2026-11-22):** kept, variant C (far zone squeezed into a strip, true distances labeled). Plan 2 had shipped by then, so the editor part is Plan 2b (after Plan 3, before Plan 4); Plan 4 prints it.
 
 ## Plan 2 — Stage brief, Targets tally, measure lines, annotations, matches
 
@@ -55,10 +57,17 @@ Update this table as plans are written and finished.
 
 - **Note for Plan 7:** consider storing the stage procedure as an ordered list of steps (still shown as one text block), so walkthrough steps can link to them later.
 
+## Plan 2b — Scale break in the editor (variant C)
+
+- **Spec:** §7.4 (variant C).
+- **Builds:** a "Not to scale beyond" depth setting per plan (stored as one `scaleBreaks` entry, `toFt` = bay depth; clearing it removes the entry); the depth mapping (true ↔ drawn) used by drawing, hit-testing, dragging, snapping and fitting; the shaded strip with its torn edge, label and true-distance ticks; true-distance tags on objects inside the strip; measure lines and arrows that cross the break still show true distances.
+- **Reference:** the spike on `spike/scale-break` (`src/lib/editor/scale-break-prototype.svelte.ts`) — port, don't merge.
+- **Watch for:** the mapping must be the only place drawn depth is computed (print in Plan 4 reuses it); grid lines inside the strip; zoom and pan with a break on; an object dragged across the break edge.
+
 ## Plan 3 — Symbol library art
 
 - **Spec:** §7.7 (style rules, catalog entry shape, first symbol set), anti-goals in §2 (no legend needed, black-and-white legible, original art only).
-- **User checkpoint first:** draw a sample of about 8 symbols in 2–3 style directions (targets drawn standing up; footprints from above) and get the user's pick **before** drawing the full set. Use the visual companion or an HTML preview for side-by-side comparison.
+- **User checkpoint first:** draw a sample of about 8 symbols in 2–3 style directions (targets drawn standing up; footprints from above) and get the user's pick **before** drawing the full set. Use the visual companion or an HTML preview for side-by-side comparison. **Done 2026-11-22: direction A (spec §7.7).**
 - **Builds:**
   - The full first symbol set from §7.7: about 16 targets, about 26 props and structures, and about 7 areas and markers. It replaces the Plan 1 placeholders and **keeps their ids** (`paper`, `popper`, `popper-static`, `popper-trigger`, `popper-auto-reset`, `steel-static`, `barrel`, `dump-box`, `shooting-position`, `wall`, `shooting-box`, `start-box`, `fault-line`).
   - Families for every target type with variants (paper, poppers, plates, movers…), so the palette groups them (spec §7.1, §7.7). Plan 1 adds the `family` field and the Poppers family.
@@ -70,7 +79,7 @@ Update this table as plans are written and finished.
 ## Plan 4 — Print & PDF
 
 - **Spec:** §7.6 (pages, overflow page, fit vs. tile, scale bar, downrange arrow, match print), §6 (Letter portrait/landscape, browser print + in-browser PDF), goal 6 and the print half of goal 7.
-- **User checkpoint first:** page design mockups (header layout, typography, how the brief sits beside or above the diagram) reviewed with the user before building. The goal is to improve on the MD's PowerPoint layout, not copy it.
+- **User checkpoint first:** page design mockups (header layout, typography, how the brief sits beside or above the diagram) reviewed with the user before building. The goal is to improve on the MD's PowerPoint layout, not copy it. **Done 2026-11-22: layout B (spec §9).**
 - **Builds:**
   - Print route(s) rendering pages as SVG/HTML at Letter size with print CSS.
   - Fit to page: the canvas scaled into the diagram area.

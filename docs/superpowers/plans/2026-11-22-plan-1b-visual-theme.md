@@ -19,7 +19,7 @@
 - **Wordmark:** "MATCH SKETCH" as inline SVG text in Graduate, 30 px, 9 px black outline with `stroke-linejoin="round"`, white letters thickened by a 1.6 px white stroke, 5 px offset black block shadow; accessible name "Match Sketch". The compact form (editor bar) is about 20 px with the same treatment scaled by 2/3.
 - **Outlined HTML text:** a ring of `text-shadow`s plus a block shadow, scaled with font size; only display text is outlined. Focus rings on patterns: a white ring inside a black ring.
 - **Tiles:** WebP, ≤ 250 KB each, seamless, served from `static/themes/<id>.webp`.
-- **Public repo:** commit only assets that are public domain, openly licensed for commercial use, our own, or licensed for app use. Tiles from uncleared sources are never committed (spec §8). Never MultiCam, OCP, MARPAT, AOR1/AOR2, CADPAT, or MTP.
+- **References:** the user accepts provenance risk for references (spec §8, 2026-11-22), so every reference ships; sources stay recorded and credited. Never MultiCam, OCP, MARPAT, AOR1/AOR2, CADPAT, or MTP.
 - **Default theme:** `coyote` until Task 7 ships the DPM tile, then `dpm` (spec §6.2/§8: M81 once cleared, DPM until then).
 - **Migration:** existing e2e specs pass unchanged after every task (their roles, labels, test ids, and texts are the contract). Every `.svelte`/`.svelte.ts` file passes the Svelte MCP `svelte-autofixer` with no issues or suggestions.
 - Commits are atomic, Angular style (`type(scope): description`), per `AGENTS.md`.

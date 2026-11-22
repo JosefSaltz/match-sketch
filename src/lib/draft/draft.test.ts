@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getEntry } from '../catalog';
 import { emptyPlanDocument, type PlanDocument } from '../model/plan';
 import { applyDraft } from './apply';
-import type { DraftPlacement } from './contract';
+import { DraftRequestSchema, type DraftPlacement } from './contract';
 import { minSpacingFt } from './spacing';
 import { validatePlacements } from './validate';
 
@@ -98,5 +98,35 @@ describe('applyDraft', () => {
 		expect(next.objects.map((o) => o.z)).toEqual([0, 1]);
 		expect(next.annotations.map((a) => a.type)).toEqual(['text']);
 		expect(next.brief).toBe(doc.brief);
+	});
+});
+
+describe('DraftRequestSchema', () => {
+	const request = () => ({
+		planId: crypto.randomUUID(),
+		description: 'Engage the steel from SA-1.',
+		brief: emptyPlanDocument().brief,
+		canvas: { widthFt: 60, depthFt: 90, unit: 'yd' as const },
+		symbolSize: 'medium' as const
+	});
+
+	it('accepts an ordinary request', () => {
+		expect(DraftRequestSchema.safeParse(request()).success).toBe(true);
+	});
+
+	it('caps what a request may send to the model, so nobody can run up the bill', () => {
+		const huge = request();
+		huge.brief.notes = [{ id: 'n', title: 'Notes', body: 'x'.repeat(100_000) }];
+		expect(DraftRequestSchema.safeParse(huge).success).toBe(false);
+		const many = request();
+		many.brief.notes = Array.from({ length: 50 }, (_, i) => ({
+			id: `n${i}`,
+			title: 'Bonus',
+			body: 'x'
+		}));
+		expect(DraftRequestSchema.safeParse(many).success).toBe(false);
+		const longField = request();
+		longField.brief.startPosition = 'x'.repeat(10_000);
+		expect(DraftRequestSchema.safeParse(longField).success).toBe(false);
 	});
 });

@@ -54,6 +54,23 @@ describe("the editor's plan saver", () => {
 		expect(saver.bases).toEqual([saver.base]);
 	});
 
+	it('keeps edits after a share change on a stale plan as a conflicted copy', async () => {
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		const onStale = vi.fn();
+		const saver = createPlanSaver({ db, planId: plan.id, base: plan.updatedAt, onStale });
+		// Another tab or a pull replaced the plan.
+		await db.plans.update(plan.id, {
+			document: named('Theirs'),
+			updatedAt: '2026-11-22T09:00:00.000Z'
+		});
+		await saver.setShare({ id: 'AbCdEfGhIjKlMnOpQrStUv', on: true });
+		await saver.save(named('Mine'), new Date().toISOString());
+		expect(onStale).toHaveBeenCalledOnce();
+		expect((await getPlan(db, plan.id))?.document.brief.stageName).toBe('Theirs');
+		const names = (await db.plans.toArray()).map((p) => p.document.brief.stageName);
+		expect(names.some((n) => n.startsWith('Mine (conflicted copy'))).toBe(true);
+	});
+
 	it("keeps an edit made on a stale plan as a conflicted copy instead of overwriting the other device's version", async () => {
 		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
 		const onStale = vi.fn();

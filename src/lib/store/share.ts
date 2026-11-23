@@ -1,6 +1,5 @@
 import { newShareId, type Share } from '../model/share';
 import type { MatchSketchDB } from './db';
-import { StalePlanError } from './plans';
 import { now, type MatchRecord, type PlanRecord } from './records';
 
 export type ShareAction = 'on' | 'off' | 'reset';
@@ -21,25 +20,22 @@ export function nextShare(current: Share | null, action: ShareAction): Share {
 }
 
 /**
- * Saves a plan's share; `at` is when the change was made. With `expectedUpdatedAt`, it saves only
- * if the stored plan is still that version (else `StalePlanError`), like `savePlanDocument`.
+ * Saves a plan's share on whatever version is stored (the share is its own field, so this never
+ * writes over another device's document); `at` is when the change was made. Returns the saved
+ * plan and the `updatedAt` it replaced, or null when the plan is gone.
  */
 export async function savePlanShare(
 	db: MatchSketchDB,
 	id: string,
 	share: Share,
-	at: string = now(),
-	expectedUpdatedAt?: string
-): Promise<PlanRecord> {
+	at: string = now()
+): Promise<{ saved: PlanRecord; replaced: string } | null> {
 	return db.transaction('rw', db.plans, async () => {
 		const current = await db.plans.get(id);
-		if (!current || current.deletedAt !== null) throw new StalePlanError(id);
-		if (expectedUpdatedAt !== undefined && current.updatedAt !== expectedUpdatedAt) {
-			throw new StalePlanError(id);
-		}
+		if (!current || current.deletedAt !== null) return null;
 		const saved: PlanRecord = { ...current, share, updatedAt: at, dirty: 1 };
 		await db.plans.put(saved);
-		return saved;
+		return { saved, replaced: current.updatedAt };
 	});
 }
 

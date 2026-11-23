@@ -4,7 +4,7 @@ import { SHARE_TOKEN } from '../model/share';
 import { createCanvas } from './canvases';
 import { createDb, type MatchSketchDB } from './db';
 import { createMatch, getMatch } from './matches';
-import { createPlan, getPlan, StalePlanError } from './plans';
+import { createPlan, getPlan } from './plans';
 import { nextShare, saveMatchShare, savePlanShare } from './share';
 
 let db: MatchSketchDB;
@@ -36,17 +36,15 @@ describe('nextShare', () => {
 });
 
 describe('saving a share', () => {
-	it('marks the plan for sync, and refuses a stale base', async () => {
+	it('marks the plan for sync and says which version it replaced', async () => {
 		const bay = await createCanvas(db, { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' });
 		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
 		await db.plans.update(plan.id, { dirty: 0 });
 		const share = nextShare(null, 'on');
-		const saved = await savePlanShare(db, plan.id, share, undefined, plan.updatedAt);
+		const result = await savePlanShare(db, plan.id, share);
 		expect(await getPlan(db, plan.id)).toMatchObject({ share, dirty: 1 });
-		await expect(savePlanShare(db, plan.id, share, undefined, plan.updatedAt)).rejects.toThrow(
-			StalePlanError
-		);
-		expect(saved.updatedAt > plan.updatedAt).toBe(true);
+		expect(result?.replaced).toBe(plan.updatedAt);
+		expect(result!.saved.updatedAt > plan.updatedAt).toBe(true);
 	});
 
 	it('marks the match for sync', async () => {

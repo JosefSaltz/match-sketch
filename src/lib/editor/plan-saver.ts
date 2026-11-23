@@ -81,7 +81,10 @@ export function createPlanSaver(options: {
 			return track(at, async () => {
 				// After the plan went stale, the page reopens it; the change is made there again.
 				if (staleAt) return;
-				await onBase(at, () => savePlanShare(db, planId, share, at, base));
+				const result = await savePlanShare(db, planId, share, at);
+				// Follow the write only if it was on our version; otherwise the next document save
+				// finds the other version and keeps the edit as a conflicted copy, as usual.
+				if (result?.replaced === base) base = at;
 			});
 		}
 	};

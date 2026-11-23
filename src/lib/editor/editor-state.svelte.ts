@@ -25,6 +25,8 @@ import {
 	type StageBrief
 } from '../model/plan';
 import { stepsFromText } from '../model/procedure';
+import type { Share } from '../model/share';
+import { nextShare, type ShareAction } from '../store/share';
 import { effectiveStageNumber, now, planTitle, type PlanRecord } from '../store/records';
 import {
 	addAnnotation,
@@ -110,6 +112,8 @@ export type EditorDeps = {
 	onGridCross?: () => void;
 	/** A synchronous copy of the newest edit that survives a reload (see store/journal). */
 	journal?: { write: (doc: PlanDocument, at: string) => void; clear: () => void };
+	/** Saves the plan's share link (in order with document saves; see plan-saver). */
+	setShare?: (share: Share) => Promise<void>;
 };
 
 const FIT_PADDING_PX = 48;
@@ -158,6 +162,8 @@ export class EditorState {
 	canRedo = $state(false);
 	/** The swing of the items being dragged (visual only). */
 	readonly swing = new DragSwing();
+	/** The plan's read-only link (spec §7.11); not part of the document, so not undoable. */
+	share = $state.raw<Share | null>(null);
 	/** Which tab the right column shows. */
 	panel = $state<'properties' | 'brief'>('properties');
 	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
@@ -169,6 +175,7 @@ export class EditorState {
 		this.match = match;
 		this.#deps = deps;
 		this.#history = createHistory(plan.document);
+		this.share = plan.share;
 		this.#current = plan.document;
 		this.#queue = new SaveQueue(
 			({ doc, at }) => deps.save(doc, at),
@@ -177,6 +184,12 @@ export class EditorState {
 				if (status === 'saved') deps.journal?.clear();
 			}
 		);
+	}
+
+	/** Turns sharing on or off, or resets the link (see `nextShare`). */
+	changeShare(action: ShareAction): Promise<void> {
+		this.share = nextShare(this.share, action);
+		return this.#deps.setShare?.(this.share) ?? Promise.resolve();
 	}
 
 	/** The typed stage number, else the plan's place in its match. */

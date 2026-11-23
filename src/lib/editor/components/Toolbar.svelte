@@ -15,6 +15,9 @@
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import DraftDialog from './DraftDialog.svelte';
+	import ShareDialog from '#lib/components/ShareDialog.svelte';
+	import { shareUrl } from '#lib/model/share.js';
+	import type { ShareAction } from '#lib/store/share.js';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -39,6 +42,7 @@
 
 	let pickingTheme = $state(false);
 	let drafting = $state(false);
+	let sharing = $state(false);
 
 	/** Drag clicks on or off for this device (remembered like the theme). */
 	function toggleSounds() {
@@ -163,6 +167,7 @@
 	>
 		{sounds.on ? '🔊' : '🔇'}
 	</Button>
+	<Button onclick={() => (sharing = true)}>Share</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
 	{#if FEATURE_DRAFT_FROM_TEXT}
 		<Button
@@ -180,6 +185,15 @@
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />
+{#if sharing}
+	<ShareDialog
+		title="Share stage"
+		share={editor.share}
+		link={editor.share ? shareUrl(location.origin, editor.share.id) : null}
+		onaction={(action: ShareAction) => void editor.changeShare(action).catch(console.error)}
+		onclose={() => (sharing = false)}
+	/>
+{/if}
 {#if FEATURE_DRAFT_FROM_TEXT && drafting}
 	<DraftDialog {editor} onclose={() => (drafting = false)} />
 {/if}

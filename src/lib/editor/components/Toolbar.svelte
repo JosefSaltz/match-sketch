@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { FEATURE_DRAFT_FROM_TEXT } from '$app/env/public';
 	import { resolve } from '$app/paths';
 	import { sounds } from '#lib/audio/sounds.svelte.js';
 	import { gridChoice, guideOptions } from '#lib/geometry/grid.js';
@@ -163,20 +164,22 @@
 		{sounds.on ? '🔊' : '🔇'}
 	</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
-	<Button
-		disabled={!syncState.online}
-		title={syncState.online ? undefined : 'Drafting needs a connection.'}
-		onclick={() => (drafting = true)}
-	>
-		Draft from text
-	</Button>
-	{#if !syncState.online}
-		<span class="text-xs text-outline-sm">Drafting needs a connection.</span>
+	{#if FEATURE_DRAFT_FROM_TEXT}
+		<Button
+			disabled={!syncState.online}
+			title={syncState.online ? undefined : 'Drafting needs a connection.'}
+			onclick={() => (drafting = true)}
+		>
+			Draft from text
+		</Button>
+		{#if !syncState.online}
+			<span class="text-xs text-outline-sm">Drafting needs a connection.</span>
+		{/if}
 	{/if}
 	<SyncStatus />
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />
-{#if drafting}
+{#if FEATURE_DRAFT_FROM_TEXT && drafting}
 	<DraftDialog {editor} onclose={() => (drafting = false)} />
 {/if}

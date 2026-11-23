@@ -17,6 +17,14 @@ export const variables = defineEnvVars({
 		schema: required,
 		description: 'Supabase publishable key (`sb_publishable_…`); safe in the browser.'
 	},
+	FEATURE_DRAFT_FROM_TEXT: {
+		public: true,
+		// Inlined at build like the Supabase URL, so the editor knows offline whether to offer it.
+		static: true,
+		schema: (value) => flag(value),
+		description:
+			'Feature flag for Draft from text: `true` shows it and opens POST /api/drafts (default off).'
+	},
 	SUPABASE_SECRET_KEY: {
 		schema: required,
 		description: 'Supabase secret key (`sb_secret_…`); server only, bypasses RLS.'
@@ -40,6 +48,14 @@ export const variables = defineEnvVars({
 			'Estimated model spend per UTC day, site-wide, before drafting pauses (default 10).'
 	}
 });
+
+/** A feature flag: unset or empty is off. */
+export function flag(value: string | undefined): boolean {
+	const v = value?.trim().toLowerCase();
+	if (!v || v === 'false' || v === '0' || v === 'off') return false;
+	if (v === 'true' || v === '1' || v === 'on') return true;
+	throw new Error(`Expected true or false, got "${value}"`);
+}
 
 function positiveNumber(value: string | undefined, fallback: number): number {
 	if (value === undefined || value === '') return fallback;

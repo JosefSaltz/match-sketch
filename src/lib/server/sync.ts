@@ -12,7 +12,7 @@ import { PLAN_SCHEMA_VERSION } from '../model/plan';
 import type { Share } from '../model/share';
 import { readPlanDocument } from '../model/upgrade';
 import type { Database } from './db/client';
-import { canvases, matches, plans } from './db/schema';
+import { canvases, matches, plans, shareTokens } from './db/schema';
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 type Db = Database | Tx;
@@ -194,29 +194,45 @@ async function updateRecord(db: Db, record: WireRecord, version: number): Promis
 	}
 }
 
-/** True when another plan or match already holds the record's share token. */
-async function tokenTaken(db: Db, record: WireRecord): Promise<boolean> {
-	if (record.table === 'canvases' || !record.share) return false;
+/**
+ * Whether the record may use its share token: the token must be this owner's (the first push
+ * of a token claims it for good) and no other plan or match may hold it.
+ */
+async function tokenAllowed(db: Db, ownerId: string, record: WireRecord): Promise<boolean> {
+	if (record.table === 'canvases' || !record.share) return true;
 	const token = record.share.id;
+	// The primary key settles concurrent claims: a second claimant waits, then reads the owner.
+	await db.insert(shareTokens).values({ token, ownerId }).onConflictDoNothing();
+	const [claim] = await db
+		.select({ ownerId: shareTokens.ownerId })
+		.from(shareTokens)
+		.where(eq(shareTokens.token, token));
+	if (claim?.ownerId !== ownerId) return false;
+	// Only the record itself is left out, in its own table.
+	const otherPlan = record.table === 'plans' ? ne(plans.id, record.id) : undefined;
+	const otherMatch = record.table === 'matches' ? ne(matches.id, record.id) : undefined;
 	const [p] = await db
 		.select({ id: plans.id })
 		.from(plans)
-		.where(and(eq(plans.shareId, token), ne(plans.id, record.id)))
+		.where(and(eq(plans.shareId, token), otherPlan))
 		.limit(1);
-	if (p) return true;
+	if (p) return false;
 	const [m] = await db
 		.select({ id: matches.id })
 		.from(matches)
-		.where(and(eq(matches.shareId, token), ne(matches.id, record.id)))
+		.where(and(eq(matches.shareId, token), otherMatch))
 		.limit(1);
-	return m !== undefined;
+	return m === undefined;
 }
 
 async function pushOne(tx: Tx, ownerId: string, item: PushItem): Promise<PushResult> {
 	const { record, baseVersion } = item;
 	const ref = { table: record.table, id: record.id };
-	// A token another record holds would break the unique index (and the transaction).
-	if (await tokenTaken(tx, record)) return { status: 'rejected', ...ref, reason: 'invalid' };
+	// Someone else's token, or one another record holds (which would also break the unique index
+	// and the transaction).
+	if (!(await tokenAllowed(tx, ownerId, record))) {
+		return { status: 'rejected', ...ref, reason: 'invalid' };
+	}
 	let existing = await findExisting(tx, record.table, record.id);
 	if (!existing) {
 		if (await insertRecord(tx, ownerId, record)) return { status: 'accepted', ...ref, version: 1 };

@@ -165,6 +165,50 @@ describe('share links', () => {
 	});
 });
 
+describe('share tokens stay with their first owner', () => {
+	const matchWith = (id: string, token: string) => ({
+		table: 'matches' as const,
+		id,
+		updatedAt: new Date().toISOString(),
+		deletedAt: null,
+		name: 'Not yours',
+		date: '',
+		share: { id: token, on: true }
+	});
+
+	it("rejects a match that borrows a shared plan's id and token", async () => {
+		const victim = await createOwner();
+		const attacker = await createOwner();
+		const shared = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, victim, [{ record: shared, baseVersion: 0 }]);
+		const [result] = await pushRecords(db, attacker, [
+			{ record: matchWith(shared.id, shared.share.id), baseVersion: 0 }
+		]);
+		expect(result).toMatchObject({ status: 'rejected', reason: 'invalid' });
+	});
+
+	it('never hands a reset link to another account, so old QR codes stay safe', async () => {
+		const victim = await createOwner();
+		const attacker = await createOwner();
+		const old = newShareId();
+		const shared = { ...plan(), share: { id: old, on: true } };
+		await pushRecords(db, victim, [{ record: shared, baseVersion: 0 }]);
+		// The victim resets the link: the old token is free in plans and matches, but still theirs.
+		await pushRecords(db, victim, [
+			{ record: { ...shared, share: { id: newShareId(), on: true } }, baseVersion: 1 }
+		]);
+		const [result] = await pushRecords(db, attacker, [
+			{ record: { ...plan(), share: { id: old, on: true } }, baseVersion: 0 }
+		]);
+		expect(result).toMatchObject({ status: 'rejected', reason: 'invalid' });
+		// The owner may bring their old token back.
+		const [mine] = await pushRecords(db, victim, [
+			{ record: { ...plan(), share: { id: old, on: true } }, baseVersion: 0 }
+		]);
+		expect(mine.status).toBe('accepted');
+	});
+});
+
 describe('pushRecords', () => {
 	it('accepts a new record at version 1', async () => {
 		const owner = await createOwner();

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { PageProps } from './$types';
+	import { getSupabase } from '#lib/auth/client.js';
+	import { signOutDevice } from '#lib/auth/session.js';
+	import { clearStoredSession } from '#lib/auth/stored-session.js';
 	import { APP_NAME } from '#lib/app-info.js';
 	import CanvasForm from '#lib/components/CanvasForm.svelte';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
@@ -26,6 +30,8 @@
 		type PlanRecord
 	} from '#lib/store/records.js';
 	import { resolve } from '$app/paths';
+
+	let { data }: PageProps = $props();
 
 	let pickingTheme = $state(false);
 	let showingCredits = $state(false);
@@ -57,11 +63,40 @@
 		matches = await listMatches(getDb());
 	}
 
+	let isAdmin = $state(false);
+
+	/** Shows the Admin link. RLS lets a user read only their own profile; errors leave it hidden. */
+	async function checkAdmin(id: string) {
+		try {
+			const { data: profile } = await getSupabase()
+				.from('profiles')
+				.select('role')
+				.eq('id', id)
+				.maybeSingle();
+			isAdmin = profile?.role === 'admin';
+		} catch {
+			// Offline: the link stays hidden.
+		}
+	}
+
 	onMount(() => {
+		if (data.account.id) void checkAdmin(data.account.id);
 		void refreshPlans();
 		void refreshCanvases();
 		void refreshMatches();
 	});
+
+	async function signOut() {
+		// Local scope signs out only this device; offline, the stored session is cleared directly.
+		try {
+			await signOutDevice(
+				() => getSupabase().auth.signOut({ scope: 'local' }),
+				() => clearStoredSession(document)
+			);
+		} finally {
+			await goto(resolve('/sign-in'));
+		}
+	}
 
 	async function saveMatch(input: MatchInput) {
 		const match = await createMatch(getDb(), input);
@@ -134,7 +169,14 @@
 			<Button href={resolve('plans/new')}>New plan</Button>
 			<Button onclick={() => (creatingMatch = true)}>New match</Button>
 			<Button onclick={() => (canvasDialog = { mode: 'create' })}>New canvas</Button>
+			{#if isAdmin}
+				<Button href={resolve('/admin')}>Admin</Button>
+			{/if}
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
+			{#if data.account.email}
+				<span class="text-sm text-muted">{data.account.email}</span>
+			{/if}
+			<Button onclick={signOut}>Sign out</Button>
 		</div>
 	</header>
 	<ThemePicker bind:open={pickingTheme} />

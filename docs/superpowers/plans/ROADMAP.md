@@ -17,7 +17,8 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 2   | Brief, tally, measure, annotations, matches | Done (2026-11-22)         | `2026-11-22-plan-2-brief-annotations-matches.md` |
 | 3   | Symbol library art                          | Done (2026-11-22)         | `2026-11-22-plan-3-symbol-library.md` |
 | 4   | Print & PDF                                 | Done (2026-11-22)         | `2026-11-22-plan-4-print-pdf.md` |
-| 5   | Accounts & sync                             | Not written               | —                                   |
+| 5a  | Accounts                                    | Done (2026-11-22)         | `2026-11-22-plan-5a-accounts.md`    |
+| 5b  | Sync & offline                              | Not written               | —                                   |
 | 6   | Draft from text                             | Not written               | —                                   |
 | 7   | Walkthrough presentation                    | Idea recorded             | spec §7.10                          |
 
@@ -92,25 +93,40 @@ Update this table as plans are written and finished.
   - The scale break in print, if it was kept.
 - **Tests:** page-count logic (overflow, tiling math) unit-tested; Playwright checks that the print route renders the expected pages, that the PDF downloads and has the right page count, and that both work with the network disabled.
 
-## Plan 5 — Accounts & sync
+## Plan 5 — Accounts & sync (split into 5a and 5b, 2026-11-22)
 
-- **Spec:** §6 (sign-in, invites, authorization, cost ceiling), §7.8 (tables, sync columns), §7.9 (offline and sync), §7.1 screens 1 and 7, goals 1 and 8, constraints in §3.
+The user split Plan 5 into two stacked plans. Both develop and test against the **local Supabase stack** (`supabase start` in Docker); tests never touch the hosted project. Each plan adds only the tables its own code uses.
+
+### Plan 5a — Accounts
+
+- **Spec:** §6 (sign-in, invites, authorization, hosting), §7.8 (`profiles`), §7.1 screens 1 and 7, goal 1, constraints in §3.
 - **Builds:**
-  - **Supabase project:** Postgres and Auth. Email + password only, public sign-up disabled.
-  - **Drizzle schema and migrations:** `profiles`, `canvases`, `matches`, `plans`, `ai_drafts`, with sync columns and a server change sequence.
-  - **RLS** enabled as a backstop.
-  - **Invites:** the minimal admin page (invite by email via Supabase's built-in invite, list users).
-  - **Sign-in and session handling:** works offline once a session exists.
+  - **Local Supabase project:** `supabase/config.toml` with email + password only, public sign-up disabled, and the invite email template.
+  - **Drizzle schema and migrations** (generated into `supabase/migrations`): `profiles` and the trigger that creates one for each new auth user. RLS is enabled as a backstop.
+  - **Sign-in, invite acceptance (set password), and sign-out.** App routes need a stored session, and the check works offline.
+  - **Admin page:** invite an MD by email with Supabase's built-in invite, and list users.
+  - **Hosting:** `@sveltejs/adapter-node`, a Dockerfile and a `docker-compose.yml` for Coolify's Docker Compose build pack, and a health check route.
+  - **Rollout checklist** for the hosted project: migrations, auth settings, custom SMTP for invites, and Coolify env vars. These steps need the user.
+- **Watch for:** server-side checks of the session and admin role on every server route (never trust `user_metadata`); open redirects through `?next=`; existing e2e specs must sign in first.
+- **Known gap closed by 5b:** sign-out keeps local data, so another account signing in on the same device sees it.
+
+### Plan 5b — Sync & offline
+
+- **Spec:** §7.8 (tables, sync columns), §7.9 (offline and sync), §7.1 screen 2 (sync status), goal 8.
+- **Builds:**
+  - **Tables:** `canvases`, `matches` and `plans`, with sync columns and a server change sequence.
   - **Sync endpoints:**
     - Push validates with the shared Zod schemas and checks the base version.
     - Pull returns changes since the client's cursor.
   - **Client sync loop:** outbox of dirty records, pull/apply, and conflicted copies (§7.9). A sync status indicator shows synced / offline / changes pending / conflict.
   - **Service worker:** precaches the app shell, symbols, and fonts.
   - **Schema-version guard:** a client that sees a newer schema asks the user to reload.
+  - **First sign-in on a device with local data from before accounts:** upload it to the account, with a notice of how many records were added (decided 2026-11-22).
   - **Sign-out:** clears local data, warning first if anything is unsynced.
-  - **Hosting:** Vercel adapter.
-- **Watch for:** server-side ownership checks on every query; the conflict path (same plan edited on two devices offline); the first sign-in on a device with existing local data from before accounts existed (Plan 1–4 users) — decide whether to upload it to the new account.
-- **Tests:** unit tests for the sync merge rules and endpoint validation (against a test database); Playwright e2e for invite → set password → sign in, editing offline (`context.setOffline(true)`) then syncing, and a two-context conflict producing a conflicted copy.
+- **Watch for:** server-side ownership checks on every query; the conflict path (same plan edited on two devices offline); pull cursors must not skip rows that commit out of sequence order; e2e tests need one account per test once data syncs.
+- **Tests:** unit tests for the sync merge rules and endpoint validation (against the local database); Playwright e2e for editing offline (`context.setOffline(true)`) then syncing, and a two-context conflict producing a conflicted copy.
+
+`ai_drafts` is created by Plan 6, which uses it.
 
 ## Plan 6 — Draft from text
 

@@ -8,7 +8,7 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "node scripts/local-env.ts vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
@@ -16,18 +16,25 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
-		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright install && playwright test"
+		"test:unit": "vitest --project server",
+		"test": "npm run test:unit -- --run && npm run test:db && npm run test:e2e",
+		"test:e2e": "playwright install && node scripts/local-env.ts playwright test",
+		"test:db": "node scripts/local-env.ts vitest --run --project db",
+		"db:start": "supabase start",
+		"db:stop": "supabase stop",
+		"db:reset": "supabase db reset",
+		"db:generate": "drizzle-kit generate",
+		"users:promote": "node scripts/local-env.ts node scripts/users.ts promote"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@playwright/test": "^1.65.1",
-		"@sveltejs/adapter-auto": "^8.0.1",
+		"@sveltejs/adapter-node": "^6.0.5",
 		"@sveltejs/kit": "^3.2.0",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/vite": "^4.3.5",
 		"@types/node": "^26",
+		"drizzle-kit": "^0.31.11",
 		"eslint": "^10.15.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.24.1",
@@ -45,8 +52,12 @@
 	},
 	"dependencies": {
 		"@fontsource/graduate": "^5.3.0",
+		"@supabase/ssr": "^0.12.7",
+		"@supabase/supabase-js": "^2.119.2",
 		"dexie": "^4.4.7",
+		"drizzle-orm": "^0.45.4",
 		"jspdf": "^4.2.1",
+		"postgres": "^4.1.1",
 		"svg2pdf.js": "^2.9.0",
 		"zod": "^4.6.7"
 	}

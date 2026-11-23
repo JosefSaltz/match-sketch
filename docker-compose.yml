@@ -1,0 +1,23 @@
+# Coolify: Docker Compose build pack, compose file /docker-compose.yml. See docs/operations.md.
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Inlined into the bundle at build time (src/env.ts): set them as build variables.
+        SUPABASE_URL: ${SUPABASE_URL:?}
+        SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?}
+    environment:
+      # Coolify routes the app's domain to port 3000 inside the container.
+      - SERVICE_FQDN_APP_3000
+      # The public URL, e.g. https://sketch.example.com (SvelteKit's form-action origin check).
+      - ORIGIN=${ORIGIN:?}
+      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY:?}
+      # Supabase's session pooler (port 5432, IPv4), from the dashboard's Connect dialog.
+      - DATABASE_URL=${DATABASE_URL:?}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

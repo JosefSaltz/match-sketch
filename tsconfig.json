@@ -10,6 +10,8 @@
 		"prettier.config.js",
 		"eslint.config.js",
 		"playwright.config.ts",
-		"tests"
+		"tests",
+		"scripts",
+		"drizzle.config.ts"
 	]
 }

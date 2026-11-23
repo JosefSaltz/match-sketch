@@ -1,7 +1,15 @@
 import { defineConfig } from 'vitest/config';
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
+
+// The public Supabase variables are inlined at build time, and SvelteKit checks them whenever
+// Vite starts. Unit tests never talk to Supabase, so under Vitest placeholders stand in for any
+// that aren't set (db tests and e2e get the real ones from scripts/local-env.ts).
+if (process.env.VITEST) {
+	process.env.SUPABASE_URL ??= 'http://127.0.0.1:54321';
+	process.env.SUPABASE_PUBLISHABLE_KEY ??= 'sb_publishable_unit_tests';
+}
 
 export default defineConfig({
 	plugins: [
@@ -13,9 +21,7 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 
-			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+			// A Node server in a Docker image, deployed by Coolify (docker-compose.yml, docs/operations.md).
 			adapter: adapter()
 		})
 	],
@@ -28,7 +34,18 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.db.test.ts']
+				}
+			},
+			{
+				// Against the local Supabase stack: `pnpm db:start`, then `pnpm test:db`.
+				extends: './vite.config.ts',
+				test: {
+					name: 'db',
+					environment: 'node',
+					include: ['src/**/*.db.test.ts'],
+					// One database: files run one at a time so their users and rows don't race.
+					fileParallelism: false
 				}
 			}
 		]

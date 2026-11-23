@@ -111,7 +111,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 ### 7.1 Screens
 
 1. **Sign in / accept invite / set password.** (Needs a connection.)
-2. **Home:** _My matches_ (name, date, stage count), _Unassigned plans_ (plans not in a match), and _My canvases_ (name, dimensions). Actions: new match, new plan, new canvas, open, duplicate, delete. A sync status indicator (synced / offline / changes pending / conflict) is always visible.
+2. **Home:** _My matches_ (name, date, stage count), _Unassigned plans_ (plans not in a match), and _My canvases_ (name, dimensions). Actions: new match, new plan, new canvas, open, duplicate, delete. A cloud sync button is always visible: its icon shows the state (synced / syncing / changes pending / offline / failed / conflict), with the words in its tooltip, and clicking it syncs now (or, on a conflict, lists the copies). Sync still runs on its own as well.
 3. **Match:** name, date, ordered list of its stage plans (drag to reorder; stage numbers follow the order unless set by hand). Actions: add new or existing plan, remove, print/PDF the whole match.
 4. **New plan:** pick a canvas from the library or define a new one (name, width, depth, unit) with an option to save it to the library; optionally pick a match. Then the editor opens.
 5. **Editor:**
@@ -222,7 +222,7 @@ The plan `document` jsonb holds the brief, the objects list, labels, measure lin
 - **Auth offline:** the Supabase session is persisted on the device. Offline, the app trusts the stored session to open local data; it refreshes the token when back online. A device must have signed in online once.
 - **Outbox:** each local change marks the record dirty. Edits are saved locally within a second or two; a sync loop pushes dirty records whenever the device is online (on reconnect, on an interval, and after edits settle).
 - **Push:** the client sends the whole record with the `version` it was based on. The server accepts it only if that version is still current, then bumps the version.
-- **Conflicts:** if the server's version has moved on (the same plan was edited on another device), the server keeps its version and the client saves its local edits as a new plan named "<title> (conflicted copy, <device/date>)", shows the conflict on the sync indicator, and leaves the MD to keep or delete either. No automatic merging. Canvases and matches use the same rule (for a match, the conflicted copy keeps its plan assignments).
+- **Conflicts:** if the server's version has moved on (the same plan was edited on another device), the server keeps its version and the client saves its local edits as a new plan named "<title> (conflicted copy, <device/date>)", shows the conflict on the sync indicator, and leaves the MD to keep or delete either. No automatic merging. Canvases and matches use the same rule. (Built 2026-11-22: a match's stages stay with the original match, because a stage's place in a match is part of the plan record; see §9.) An edit made in an open editor on a version a pull has since replaced is kept the same way, as a conflicted copy.
 - **Pull:** the client asks for all records changed since its last cursor and applies them, unless the local copy is dirty (then the push/conflict rule decides).
 - **Schema changes:** a client that receives a record with a newer `schema_version` than it understands asks the user to reload to update the app; it doesn't overwrite the record.
 - **Sign-out** clears the local store after warning if there are unsynced changes.
@@ -262,6 +262,10 @@ To settle when Plan 7 is written (not before):
 - Real DRRC bay sizes for the eval set (§7.5).
 - Local data from before accounts: **decided 2026-11-22 — upload it.** On a device's first sign-in, plans, canvases and matches made before accounts existed join the signed-in account and sync up, with a notice saying how many.
 - Development and test database: **decided 2026-11-22 — the local Supabase stack** (`supabase start` in Docker). Tests never touch the hosted project.
+- Conflicted copies (Plan 5b, builder's calls, 2026-11-22):
+  - **A conflicted match copy** carries this device's name and date. Its stages stay with the original match, because a stage's place in a match is part of the plan record and syncs by the plan rule.
+  - **A conflicted plan copy** joins the same match after its last stage, so the MD can compare the two.
+  - **A deletion that conflicts with an edit on another device** makes no copy; the edit wins.
 
 ## 10. After the MVP
 

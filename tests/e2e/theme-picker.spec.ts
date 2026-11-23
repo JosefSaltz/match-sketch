@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { DEFAULT_THEME_ID } from '../../src/lib/theme/themes';
 
 test('choosing a theme applies it and survives a reload', async ({ page }) => {

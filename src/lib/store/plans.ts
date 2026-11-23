@@ -40,23 +40,40 @@ export async function getPlan(db: MatchSketchDB, id: string): Promise<PlanRecord
 	return plan && plan.deletedAt === null ? plan : undefined;
 }
 
+/** The stored plan changed after the edit's base (a pull or a conflict put another version in). */
+export class StalePlanError extends Error {
+	constructor(readonly planId: string) {
+		super(`Plan ${planId} changed on another device`);
+	}
+}
+
 /**
- * Validates and saves a plan's document. The write is issued before any other await so that
- * an edit followed immediately by a reload still lands.
+ * Validates and saves a plan's document; `at` is when the edit was made (defaults to now).
+ * With `expectedUpdatedAt`, it saves only if the stored plan is still the version the edit was
+ * made on, and otherwise throws `StalePlanError` without writing, so an open editor can never
+ * save over another device's version.
  */
-/** Saves a plan's document. `at` is when the edit was made (defaults to now). */
 export async function savePlanDocument(
 	db: MatchSketchDB,
 	id: string,
 	document: PlanDocument,
-	at: string = now()
+	at: string = now(),
+	expectedUpdatedAt?: string
 ): Promise<PlanRecord> {
 	const parsed = PlanDocumentSchema.parse(document);
-	const updated = await db.plans.update(id, { document: parsed, updatedAt: at, dirty: 1 });
-	if (!updated) throw new Error(`Plan ${id} not found`);
-	const plan = await getPlan(db, id);
-	if (!plan) throw new Error(`Plan ${id} not found`);
-	return plan;
+	return db.transaction('rw', db.plans, async () => {
+		const current = await db.plans.get(id);
+		if (!current || current.deletedAt !== null) {
+			if (current && expectedUpdatedAt !== undefined) throw new StalePlanError(id);
+			throw new Error(`Plan ${id} not found`);
+		}
+		if (expectedUpdatedAt !== undefined && current.updatedAt !== expectedUpdatedAt) {
+			throw new StalePlanError(id);
+		}
+		const saved: PlanRecord = { ...current, document: parsed, updatedAt: at, dirty: 1 };
+		await db.plans.put(saved);
+		return saved;
+	});
 }
 
 export async function duplicatePlan(db: MatchSketchDB, id: string): Promise<PlanRecord> {

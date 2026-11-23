@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
 
 // The rest of the suite runs with reduced motion so swings can't disturb measurements.

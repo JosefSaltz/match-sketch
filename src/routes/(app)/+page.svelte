@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
 	import { getSupabase } from '#lib/auth/client.js';
+	import { announceSignOut } from '#lib/auth/sign-out-broadcast.js';
 	import { signOutDevice } from '#lib/auth/session.js';
 	import { clearStoredSession } from '#lib/auth/stored-session.js';
 	import { APP_NAME } from '#lib/app-info.js';
@@ -11,6 +12,9 @@
 	import Dialog from '#lib/components/Dialog.svelte';
 	import CreditsDialog from '#lib/theme/CreditsDialog.svelte';
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
+	import SyncStatus from '#lib/sync/SyncStatus.svelte';
+	import { stopSync, syncNow, syncState, withSyncLock } from '#lib/sync/loop.svelte.js';
+	import { clearLocalData, unsyncedCount, unsyncedWarning } from '#lib/sync/device.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import Thumbnail from '#lib/print/Thumbnail.svelte';
@@ -18,7 +22,7 @@
 	import { formatMatchDate, stageCount } from '#lib/matches/format.js';
 	import MatchForm from '#lib/matches/MatchForm.svelte';
 	import { createCanvas, deleteCanvas, listCanvases, updateCanvas } from '#lib/store/canvases.js';
-	import { createMatch, deleteMatch, listMatches } from '#lib/store/matches.js';
+	import { createMatch, deleteMatch, listMatches, unassignedPlans } from '#lib/store/matches.js';
 	import { getDb } from '#lib/store/index.js';
 	import { deletePlan, duplicatePlan, listPlans } from '#lib/store/plans.js';
 	import {
@@ -41,7 +45,7 @@
 	let creatingMatch = $state(false);
 	let deletingMatch = $state<MatchRecord | null>(null);
 	/** Plans not in a match; plans in a match are listed on its screen. */
-	const unassigned = $derived(plans.filter((p) => p.matchId === null));
+	const unassigned = $derived(unassignedPlans(plans, matches));
 	/** How many stages a match has (its plans that aren't deleted). */
 	const stagesIn = (matchId: string) => plans.filter((p) => p.matchId === matchId).length;
 	let deletingPlan = $state<PlanRecord | null>(null);
@@ -86,16 +90,53 @@
 		void refreshMatches();
 	});
 
+	$effect(() => {
+		void syncState.revision;
+		untrack(() => {
+			void refreshPlans();
+			void refreshCanvases();
+			void refreshMatches();
+		});
+	});
+
+	let signingOut = $state(false);
+	let signOutWarning = $state<string | null>(null);
+
+	/** Gives pending changes a chance to sync, then warns if any remain before clearing the device. */
 	async function signOut() {
-		// Local scope signs out only this device; offline, the stored session is cleared directly.
+		signingOut = true;
 		try {
-			await signOutDevice(
-				() => getSupabase().auth.signOut({ scope: 'local' }),
-				() => clearStoredSession(document)
-			);
-		} finally {
-			await goto(resolve('/sign-in'));
+			await Promise.race([syncNow(), new Promise((r) => setTimeout(r, 3000))]);
+		} catch {
+			// Offline or failed sync: the unsynced count below decides whether to warn.
 		}
+		const count = await unsyncedCount(getDb());
+		if (count > 0) {
+			signOutWarning = unsyncedWarning(count);
+			return;
+		}
+		await finishSignOut();
+	}
+
+	/** Clears this device's local data and session, then does a full page load so no account state survives. */
+	async function finishSignOut() {
+		await stopSync();
+		// Holding the sync lock means no tab is mid-round, so nothing writes the account's records
+		// back after the clear; once the session is gone, other tabs' rounds are refused.
+		await withSyncLock(async () => {
+			try {
+				// Local scope signs out only this device; offline, the stored session is cleared directly.
+				await signOutDevice(
+					() => getSupabase().auth.signOut({ scope: 'local' }),
+					() => clearStoredSession(document)
+				);
+			} catch {
+				// Signing out must always finish.
+			}
+			await clearLocalData(getDb(), localStorage);
+		});
+		announceSignOut();
+		location.assign(resolve('/sign-in'));
 	}
 
 	async function saveMatch(input: MatchInput) {
@@ -173,13 +214,27 @@
 				<Button href={resolve('/admin')}>Admin</Button>
 			{/if}
 			<Button onclick={() => (pickingTheme = true)}>Theme</Button>
+			<SyncStatus />
 			{#if data.account.email}
 				<span class="text-sm text-muted">{data.account.email}</span>
 			{/if}
-			<Button onclick={signOut}>Sign out</Button>
+			<Button onclick={signOut} disabled={signingOut}>Sign out</Button>
 		</div>
 	</header>
 	<ThemePicker bind:open={pickingTheme} />
+
+	{#if syncState.notice}
+		<p role="status" class="mx-auto m-0 flex max-w-6xl items-center gap-3 px-4 pt-4 text-sm">
+			<span>{syncState.notice}</span>
+			<button
+				type="button"
+				class="focus-ring cursor-pointer underline"
+				onclick={() => (syncState.notice = null)}
+			>
+				Dismiss
+			</button>
+		</p>
+	{/if}
 
 	<main class="mx-auto grid max-w-6xl gap-10 px-4 py-8">
 		<section aria-labelledby="matches-heading" class="grid gap-4">
@@ -335,6 +390,19 @@
 		confirmLabel="Delete"
 		onconfirm={confirmDeleteMatch}
 		oncancel={() => (deletingMatch = null)}
+	/>
+{/if}
+
+{#if signOutWarning}
+	<ConfirmDialog
+		title="Sign out?"
+		message={signOutWarning}
+		confirmLabel="Sign out anyway"
+		onconfirm={finishSignOut}
+		oncancel={() => {
+			signOutWarning = null;
+			signingOut = false;
+		}}
 	/>
 {/if}
 

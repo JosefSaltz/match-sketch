@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
 
 /** Replaces Web Audio with a stub that counts clicks (each oscillator start). */

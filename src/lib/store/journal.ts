@@ -11,7 +11,15 @@ import type { PlanRecord } from './records';
  */
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-const EntrySchema = z.object({ at: z.string(), document: PlanDocumentSchema });
+/**
+ * `bases`: the stored plan's `updatedAt` values the edit may follow, the editor's last saved
+ * version and any save still in flight (absent in older entries).
+ */
+const EntrySchema = z.object({
+	at: z.string(),
+	bases: z.array(z.string()).optional(),
+	document: PlanDocumentSchema
+});
 
 export function journalKey(planId: string): string {
 	return `match-sketch:unsaved:${planId}`;
@@ -21,10 +29,11 @@ export function writeJournal(
 	storage: StorageLike,
 	planId: string,
 	document: PlanDocument,
-	at = new Date().toISOString()
+	at = new Date().toISOString(),
+	bases?: string[]
 ): void {
 	try {
-		storage.setItem(journalKey(planId), JSON.stringify({ at, document }));
+		storage.setItem(journalKey(planId), JSON.stringify({ at, bases, document }));
 	} catch {
 		// Storage full or unavailable: the IndexedDB save still runs; only the safety net is lost.
 	}
@@ -44,6 +53,14 @@ export function readNewerJournal(
 	planId: string,
 	savedAt: string
 ): PlanDocument | null {
+	const entry = readEntry(storage, planId);
+	if (entry && entry.at > savedAt) return entry.document;
+	if (entry) clearJournal(storage, planId);
+	return null;
+}
+
+/** The valid journal entry for the plan, or null (an invalid one is dropped). */
+function readEntry(storage: StorageLike, planId: string): z.infer<typeof EntrySchema> | null {
 	let raw: string | null;
 	try {
 		raw = storage.getItem(journalKey(planId));
@@ -58,7 +75,7 @@ export function readNewerJournal(
 		parsed = null;
 	}
 	const entry = EntrySchema.safeParse(parsed);
-	if (entry.success && entry.data.at > savedAt) return entry.data.document;
+	if (entry.success) return entry.data;
 	clearJournal(storage, planId);
 	return null;
 }
@@ -67,19 +84,37 @@ export function readNewerJournal(
  * Applies a newer journal entry to the stored plan (then clears it); otherwise returns `plan`.
  * If writing it back fails, the plan still opens with the recovered document and the entry is
  * kept, so the editor's next save (or the next load) can store it.
+ *
+ * An entry made on a version the device no longer has (a pull replaced it meanwhile) is not
+ * applied over the other device's version: it goes to `onStale`, which keeps it as a copy.
  */
 export async function recoverUnsavedEdits(
 	db: MatchSketchDB,
 	storage: StorageLike,
-	plan: PlanRecord
+	plan: PlanRecord,
+	onStale?: (document: PlanDocument) => Promise<void>
 ): Promise<PlanRecord> {
-	const document = readNewerJournal(storage, plan.id, plan.updatedAt);
-	if (!document) return plan;
+	const entry = readEntry(storage, plan.id);
+	if (!entry) return plan;
+	// Made on a version this device no longer has, whatever the clocks say: keep, don't apply.
+	if (entry.bases !== undefined && !entry.bases.includes(plan.updatedAt)) {
+		try {
+			await onStale?.(entry.document);
+			clearJournal(storage, plan.id);
+		} catch {
+			// Keep the entry for the next load.
+		}
+		return plan;
+	}
+	if (entry.at <= plan.updatedAt) {
+		clearJournal(storage, plan.id);
+		return plan;
+	}
 	try {
-		const saved = await savePlanDocument(db, plan.id, document);
+		const saved = await savePlanDocument(db, plan.id, entry.document);
 		clearJournal(storage, plan.id);
 		return saved;
 	} catch {
-		return { ...plan, document };
+		return { ...plan, document: entry.document };
 	}
 }

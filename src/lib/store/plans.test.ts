@@ -8,7 +8,8 @@ import {
 	savePlanDocument,
 	duplicatePlan,
 	listPlans,
-	deletePlan
+	deletePlan,
+	StalePlanError
 } from './plans';
 import { planTitle } from './records';
 import { emptyPlanDocument } from '../model/plan';
@@ -73,5 +74,30 @@ describe('plan repository', () => {
 		expect((await listPlans(db))[0].id).toBe(dup.id);
 		await deletePlan(db, p.id);
 		expect(await getPlan(db, p.id)).toBeUndefined();
+	});
+});
+
+describe('savePlanDocument with an expected base', () => {
+	it('saves when the stored plan is the one the edit was made on', async () => {
+		const bay = await createCanvas(db, { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' });
+		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const doc = emptyPlanDocument();
+		doc.brief.stageName = 'Mine';
+		const saved = await savePlanDocument(db, p.id, doc, '2026-11-22T10:00:00.000Z', p.updatedAt);
+		expect(saved.document.brief.stageName).toBe('Mine');
+	});
+
+	it('refuses to overwrite a plan that changed underneath (a pull or a conflict)', async () => {
+		const bay = await createCanvas(db, { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' });
+		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const theirs = emptyPlanDocument();
+		theirs.brief.stageName = 'Theirs';
+		await db.plans.update(p.id, { document: theirs, updatedAt: '2026-11-22T09:00:00.000Z' });
+		const mine = emptyPlanDocument();
+		mine.brief.stageName = 'Mine';
+		await expect(
+			savePlanDocument(db, p.id, mine, '2026-11-22T10:00:00.000Z', p.updatedAt)
+		).rejects.toBeInstanceOf(StalePlanError);
+		expect((await getPlan(db, p.id))?.document.brief.stageName).toBe('Theirs');
 	});
 });

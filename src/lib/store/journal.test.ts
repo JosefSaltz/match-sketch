@@ -105,3 +105,47 @@ describe('recoverUnsavedEdits', () => {
 		expect(await recoverUnsavedEdits(db, s, plan)).toBe(plan);
 	});
 });
+
+describe('recoverUnsavedEdits after a pull', () => {
+	let db: MatchSketchDB;
+	beforeEach(() => {
+		db = createDb(`journal-pull-${crypto.randomUUID()}`);
+	});
+
+	it('hands back an unsaved edit made on a plan that has since changed, without applying it', async () => {
+		const bay = await createCanvas(db, { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' });
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const s = memoryStorage();
+		writeJournal(s, plan.id, docWith('Unsaved mine'), '2026-11-22T10:00:00.000Z', [plan.updatedAt]);
+		// Another device's version arrived before the edit was saved.
+		await db.plans.update(plan.id, {
+			document: docWith('Theirs'),
+			updatedAt: '2026-11-22T09:00:00.000Z'
+		});
+		const stored = (await getPlan(db, plan.id))!;
+		const stale: PlanDocument[] = [];
+
+		const opened = await recoverUnsavedEdits(db, s, stored, (doc) => {
+			stale.push(doc);
+			return Promise.resolve();
+		});
+
+		expect(opened.document.brief.stageName).toBe('Theirs');
+		expect(stale.map((d) => d.brief.stageName)).toEqual(['Unsaved mine']);
+		expect(s.map.has(journalKey(plan.id))).toBe(false);
+	});
+});
+
+describe('recoverUnsavedEdits with a save that landed', () => {
+	it('applies an edit journaled while the save it follows was still in flight', async () => {
+		const db = createDb(`journal-flight-${crypto.randomUUID()}`);
+		const bay = await createCanvas(db, { name: 'Bay', widthFt: 90, depthFt: 60, unit: 'yd' });
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		const landed = '2026-11-22T10:00:00.000Z';
+		await db.plans.update(plan.id, { document: docWith('Saved'), updatedAt: landed });
+		const s = memoryStorage();
+		writeJournal(s, plan.id, docWith('Next'), '2026-11-22T10:00:01.000Z', [plan.updatedAt, landed]);
+		const opened = await recoverUnsavedEdits(db, s, (await getPlan(db, plan.id))!);
+		expect(opened.document.brief.stageName).toBe('Next');
+	});
+});

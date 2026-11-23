@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { bayPoint, createCanvas, createPlanFromCanvas, dragFromPalette } from './helpers';
 
 const brief = (page: Page) => page.getByRole('tabpanel', { name: 'Brief' });

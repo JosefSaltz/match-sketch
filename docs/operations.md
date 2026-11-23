@@ -31,6 +31,18 @@ The schema lives in `src/lib/server/db/schema.ts`.
 
 Don't use the Supabase MCP `apply_migration` tool for schema changes. It records migrations the repository doesn't have.
 
+## Sync and offline
+
+- **The device is the source of truth for the UI.** Pages read and write IndexedDB only. The sync loop (`src/lib/sync/`) pushes changed records to `POST /api/sync/push` and pulls changes from `GET /api/sync/pull?cursor=`.
+- **When it syncs:** 2 s after edits settle, every 30 s, on reconnect, and when the tab becomes visible. Only one tab syncs at a time (Web Locks).
+- **Conflicts:** if another device changed a record first, the server keeps its version and this device saves its own as "<name> (conflicted copy, <date>)". Nothing is merged.
+- **Change sequence:** every write to `canvases`, `matches` and `plans` takes the next value from `sync_change_seq`. Pulls follow that cursor. A per-owner advisory lock keeps an owner's writes in order.
+- **Offline:** the service worker (`src/service-worker/index.ts`) precaches the built app and `static/`, plus an app shell.
+  - Each deploy gets a new cache (keyed on the build version), so a deploy is picked up on the next full page load.
+  - `/api/*`, `/admin`, `/health` and `__data.json` are never cached.
+- **Sign-out** clears the device's plans, canvases, matches and sync settings, warning first about unsynced changes. Theme and sounds stay.
+- **A plan saved by a newer app** isn't applied on an older one. The older app shows a banner asking for a reload.
+
 ## Environment variables
 
 | Variable                   | Used                   | Where it comes from                                                                          |

@@ -183,6 +183,7 @@ describe('buildDraftPrompt', () => {
 		const text = JSON.stringify(buildDraftPrompt(request).system);
 		expect(text).toMatch(/centre/);
 		expect(text).toMatch(/24 characters/);
+		expect(text).toMatch(/exactly as the procedure writes it/);
 		expect(text).toMatch(/rotation 0/);
 	});
 });

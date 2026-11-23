@@ -44,9 +44,11 @@
 
 	<main class="mx-auto grid max-w-4xl gap-8 px-4 py-8">
 		<!-- Draft from text spend (spec §7.1 screen 7): drafting pauses for the day at the ceiling. -->
-		<p class="m-0 text-sm">
-			Model spend today: ${data.spend.todayUsd.toFixed(2)} of ${data.spend.ceilingUsd.toFixed(2)}
-		</p>
+		{#if data.spend}
+			<p class="m-0 text-sm">
+				Model spend today: ${data.spend.todayUsd.toFixed(2)} of ${data.spend.ceilingUsd.toFixed(2)}
+			</p>
+		{/if}
 		<section
 			class="overflow-hidden rounded-xl border-[3px] border-black bg-white shadow-[3px_3px_0_#000]"
 		>

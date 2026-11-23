@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ANTHROPIC_API_KEY, DRAFT_DAILY_CAP, DRAFT_DAILY_SPEND_USD } from '$app/env/private';
+import { FEATURE_DRAFT_FROM_TEXT } from '$app/env/public';
+import { error } from '@sveltejs/kit';
 import { requireApiUser } from '#lib/server/auth.js';
 import { serverDb } from '#lib/server/db/index.js';
 import { handleDraft } from '#lib/server/draft/handle.js';
@@ -18,6 +20,8 @@ function claude(): DraftClient | null {
 
 /** Draft from text (spec §7.5): the editor posts the brief and bay; the reply is the draft. */
 export const POST: RequestHandler = async (event) => {
+	// Behind a feature flag: while it is off, the endpoint doesn't exist.
+	if (!FEATURE_DRAFT_FROM_TEXT) error(404, 'Not found');
 	const user = await requireApiUser(event);
 	const body: unknown = await event.request.json().catch(() => null);
 	const { status, body: reply } = await handleDraft({

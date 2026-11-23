@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { DRAFT_DAILY_SPEND_USD } from '$app/env/private';
+import { FEATURE_DRAFT_FROM_TEXT } from '$app/env/public';
 import { requireAdmin } from '#lib/server/auth.js';
 import { serverDb } from '#lib/server/db/index.js';
 import { spendToday } from '#lib/server/draft/limits.js';
@@ -12,7 +13,10 @@ export const load: PageServerLoad = async (event) => {
 	const db = serverDb();
 	return {
 		users: await listUsers(adminClient(), db),
-		spend: { todayUsd: await spendToday(db), ceilingUsd: DRAFT_DAILY_SPEND_USD }
+		// Draft from text's spend, only while its feature flag is on.
+		spend: FEATURE_DRAFT_FROM_TEXT
+			? { todayUsd: await spendToday(db), ceilingUsd: DRAFT_DAILY_SPEND_USD }
+			: null
 	};
 };
 

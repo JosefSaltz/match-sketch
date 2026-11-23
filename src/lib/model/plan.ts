@@ -22,6 +22,22 @@ export const PlanObjectSchema = z.object({
 });
 export type PlanObject = z.infer<typeof PlanObjectSchema>;
 
+/** What the shooter does with an object in a walkthrough step (spec §7.10), in legend order. */
+export const MEANINGS = ['start', 'move', 'shoot', 'activate', 'avoid'] as const;
+export type Meaning = (typeof MEANINGS)[number];
+
+export const MarkSchema = z.object({ objectId: z.uuid(), meaning: z.enum(MEANINGS) });
+export type Mark = z.infer<typeof MarkSchema>;
+
+/** One line of the stage procedure, with what its walkthrough step highlights. */
+export const StepSchema = z.object({
+	id: z.uuid(),
+	text: z.string().max(2000),
+	marks: z.array(MarkSchema).max(200),
+	arrows: z.array(z.uuid()).max(200)
+});
+export type Step = z.infer<typeof StepSchema>;
+
 export const StageBriefSchema = z.object({
 	matchName: z.string(),
 	stageNumber: z.string(),

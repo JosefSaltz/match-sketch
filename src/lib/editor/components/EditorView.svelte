@@ -41,7 +41,7 @@
 				plan,
 				{
 					onGridCross: () => {
-						if (sounds.on) playClick();
+						if (sounds.on) playClick(sounds.click);
 					},
 					save: (doc, at) => saver.save(doc, at),
 					setShare: (share) => saver.setShare(share),

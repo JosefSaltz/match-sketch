@@ -166,6 +166,11 @@
 					{#if steps.length}
 						<Button variant="primary" onclick={() => (walking = true)}>Walkthrough</Button>
 					{/if}
+					<Button
+						href={`${resolve('/s/[token]/print', { token: data.token })}${data.stageId ? `?stage=${encodeURIComponent(data.stageId)}` : ''}`}
+					>
+						Print
+					</Button>
 				</div>
 				<div
 					class="overflow-hidden rounded-lg border-2 border-border bg-white"

@@ -144,3 +144,20 @@ test('the viewer fits a phone without sideways scrolling', async ({ page, browse
 	).toBeLessThanOrEqual(0);
 	await viewer.context.close();
 });
+
+test('a viewer can print the shared stage, with its QR code', async ({
+	page,
+	browser,
+	baseURL
+}) => {
+	const link = await sharedStage(page);
+	const viewer = await stranger(browser, baseURL!);
+	const v = viewer.page;
+	await v.goto(link);
+	await v.getByRole('link', { name: 'Print' }).click();
+	await expect(v.getByTestId('print-page').first()).toContainText('BUNKER DOWN');
+	await expect(v.getByTestId('share-qr')).toHaveCount(1);
+	await v.getByRole('link', { name: 'Back to stage' }).click();
+	await expect(v.getByRole('heading', { level: 1 })).toHaveText('Bunker Down');
+	await viewer.context.close();
+});

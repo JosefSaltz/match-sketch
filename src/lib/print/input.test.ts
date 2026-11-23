@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
 import type { PlanRecord } from '../store/records';
-import { printInput } from './input';
+import { printInput, stageLink } from './input';
 
 const base: PlanRecord = {
 	id: 'p1',
@@ -54,5 +54,31 @@ describe('printInput', () => {
 		expect(i.depth).toEqual({ fromFt: 90, toFt: 900, drawnFt: 75 });
 		expect(i.targets).toBe('6 paper');
 		expect(i.orientation).toBe('landscape');
+	});
+});
+
+describe('stageLink', () => {
+	const origin = 'https://ms.example';
+	const on = { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true };
+	const matchOn = { id: 'BbCdEfGhIjKlMnOpQrStUv', on: true };
+
+	it("uses the stage's own link first, then its match's at that stage", () => {
+		expect(stageLink(origin, { id: 'p1', share: on }, { share: matchOn })).toBe(
+			`${origin}/s/${on.id}`
+		);
+		expect(stageLink(origin, { id: 'p1', share: null }, { share: matchOn })).toBe(
+			`${origin}/s/${matchOn.id}?stage=p1`
+		);
+	});
+
+	it('gives no link when nothing is shared, or sharing is off', () => {
+		expect(stageLink(origin, { id: 'p1', share: null }, null)).toBeNull();
+		expect(
+			stageLink(
+				origin,
+				{ id: 'p1', share: { ...on, on: false } },
+				{ share: { ...matchOn, on: false } }
+			)
+		).toBeNull();
 	});
 });

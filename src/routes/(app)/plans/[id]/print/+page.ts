@@ -12,7 +12,12 @@ export const load: PageLoad = async ({ params }) => {
 	const plan = found ? await recoverUnsavedEdits(db, localStorage, found) : null;
 	const m = plan?.matchId ? await getMatch(db, plan.matchId) : undefined;
 	const match: PrintMatch | null = m
-		? { name: m.name, date: m.date, order: (await listMatchPlans(db, m.id)).map((p) => p.id) }
+		? {
+				name: m.name,
+				date: m.date,
+				order: (await listMatchPlans(db, m.id)).map((p) => p.id),
+				share: m.share
+			}
 		: null;
 	return { plan, match };
 };

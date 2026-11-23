@@ -30,6 +30,8 @@ export type PageHeader = {
 	/** Width of the black stage-number block; 0 when there is no number. */
 	numberBlockWidth: number;
 	numberFontPx: number;
+	/** The QR code to the shared link at the header's right end (spec §7.11), if shared. */
+	qr: { rect: Rect; caption: TextBlock; link: string } | null;
 };
 export type PageFooter = { y: number; left: string; right: string };
 export type Fact = { label: string; box: Rect; block: TextBlock };
@@ -79,6 +81,8 @@ export type PlanPrintInput = {
 	unit: LengthUnit;
 	orientation: Orientation;
 	mode: 'fit' | { tileScaleFtPerIn: number };
+	/** The viewer link printed as a QR code on the stage page; null when not shared. */
+	link: string | null;
 };
 
 const HEADER_H = 60;
@@ -182,6 +186,9 @@ function heading(text: string, x: number, y: number, width: number): TextBlock {
 const NUMBER_BLOCK_MIN = 84;
 const TITLE_PX = 24;
 const TITLE_MIN_PX = 14;
+const QR_CAPTION_W = 62;
+const QR_CAPTION_PX = 8;
+const QR_CAPTION_LINE_H = 10;
 
 function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): PageHeader {
 	const f = frame(o);
@@ -202,7 +209,23 @@ function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): Pag
 		);
 	}
 	const titleX = rect.x + (number ? numberBlockWidth + 14 : 12);
-	const room = rect.x + rect.width - titleX - 8;
+	// The QR code is a square the header's height at its right end, its caption to the left.
+	const qrRect = input.link
+		? { x: rect.x + rect.width - HEADER_H, y: rect.y, width: HEADER_H, height: HEADER_H }
+		: null;
+	const caption: TextBlock | null = qrRect
+		? {
+				x: qrRect.x - QR_CAPTION_W - 4,
+				y: rect.y + (HEADER_H - 2 * QR_CAPTION_LINE_H) / 2 - 2,
+				width: QR_CAPTION_W,
+				lines: ['Scan for the', 'walkthrough'],
+				fontPx: QR_CAPTION_PX,
+				lineHeight: QR_CAPTION_LINE_H,
+				bold: true
+			}
+		: null;
+	const right = caption ? caption.x : rect.x + rect.width;
+	const room = right - titleX - 8;
 	// Shrink a long name to fit; if it still doesn't, cut it with an ellipsis.
 	let title = input.title;
 	let titleFontPx = TITLE_PX;
@@ -220,7 +243,8 @@ function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): Pag
 		titleX,
 		titleFontPx,
 		numberBlockWidth,
-		numberFontPx
+		numberFontPx,
+		qr: qrRect && caption && input.link ? { rect: qrRect, caption, link: input.link } : null
 	};
 }
 
@@ -234,7 +258,8 @@ function slimHeader(input: PlanPrintInput, o: Orientation, title: string): PageH
 		titleX: f.x,
 		titleFontPx: 13,
 		numberBlockWidth: 0,
-		numberFontPx: 0
+		numberFontPx: 0,
+		qr: null
 	};
 }
 

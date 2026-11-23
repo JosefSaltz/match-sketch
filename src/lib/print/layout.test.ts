@@ -38,6 +38,7 @@ function input(extra: Partial<PlanPrintInput> = {}): PlanPrintInput {
 		unit: 'yd',
 		orientation: 'portrait',
 		mode: 'fit',
+		link: null,
 		...extra
 	};
 }
@@ -155,6 +156,43 @@ describe('layoutPlan edge cases (final review)', () => {
 		if (p.kind !== 'stage') throw new Error('expected a stage page');
 		return p;
 	};
+
+	it('puts the QR code to a shared link at the right of the stage header', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const [plain] = layoutPlan(input(), measure);
+		const [shared] = layoutPlan(input({ link }), measure);
+		expect(plain.header.qr).toBeNull();
+		const qr = shared.header.qr!;
+		expect(qr.link).toBe(link);
+		const h = shared.header.rect;
+		expect(qr.rect).toEqual({
+			x: h.x + h.width - h.height,
+			y: h.y,
+			width: h.height,
+			height: h.height
+		});
+		expect(qr.caption.lines).toEqual(['Scan for the', 'walkthrough']);
+		expect(qr.caption.x + qr.caption.width).toBeLessThanOrEqual(qr.rect.x);
+		// The title area ends before the caption.
+		const long = layoutPlan(
+			input({ link, title: 'A very long stage name '.repeat(4) }),
+			measure
+		)[0];
+		expect(
+			long.header.titleX + measure(long.header.title.toUpperCase(), long.header.titleFontPx, true)
+		).toBeLessThanOrEqual(long.header.qr!.caption.x);
+	});
+
+	it('prints the QR code only on the stage page, not continued or tile pages', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const long = layoutPlan(
+			input({ link, brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
+		expect(long.map((p) => p.header.qr !== null)).toEqual([true, false]);
+		const tiled = layoutPlan(input({ link, mode: { tileScaleFtPerIn: 10 } }), measure);
+		expect(tiled.filter((p) => p.header.qr !== null).map((p) => p.kind)).toEqual(['stage']);
+	});
 
 	it('shrinks a long stage name to fit the header', () => {
 		const title = 'Moving Targets Through The Shoot House Of Horrors And Back Again Twice';

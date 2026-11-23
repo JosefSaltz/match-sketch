@@ -25,7 +25,28 @@ Each run prints a table and writes `tools/draft-eval/out/<time>-<effort>.json` (
 every draft, for a closer look. It uses the production client (streaming, one retry, the
 service's 4-minute deadline), so the seconds it reports are what MDs will wait.
 
+To run it on a Claude subscription instead of an API key, add `DRAFT_EVAL_CLIENT=cli`. The same
+prompt, schema, model and effort then go through the local `claude` CLI (headless, no tools).
+This path doesn't exercise the API's server-side fallback or the SDK streaming adapter.
+
+```sh
+RUN_DRAFT_EVAL=1 DRAFT_EVAL_CLIENT=cli EVAL_EFFORT=medium pnpm eval:draft
+```
+
 ## Results
 
-No runs yet. The service uses `medium` effort (`DRAFT_EFFORT` in
-`src/lib/server/draft/handle.ts`) until an eval run says otherwise.
+**2026-11-22, through the CLI, Claude Opus 5.5:**
+
+| Effort | Mean score | Slowest draft | List-price cost for 7 stages |
+| ------ | ---------- | ------------- | ---------------------------- |
+| medium | 1.00       | 28 s          | $0.41                        |
+| high   | 1.00       | 30 s          | $0.36                        |
+
+- **Before the label fix:** an earlier `medium` run scored 0.98. Claude added words to the
+  labels ("SA-4 Rooftop", "B (SA-5)") and labelled targets the procedure doesn't name. The prompt
+  now asks for labels exactly as the procedure writes them.
+- **Effort:** both levels are perfect on these checks, at the same speed and cost, so the
+  service stays at `medium` (`DRAFT_EFFORT` in `src/lib/server/draft/handle.ts`).
+- **What the checks can't see:** the grader is saturated. Layout quality beyond its checks
+  (sensible spacing, how readable a draft is) needs a person looking at the drafts in
+  `tools/draft-eval/out/`.

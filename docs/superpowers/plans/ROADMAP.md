@@ -19,7 +19,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 4   | Print & PDF                                 | Done (2026-11-22)         | `2026-11-22-plan-4-print-pdf.md` |
 | 5a  | Accounts                                    | Done (2026-11-22)         | `2026-11-22-plan-5a-accounts.md`    |
 | 5b  | Sync & offline                              | Done (2026-11-22)         | `2026-11-22-plan-5b-sync-offline.md` |
-| 6   | Draft from text                             | Not written               | —                                   |
+| 6   | Draft from text                             | Done (2026-11-22)         | `2026-11-22-plan-6-draft-from-text.md` |
 | 7   | Walkthrough presentation                    | Idea recorded             | spec §7.10                          |
 
 Update this table as plans are written and finished.

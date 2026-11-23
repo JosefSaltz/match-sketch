@@ -37,3 +37,6 @@ tools/patterns/.venv/
 **/__pycache__/
 tools/patterns/.pytest_cache/
 
+
+# Draft eval output (tools/draft-eval)
+tools/draft-eval/out/

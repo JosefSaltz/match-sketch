@@ -6,12 +6,14 @@ import {
 	index,
 	integer,
 	jsonb,
+	numeric,
 	pgEnum,
 	pgPolicy,
 	pgSequence,
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
 import type { PlanDocument } from '../../model/plan';
@@ -119,3 +121,49 @@ export const plans = pgTable(
 	},
 	(t) => syncPolicies('plans', t)
 );
+
+export const draftStatus = pgEnum('draft_status', [
+	/** Running: the row reserves the draft's worst-case cost until it is settled. */
+	'pending',
+	'ok',
+	'repaired',
+	'partial',
+	'failed',
+	'refused',
+	'capped',
+	'paused'
+]);
+
+/**
+ * One row per "Draft from text" request (spec §7.5 step 6): for cost tracking, the per-user
+ * daily cap and the site-wide spend ceiling. Server only: RLS on, no policies, no grants.
+ */
+export const aiDrafts = pgTable(
+	'ai_drafts',
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		ownerId: uuid('owner_id')
+			.notNull()
+			.references(() => authUsers.id, { onDelete: 'cascade' }),
+		planId: uuid('plan_id').notNull(),
+		model: text().notNull(),
+		status: draftStatus().notNull(),
+		inputTokens: integer('input_tokens').notNull(),
+		outputTokens: integer('output_tokens').notNull(),
+		cacheReadTokens: integer('cache_read_tokens').notNull(),
+		costUsd: numeric('cost_usd', { precision: 10, scale: 6, mode: 'number' }).notNull(),
+		error: text(),
+		request: jsonb().notNull(),
+		response: jsonb().notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		index('ai_drafts_owner_created').on(t.ownerId, t.createdAt),
+		index('ai_drafts_created').on(t.createdAt),
+		// One running draft per user. (Created in its own migration: a new enum value can't be
+		// used in the transaction that adds it.)
+		uniqueIndex('ai_drafts_one_pending')
+			.on(t.ownerId)
+			.where(sql`${t.status} = 'pending'`)
+	]
+).enableRLS();

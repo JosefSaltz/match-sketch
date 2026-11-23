@@ -47,6 +47,11 @@ export default defineConfig({
 					// One database: files run one at a time so their users and rows don't race.
 					fileParallelism: false
 				}
+			},
+			{
+				// Draft from text against the real model; costs money (pnpm eval:draft, tools/draft-eval).
+				extends: './vite.config.ts',
+				test: { name: 'eval', environment: 'node', include: ['src/**/*.eval.ts'] }
 			}
 		]
 	}

@@ -7,6 +7,8 @@ services:
         # Inlined into the bundle at build time (src/env.ts): set them as build variables.
         SUPABASE_URL: ${SUPABASE_URL:?}
         SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?}
+        # Feature flag: `true` turns on Draft from text (it also needs ANTHROPIC_API_KEY below).
+        FEATURE_DRAFT_FROM_TEXT: ${FEATURE_DRAFT_FROM_TEXT:-false}
     environment:
       # Coolify routes the app's domain to port 3000 inside the container.
       - SERVICE_FQDN_APP_3000
@@ -15,6 +17,10 @@ services:
       - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY:?}
       # Supabase's session pooler (port 5432, IPv4), from the dashboard's Connect dialog.
       - DATABASE_URL=${DATABASE_URL:?}
+      # Draft from text (optional: without a key it reports that it isn't set up).
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DRAFT_DAILY_CAP=${DRAFT_DAILY_CAP:-20}
+      - DRAFT_DAILY_SPEND_USD=${DRAFT_DAILY_SPEND_USD:-10}
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
       interval: 30s

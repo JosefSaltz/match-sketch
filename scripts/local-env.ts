@@ -27,7 +27,8 @@ export function localEnv(): Record<string, string> {
 		throw new Error('The local Supabase stack is not running. Start it with: pnpm db:start');
 	}
 	const status = JSON.parse(raw.slice(raw.indexOf('{'))) as Record<string, string>;
-	const env: Record<string, string> = {};
+	// Feature flags default on locally, so dev and the tests exercise them; export one to override.
+	const env: Record<string, string> = { FEATURE_DRAFT_FROM_TEXT: 'true' };
 	for (const [field, name] of Object.entries(NAMES)) {
 		if (status[field]) env[name] = status[field];
 	}

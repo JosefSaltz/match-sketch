@@ -163,6 +163,8 @@ Status: **kept (2026-11-22), as variant C of the prototype ("far zone squeezed")
 
 ### 7.5 Draft from text
 
+Behind a feature flag (`FEATURE_DRAFT_FROM_TEXT`, off by default; see docs/operations.md). While it is off, nothing below appears in the app and the endpoint doesn't exist.
+
 1. The MD opens **Draft from text**, enters or confirms the description. The stage brief fields are pre-filled into the request; the procedure is required. Counts in the Targets/round count fields help the model place the right number of targets.
 2. Server route (authenticated, rate-limited) sends Claude:
    - canvas width and depth (ft) and the coordinate convention;

@@ -34,7 +34,7 @@
 ## Decisions
 
 1. **Steps keep their ids through text edits.** `stepsFromText(prev, text)` splits on `\n`, keeps every line (blank ones too, so the textarea round-trips), and matches new lines to old steps by longest common subsequence of exact text. Within each changed run, old and new lines pair up in order (an edited line keeps its id); leftover new lines get new ids, leftover old lines are dropped. `procedureText(steps)` joins with `\n`.
-2. **Walkthrough and print use `displaySteps(steps)`:** non-blank steps, text trimmed and any typed leading number ("1.", "2)", "3 -") removed, the rule print uses today (`src/lib/print/layout.ts:122`, which moves here).
+2. **Walkthrough and print use `displaySteps(steps)`:** non-blank steps, text trimmed and any typed leading number ("1.", "2)") removed, the rule print uses today (`src/lib/print/layout.ts:122`, which moves here).
 3. **Upgrading v1:** `procedure` splits into steps by line (an empty procedure gives `[]`), each with a new uuid, no marks, no arrows. Upgrades happen on read and don't mark records dirty. Ids differ between devices that upgraded the same v1 plan separately; that is harmless because no marks exist before v2.
 4. **Server:** pushes may carry schema version 1 or 2 (a stale tab); the server stores version 2. Rows still at version 1 are upgraded when read (pull, conflict, share link). There is no SQL data migration.
 5. **Share writes in the editor go through the plan saver**, serialized with document saves on one promise chain, so a share toggle never races a save into a conflicted copy. Outside the editor (match screen), store functions write directly.
@@ -92,7 +92,7 @@ tests/e2e/walkthrough.spec.ts, share.spec.ts, viewer.spec.ts
 - `stepsFromText(prev: Step[], text: string): Step[]`, `procedureText(steps: Step[]): string`, `displaySteps(steps: Step[]): Step[]` (Decisions 1–2).
 
 - [ ] **Steps:**
-  1. Write the failing tests: `procedureText(stepsFromText([], t)) === t` for `''`, `'a'`, `'a\n\nb'`, `'a\n'`; `stepsFromText([], '')` is `[]`; with steps A, B, C (C marked): editing B's text keeps B's id; inserting a line above C keeps C's id and marks; deleting B keeps A and C; splitting B by a newline keeps B's id on the first part; pasting the identical text keeps every id; `displaySteps` drops blank lines and strips "1. ", "2) ", "3 - ".
+  1. Write the failing tests: `procedureText(stepsFromText([], t)) === t` for `''`, `'a'`, `'a\n\nb'`, `'a\n'`; `stepsFromText([], '')` is `[]`; with steps A, B, C (C marked): editing B's text keeps B's id; inserting a line above C keeps C's id and marks; deleting B keeps A and C; splitting B by a newline keeps B's id on the first part; pasting the identical text keeps every id; `displaySteps` drops blank lines and strips "1. " and "2) ".
   2. Run `pnpm vitest run src/lib/model/procedure.test.ts` (FAIL), implement, run again (PASS).
   3. Commit: `feat(plans): keep procedure lines as steps with stable ids`
 

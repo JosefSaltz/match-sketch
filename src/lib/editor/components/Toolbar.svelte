@@ -18,6 +18,8 @@
 	import ShareDialog from '#lib/components/ShareDialog.svelte';
 	import { shareUrl } from '#lib/model/share.js';
 	import type { ShareAction } from '#lib/store/share.js';
+	import { displaySteps } from '#lib/model/procedure.js';
+	import PresentDialog from '#lib/walkthrough/PresentDialog.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -43,6 +45,8 @@
 	let pickingTheme = $state(false);
 	let drafting = $state(false);
 	let sharing = $state(false);
+	let presenting = $state(false);
+	const hasSteps = $derived(displaySteps(editor.doc.brief.steps).length > 0);
 
 	/** Drag clicks on or off for this device (remembered like the theme). */
 	function toggleSounds() {
@@ -167,6 +171,13 @@
 	>
 		{sounds.on ? '🔊' : '🔇'}
 	</Button>
+	<Button
+		disabled={!hasSteps}
+		title={hasSteps ? undefined : 'Write the stage procedure first.'}
+		onclick={() => (presenting = true)}
+	>
+		Present
+	</Button>
 	<Button onclick={() => (sharing = true)}>Share</Button>
 	<Button href={resolve('/(app)/plans/[id]/print', { id: editor.plan.id })}>Print</Button>
 	{#if FEATURE_DRAFT_FROM_TEXT}
@@ -185,6 +196,16 @@
 	<Button onclick={() => (pickingTheme = true)}>Theme</Button>
 </header>
 <ThemePicker bind:open={pickingTheme} />
+{#if presenting}
+	<PresentDialog
+		doc={editor.doc}
+		canvas={editor.canvas}
+		unit={editor.plan.unit}
+		depth={editor.depth}
+		title={editor.title}
+		onclose={() => (presenting = false)}
+	/>
+{/if}
 {#if sharing}
 	<ShareDialog
 		title="Share stage"

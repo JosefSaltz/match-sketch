@@ -2,13 +2,15 @@
 	import type { EditorState } from '../editor-state.svelte.js';
 	import BriefPanel from './BriefPanel.svelte';
 	import PropertiesPanel from './PropertiesPanel.svelte';
+	import WalkthroughPanel from './WalkthroughPanel.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
 	type Tab = 'properties' | 'brief' | 'walkthrough';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'properties', label: 'Properties' },
-		{ id: 'brief', label: 'Brief' }
+		{ id: 'brief', label: 'Brief' },
+		{ id: 'walkthrough', label: 'Walkthrough' }
 	];
 
 	const uid = $props.id();
@@ -52,7 +54,7 @@
 				aria-controls={panelId(t.id)}
 				tabindex={selected ? 0 : -1}
 				class={[
-					'focus-ring -mb-[3px] min-h-11 rounded-t-lg border-[3px] border-black px-4 font-display text-sm tracking-wide uppercase',
+					'focus-ring -mb-[3px] min-h-11 rounded-t-lg border-[3px] border-black px-2.5 font-display text-xs tracking-wide uppercase',
 					selected ? 'border-b-white bg-white text-text' : 'bg-white/70 text-muted'
 				]}
 				onclick={() => (editor.panel = t.id)}
@@ -71,8 +73,10 @@
 	>
 		{#if editor.panel === 'properties'}
 			<PropertiesPanel {editor} />
-		{:else}
+		{:else if editor.panel === 'brief'}
 			<BriefPanel {editor} />
+		{:else}
+			<WalkthroughPanel {editor} />
 		{/if}
 	</div>
 </aside>

@@ -202,6 +202,12 @@ export class EditorState {
 		this.commit(markObjects(this.#current, step.id, ids, meaning));
 	}
 
+	/** Removes one object's mark from the active step. */
+	clearMark(objectId: string): void {
+		const step = this.activeStep;
+		if (step) this.commit(markObjects(this.#current, step.id, [objectId], null));
+	}
+
 	/** Shows the selected arrows in the active step, or stops showing them. */
 	setSelectedArrowsInStep(include: boolean): void {
 		const step = this.activeStep;

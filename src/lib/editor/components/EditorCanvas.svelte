@@ -9,6 +9,8 @@
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
 	import SelectionOverlay from './SelectionOverlay.svelte';
+	import { SYMBOL_PX } from '#lib/model/plan.js';
+	import StepHighlights from '#lib/walkthrough/StepHighlights.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -235,6 +237,15 @@
 			{/each}
 		</g>
 		<AnnotationLayer {editor} layer="above" />
+		{#if editor.panel === 'walkthrough' && editor.activeStep}
+			<StepHighlights
+				doc={editor.doc}
+				step={editor.activeStep}
+				viewport={editor.viewport}
+				symbolPx={SYMBOL_PX[editor.doc.display.symbolSize]}
+				arrows
+			/>
+		{/if}
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>

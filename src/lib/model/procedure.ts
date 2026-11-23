@@ -40,13 +40,27 @@ const newStep = (text: string): Step => ({ id: crypto.randomUUID(), text, marks:
 export function stepsFromText(prev: Step[], text: string): Step[] {
 	if (text === '') return [];
 	const lines = text.split('\n');
+	const old = prev.map((s) => s.text);
+	// One edit changes one run of lines: lines equal at both ends keep their steps first, so a
+	// line typed into never borrows another (often blank) line's step in the middle diff.
+	let head = 0;
+	while (head < old.length && head < lines.length && old[head] === lines[head]) head++;
+	let tail = 0;
+	while (
+		tail < old.length - head &&
+		tail < lines.length - head &&
+		old[old.length - 1 - tail] === lines[lines.length - 1 - tail]
+	) {
+		tail++;
+	}
 	const pairs = commonLines(
-		prev.map((s) => s.text),
-		lines
-	);
-	const next: Step[] = [];
-	let i = 0;
-	let j = 0;
+		old.slice(head, old.length - tail),
+		lines.slice(head, lines.length - tail)
+	).map(([i, j]): [number, number] => [i + head, j + head]);
+
+	const next: Step[] = prev.slice(0, head);
+	let i = head;
+	let j = head;
 	const fillRun = (toI: number, toJ: number) => {
 		while (j < toJ) {
 			next.push(i < toI ? { ...prev[i++], text: lines[j] } : newStep(lines[j]));
@@ -60,8 +74,8 @@ export function stepsFromText(prev: Step[], text: string): Step[] {
 		i = pi + 1;
 		j = pj + 1;
 	}
-	fillRun(prev.length, lines.length);
-	return next;
+	fillRun(old.length - tail, lines.length - tail);
+	return [...next, ...prev.slice(old.length - tail)];
 }
 
 /** A step's text as shown and printed: trimmed, without a number typed at its start. */

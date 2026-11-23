@@ -64,6 +64,30 @@ describe('stepsFromText', () => {
 		expect(stepsFromText(prev, procedureText(prev))).toEqual(prev);
 	});
 
+	it('keeps a line its own step while it is cleared and retyped past a blank line', () => {
+		const [a, blank, c] = stepsFromText([], 'Start A\n\nEngage T1');
+		const marked = [
+			{ ...a, marks: [{ objectId: crypto.randomUUID(), meaning: 'start' as const }] },
+			blank,
+			c
+		];
+		let steps = marked;
+		for (const t of ['Start ', 'S', '', 'Go']) steps = stepsFromText(steps, `${t}\n\nEngage T1`);
+		expect(ids(steps)).toEqual(ids(marked));
+		expect(steps[0].marks).toEqual(marked[0].marks);
+	});
+
+	it("keeps marks on their step when a line passes through another line's text", () => {
+		const prev = stepsFromText([], 'Shoot T12\nShoot T1').map((s) => ({
+			...s,
+			marks: [{ objectId: crypto.randomUUID(), meaning: 'shoot' as const }]
+		}));
+		let steps = stepsFromText(prev, 'Shoot T1\nShoot T1');
+		steps = stepsFromText(steps, 'Shoot T13\nShoot T1');
+		expect(ids(steps)).toEqual(ids(prev));
+		expect(steps.map((s) => s.marks)).toEqual(prev.map((s) => s.marks));
+	});
+
 	it('keeps ids of repeated lines in order', () => {
 		const prev = stepsFromText([], 'Reload\nReload');
 		expect(ids(stepsFromText(prev, 'Reload\nReload'))).toEqual(ids(prev));

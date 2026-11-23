@@ -97,4 +97,12 @@ describe('gradeDraft', () => {
 		};
 		expect(gradeDraft(theCase, result).checks.targetsDownrange).toBe(false);
 	});
+
+	it('scores a draft that never came back as 0', () => {
+		for (const status of ['failed', 'refused'] as const) {
+			expect(
+				gradeDraft(theCase, { status, objects: [], unrepresentable: [], dropped: [] }).score
+			).toBe(0);
+		}
+	});
 });

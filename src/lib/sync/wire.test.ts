@@ -26,9 +26,50 @@ const plan: PlanRecord = {
 	widthFt: 90,
 	depthFt: 60,
 	unit: 'yd',
-	schemaVersion: 1,
+	schemaVersion: 2,
 	document: emptyPlanDocument()
 };
+
+/** A plan document as an app before schema version 2 wrote it. */
+function v1Document(procedure: string) {
+	const { steps, ...brief } = emptyPlanDocument().brief;
+	void steps;
+	return { ...emptyPlanDocument(), brief: { ...brief, procedure } };
+}
+
+describe('plan schema versions', () => {
+	it('reads a version 1 plan from the server as version 2', () => {
+		const server = ServerRecordSchema.parse({
+			...toWire('plans', plan),
+			version: 4,
+			schemaVersion: 1,
+			document: v1Document('Start\nEngage T1')
+		});
+		const local = fromServer(server) as PlanRecord;
+		expect(local.schemaVersion).toBe(2);
+		expect(local.document.brief.steps.map((s) => s.text)).toEqual(['Start', 'Engage T1']);
+	});
+
+	it('leaves a plan from a newer app to a reload', () => {
+		const server = ServerRecordSchema.parse({
+			...toWire('plans', plan),
+			version: 4,
+			schemaVersion: 3,
+			document: {}
+		});
+		expect(() => fromServer(server)).toThrow('newer-schema');
+	});
+
+	it('takes a version 1 push from an older app, upgraded', () => {
+		const wire = WireRecordSchema.parse({
+			...toWire('plans', plan),
+			schemaVersion: 1,
+			document: v1Document('Start')
+		});
+		if (wire.table !== 'plans') throw new Error('expected a plan');
+		expect(wire.document.brief.steps.map((s) => s.text)).toEqual(['Start']);
+	});
+});
 
 describe('wire records', () => {
 	it.each([
@@ -61,7 +102,7 @@ describe('wire records', () => {
 	});
 
 	it('recognises a plan from a newer app but will not apply it', () => {
-		const newer = { ...toWire('plans', plan), version: 1, schemaVersion: 2, document: { v: 2 } };
+		const newer = { ...toWire('plans', plan), version: 1, schemaVersion: 3, document: { v: 2 } };
 		const server = ServerRecordSchema.parse(newer);
 		expect(() => fromServer(server)).toThrow('newer-schema');
 	});

@@ -120,7 +120,7 @@ test('a plan saved by a newer app asks for a reload', async ({ page, account }) 
 	await withSql(
 		(sql) => sql`insert into public.plans
 			(id, owner_id, version, updated_at, width_ft, depth_ft, unit, schema_version, document)
-			values (${crypto.randomUUID()}, ${owner}, 1, now(), 90, 60, 'yd', 2,
+			values (${crypto.randomUUID()}, ${owner}, 1, now(), 90, 60, 'yd', 3,
 				${sql.json({ ...emptyPlanDocument(), future: true })})`
 	);
 	await page.reload();

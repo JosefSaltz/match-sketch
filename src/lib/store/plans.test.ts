@@ -36,7 +36,7 @@ describe('plan repository', () => {
 			depthFt: 75,
 			unit: 'yd',
 			sourceCanvasId: bay.id,
-			schemaVersion: 1
+			schemaVersion: 2
 		});
 		expect(p.document).toEqual(emptyPlanDocument());
 		await updateCanvas(db, bay.id, { name: 'Bay A', widthFt: 300, depthFt: 75, unit: 'yd' });

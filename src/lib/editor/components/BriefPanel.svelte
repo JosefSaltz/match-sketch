@@ -2,6 +2,7 @@
 	import { targetsTally } from '#lib/brief/tally.js';
 	import { resolve } from '$app/paths';
 	import type { StageBrief } from '#lib/model/plan.js';
+	import { procedureText } from '#lib/model/procedure.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
@@ -18,8 +19,8 @@
 		return i >= 0 ? `${i + 1} (match order)` : undefined;
 	});
 
-	type TextKey = Exclude<keyof StageBrief, 'targetsOverride' | 'notes'>;
-	type Row = { key: TextKey; label: string; rows?: number };
+	type TextKey = Exclude<keyof StageBrief, 'targetsOverride' | 'notes' | 'steps'>;
+	type Row = { key: TextKey | 'procedure'; label: string; rows?: number };
 
 	/** Spec §7.2 order; Targets sits between Round count and Par time. */
 	const BEFORE_TARGETS: Row[] = [
@@ -44,9 +45,15 @@
 	}
 
 	/** Every keystroke is saved; one field visit is one undo step (EditorState.setBrief). */
-	function typeInto(key: TextKey, e: InputEvent) {
-		editor.setBrief({ [key]: e.currentTarget.value }, key);
+	function typeInto(key: Row['key'], e: InputEvent) {
+		const value = e.currentTarget.value;
+		if (key === 'procedure') editor.setProcedure(value);
+		else editor.setBrief({ [key]: value }, key);
 	}
+
+	/** The procedure edits as one block of text; each line is a step (spec §7.10). */
+	const valueOf = (key: Row['key']) =>
+		key === 'procedure' ? procedureText(brief.steps) : brief[key];
 </script>
 
 {#snippet textRow(row: Row)}
@@ -57,7 +64,7 @@
 					{id}
 					rows={row.rows}
 					class="{controlClass} py-2"
-					value={brief[row.key]}
+					value={valueOf(row.key)}
 					oninput={(e) => typeInto(row.key, e)}
 					onblur={() => editor.endTyping()}></textarea>
 			{:else}
@@ -65,7 +72,7 @@
 					{id}
 					type="text"
 					class={controlClass}
-					value={brief[row.key]}
+					value={valueOf(row.key)}
 					placeholder={row.key === 'stageNumber' ? matchOrderHint : undefined}
 					oninput={(e) => typeInto(row.key, e)}
 					onblur={() => editor.endTyping()}

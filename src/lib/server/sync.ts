@@ -8,6 +8,8 @@ import {
 	type SyncTable,
 	type WireRecord
 } from '../sync/wire';
+import { PLAN_SCHEMA_VERSION } from '../model/plan';
+import { readPlanDocument } from '../model/upgrade';
 import type { Database } from './db/client';
 import { canvases, matches, plans } from './db/schema';
 
@@ -48,6 +50,16 @@ function matchRecord(row: MatchRow): ServerRecord {
 	};
 }
 
+/** Rows a version 1 app saved go out as version 2 (spec §7.10); newer ones as they are. */
+function upgradedDocument(row: PlanRow): { schemaVersion: number; document: unknown } {
+	if (row.schemaVersion !== 1) return { schemaVersion: row.schemaVersion, document: row.document };
+	try {
+		return { schemaVersion: PLAN_SCHEMA_VERSION, document: readPlanDocument(row.document) };
+	} catch {
+		return { schemaVersion: row.schemaVersion, document: row.document };
+	}
+}
+
 function planRecord(row: PlanRow): ServerRecord {
 	return {
 		table: 'plans',
@@ -61,8 +73,7 @@ function planRecord(row: PlanRow): ServerRecord {
 		widthFt: row.widthFt,
 		depthFt: row.depthFt,
 		unit: row.unit,
-		schemaVersion: row.schemaVersion,
-		document: row.document
+		...upgradedDocument(row)
 	};
 }
 
@@ -103,7 +114,8 @@ function fields(record: WireRecord) {
 		}
 		case 'plans': {
 			const { matchId, stageOrder, sourceCanvasId, widthFt, depthFt, unit } = record;
-			const { schemaVersion, document } = record;
+			const { document } = record;
+			const schemaVersion = PLAN_SCHEMA_VERSION;
 			return {
 				table: record.table,
 				values: {

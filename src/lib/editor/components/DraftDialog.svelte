@@ -3,7 +3,8 @@
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import { applyDraft } from '#lib/draft/apply.js';
 	import { draftProblem, requestDraft } from '#lib/draft/client.js';
-	import type { DraftResult } from '#lib/draft/contract.js';
+	import { draftBrief, type DraftResult } from '#lib/draft/contract.js';
+	import { procedureText } from '#lib/model/procedure.js';
 	import { syncState } from '#lib/sync/loop.svelte.js';
 	import Button from '#lib/ui/Button.svelte';
 	import Field from '#lib/ui/Field.svelte';
@@ -16,14 +17,14 @@
 
 	// Copied once at open; the textarea is editable from here.
 	// svelte-ignore state_referenced_locally
-	let description = $state(editor.doc.brief.procedure);
+	let description = $state(procedureText(editor.doc.brief.steps));
 	let pending = $state(false);
 	let error = $state<string | null>(null);
 	let result = $state<DraftResult | null>(null);
 	let confirming = $state(false);
 
 	const brief = $derived(editor.doc.brief);
-	const missingProcedure = $derived(brief.procedure.trim() === '');
+	const missingProcedure = $derived(procedureText(brief.steps).trim() === '');
 	const problem = $derived(result ? draftProblem(result) : null);
 	const objectCount = $derived(editor.doc.objects.length);
 	const sentFields = $derived(
@@ -45,7 +46,7 @@
 		const outcome = await requestDraft({
 			planId: editor.plan.id,
 			description,
-			brief: editor.doc.brief,
+			brief: draftBrief(editor.doc.brief),
 			canvas: {
 				widthFt: editor.plan.widthFt,
 				depthFt: editor.plan.depthFt,

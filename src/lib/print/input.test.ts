@@ -15,7 +15,7 @@ const base: PlanRecord = {
 	widthFt: 120,
 	depthFt: 900,
 	unit: 'yd',
-	schemaVersion: 1,
+	schemaVersion: 2,
 	document: emptyPlanDocument()
 };
 

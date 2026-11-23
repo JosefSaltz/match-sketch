@@ -24,6 +24,7 @@ import {
 	type PlanDocument,
 	type StageBrief
 } from '../model/plan';
+import { stepsFromText } from '../model/procedure';
 import { effectiveStageNumber, now, planTitle, type PlanRecord } from '../store/records';
 import {
 	addAnnotation,
@@ -471,6 +472,14 @@ export class EditorState {
 	/** Ends the current typing run (the field lost focus). */
 	endTyping(): void {
 		this.#typing = null;
+	}
+
+	/**
+	 * Sets the procedure from its text: each line stays the step it was (with its walkthrough
+	 * highlights) as far as the line diff can tell (spec §7.10).
+	 */
+	setProcedure(text: string): void {
+		this.setBrief({ steps: stepsFromText(this.#current.brief.steps, text) }, 'procedure');
 	}
 
 	addNoteSection(): void {

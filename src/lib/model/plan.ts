@@ -44,7 +44,8 @@ export const StageBriefSchema = z.object({
 	stageName: z.string(),
 	startPosition: z.string(),
 	gunReady: z.string(),
-	procedure: z.string(),
+	/** The stage procedure, one step per line (spec §7.2, §7.10). */
+	steps: z.array(StepSchema).max(500),
 	roundCount: z.string(),
 	parTime: z.string(),
 	targetsOverride: z.string().nullable(),
@@ -91,6 +92,9 @@ export const PlanDisplaySchema = z.object({
 });
 export type PlanDisplay = z.infer<typeof PlanDisplaySchema>;
 
+/** The plan document version `PlanDocumentSchema` describes (`plans.schema_version`). */
+export const PLAN_SCHEMA_VERSION = 2;
+
 export const PlanDocumentSchema = z.object({
 	brief: StageBriefSchema,
 	objects: z.array(PlanObjectSchema),
@@ -108,7 +112,7 @@ export function emptyPlanDocument(): PlanDocument {
 			stageName: '',
 			startPosition: '',
 			gunReady: '',
-			procedure: '',
+			steps: [],
 			roundCount: '',
 			parTime: '',
 			targetsOverride: null,

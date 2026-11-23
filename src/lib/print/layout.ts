@@ -2,6 +2,7 @@ import { toDrawn, type DepthMap } from '../geometry/depth-map';
 import type { CanvasSize } from '../geometry/types';
 import { toFeet, type LengthUnit } from '../geometry/units';
 import type { StageBrief } from '../model/plan';
+import { displaySteps } from '../model/procedure';
 import { MARGIN_PX, PX_PER_IN, pageSize, type Orientation } from './page';
 import { wrapText, type Measure } from './wrap';
 
@@ -118,19 +119,15 @@ export function tileArea(o: Orientation): Rect {
 	return { x: f.x, y, width: f.width, height: f.bottom - y };
 }
 
-/** The procedure as numbered steps, one per non-empty line (numbers the MD typed are replaced). */
-function steps(procedure: string): string[] {
-	return procedure
-		.split('\n')
-		.map((l) => l.trim().replace(/^\d+[.)]\s*/, ''))
-		.filter(Boolean)
-		.map((l, i) => `${i + 1}. ${l}`);
+/** The procedure as numbered steps (numbers typed into the procedure are replaced). */
+function numberedSteps(brief: StageBrief): string[] {
+	return displaySteps(brief.steps).map((s, i) => `${i + 1}. ${s.text}`);
 }
 
 type Line = { text: string; bold: boolean; part: 'facts' | 'procedure' | 'notes' };
 
 function procedureLines(brief: StageBrief, width: number, measure: Measure): Line[] {
-	return steps(brief.procedure).flatMap((s) =>
+	return numberedSteps(brief).flatMap((s) =>
 		wrapText(s, width, BODY_PX, measure).map((text) => ({
 			text,
 			bold: false,

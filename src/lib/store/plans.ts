@@ -1,4 +1,9 @@
-import { emptyPlanDocument, PlanDocumentSchema, type PlanDocument } from '../model/plan';
+import {
+	emptyPlanDocument,
+	PLAN_SCHEMA_VERSION,
+	PlanDocumentSchema,
+	type PlanDocument
+} from '../model/plan';
 import type { MatchSketchDB } from './db';
 import { nextStageOrder } from './matches';
 import { CanvasInputSchema, newSyncMeta, now, type CanvasInput, type PlanRecord } from './records';
@@ -28,7 +33,7 @@ export async function createPlan(
 		widthFt,
 		depthFt,
 		unit,
-		schemaVersion: 1,
+		schemaVersion: PLAN_SCHEMA_VERSION,
 		document: emptyPlanDocument()
 	};
 	await db.plans.add(record);

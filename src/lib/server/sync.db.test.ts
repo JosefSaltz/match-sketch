@@ -1,7 +1,8 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
-import type { WireRecord } from '../sync/wire';
+import { readPlanDocument } from '../model/upgrade';
+import { WireRecordSchema, type WireRecord } from '../sync/wire';
 import { createDatabase } from './db/client';
 import { canvases, plans } from './db/schema';
 import { pullChanges, pushRecords } from './sync';
@@ -50,7 +51,7 @@ function plan(): Extract<WireRecord, { table: 'plans' }> {
 		widthFt: 90,
 		depthFt: 60,
 		unit: 'yd',
-		schemaVersion: 1,
+		schemaVersion: 2,
 		document: emptyPlanDocument()
 	};
 }
@@ -73,6 +74,46 @@ afterEach(async () => {
 
 afterAll(async () => {
 	await database.close();
+});
+
+/** A plan document as an app before schema version 2 wrote it. */
+function v1Document(procedure: string) {
+	const { steps, ...brief } = emptyPlanDocument().brief;
+	void steps;
+	return { ...emptyPlanDocument(), brief: { ...brief, procedure } };
+}
+
+describe('plan schema version 2', () => {
+	it('stores a version 1 push from an older app as version 2', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), schemaVersion: 1, document: v1Document('Start\nEngage T1') };
+		const [result] = await pushRecords(db, owner, [
+			{ record: WireRecordSchema.parse(p), baseVersion: 0 }
+		]);
+		expect(result.status).toBe('accepted');
+		const [row] = await db.select().from(plans).where(eq(plans.id, p.id));
+		expect(row.schemaVersion).toBe(2);
+		expect(row.document.brief.steps.map((s) => s.text)).toEqual(['Start', 'Engage T1']);
+	});
+
+	it('pulls a row a version 1 app saved as version 2', async () => {
+		const owner = await createOwner();
+		const p = plan();
+		await db.insert(plans).values({
+			...p,
+			ownerId: owner,
+			version: 1,
+			updatedAt: new Date(p.updatedAt),
+			deletedAt: null,
+			schemaVersion: 1,
+			document: v1Document('Start') as never
+		});
+		const { records } = await pullAll(owner);
+		const pulled = records.find((r) => r.id === p.id);
+		if (pulled?.table !== 'plans') throw new Error('expected the plan');
+		expect(pulled.schemaVersion).toBe(2);
+		expect(readPlanDocument(pulled.document).brief.steps.map((s) => s.text)).toEqual(['Start']);
+	});
 });
 
 describe('pushRecords', () => {
@@ -196,7 +237,7 @@ describe('pullChanges', () => {
 				widthFt: 90,
 				depthFt: 60,
 				unit: 'yd',
-				schemaVersion: 1,
+				schemaVersion: 2,
 				document: p.document
 			});
 			await new Promise((r) => setTimeout(r, 400));

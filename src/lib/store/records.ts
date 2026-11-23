@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { LengthUnit } from '../geometry/units';
-import type { PlanDocument } from '../model/plan';
+import type { PLAN_SCHEMA_VERSION, PlanDocument } from '../model/plan';
 
 /** Fields every user-editable record carries so it can sync later (Plan 5). */
 export type SyncMeta = {
@@ -27,7 +27,7 @@ export type PlanRecord = SyncMeta & {
 	widthFt: number;
 	depthFt: number;
 	unit: LengthUnit;
-	schemaVersion: 1;
+	schemaVersion: typeof PLAN_SCHEMA_VERSION;
 	document: PlanDocument;
 };
 

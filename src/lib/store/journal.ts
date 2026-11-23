@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { PlanDocumentSchema, type PlanDocument } from '../model/plan';
+import type { PlanDocument } from '../model/plan';
+import { AnyPlanDocumentSchema } from '../model/upgrade';
 import type { MatchSketchDB } from './db';
 import { savePlanDocument } from './plans';
 import type { PlanRecord } from './records';
@@ -18,7 +19,8 @@ export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 const EntrySchema = z.object({
 	at: z.string(),
 	bases: z.array(z.string()).optional(),
-	document: PlanDocumentSchema
+	/** Entries written before schema version 2 hold a version 1 document. */
+	document: AnyPlanDocumentSchema
 });
 
 export function journalKey(planId: string): string {

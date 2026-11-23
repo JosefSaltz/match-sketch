@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
 import { draftProblem, requestDraft } from './client';
-import type { DraftRequest, DraftResult } from './contract';
+import { draftBrief, type DraftRequest, type DraftResult } from './contract';
 
 const request: DraftRequest = {
 	planId: crypto.randomUUID(),
 	description: 'Engage the steel.',
-	brief: emptyPlanDocument().brief,
+	brief: draftBrief(emptyPlanDocument().brief),
 	canvas: { widthFt: 60, depthFt: 90, unit: 'yd' },
 	symbolSize: 'medium'
 };

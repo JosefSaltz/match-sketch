@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { StageBriefSchema, SYMBOL_SIZES } from '../model/plan';
+import { StageBriefSchema, SYMBOL_SIZES, type StageBrief } from '../model/plan';
+import { procedureText } from '../model/procedure';
 
 /**
  * What Claude returns for a draft (spec §7.5 step 3). Kept loose for structured output; the
@@ -42,9 +43,10 @@ const field = z.string().max(MAX_FIELD);
 
 /**
  * The brief as a draft request may carry it: every field the prompt uses is bounded, so one
- * request can't send an arbitrarily large (and expensive) prompt.
+ * request can't send an arbitrarily large (and expensive) prompt. The procedure goes as its text;
+ * the model never sees the steps' ids or highlights.
  */
-const DraftBriefSchema = StageBriefSchema.extend({
+const DraftBriefSchema = StageBriefSchema.omit({ steps: true }).extend({
 	matchName: z.string().max(200),
 	stageNumber: z.string().max(20),
 	stageName: z.string().max(200),
@@ -71,6 +73,12 @@ export const DraftRequestSchema = z.object({
 	symbolSize: z.enum(SYMBOL_SIZES)
 });
 export type DraftRequest = z.infer<typeof DraftRequestSchema>;
+
+/** The brief as a draft request carries it. */
+export function draftBrief(brief: StageBrief): DraftRequest['brief'] {
+	const { steps, ...rest } = brief;
+	return { ...rest, procedure: procedureText(steps) };
+}
 
 export type DraftStatus = 'ok' | 'repaired' | 'partial' | 'failed' | 'refused';
 

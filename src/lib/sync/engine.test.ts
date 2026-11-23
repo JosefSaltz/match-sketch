@@ -235,7 +235,7 @@ describe('syncOnce: pull', () => {
 			record: {
 				...record,
 				version: 2,
-				schemaVersion: 2,
+				schemaVersion: 3,
 				document: { future: true }
 			} as ServerRecord,
 			seq: ++server.seq
@@ -254,7 +254,7 @@ describe('syncOnce: pull', () => {
 			record: {
 				...record,
 				version: 2,
-				schemaVersion: 2,
+				schemaVersion: 3,
 				document: { future: true }
 			} as ServerRecord,
 			seq: ++server.seq

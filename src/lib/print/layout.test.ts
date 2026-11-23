@@ -1,3 +1,4 @@
+import { stepsFromText } from '../model/procedure';
 import { describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
 import {
@@ -19,7 +20,7 @@ const brief = {
 	stageName: 'Bunker Down',
 	startPosition: 'Standing in Box A',
 	gunReady: 'Loaded, holstered',
-	procedure: 'Engage T1–T4 from Box A.\nMove to Box B.',
+	steps: stepsFromText([], 'Engage T1–T4 from Box A.\nMove to Box B.'),
 	roundCount: '21 rds',
 	parTime: '120 s'
 };
@@ -83,13 +84,19 @@ describe('layoutPlan', () => {
 	});
 
 	it('does not double-number steps the MD numbered', () => {
-		const [p] = layoutPlan(input({ brief: { ...brief, procedure: '1. Start\n2) Move' } }), measure);
+		const [p] = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], '1. Start\n\n2) Move') } }),
+			measure
+		);
 		if (p.kind !== 'stage') throw new Error('expected a stage page');
 		expect(p.procedure.flatMap((b) => b.lines)).toEqual(['1. Start', '2. Move']);
 	});
 
 	it('moves a long procedure and the notes to page 2 with a pointer', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(40) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.kind)).toEqual(['stage', 'continued']);
 		const [first, second] = pages;
 		if (first.kind !== 'stage' || second.kind !== 'continued') throw new Error('kinds');
@@ -99,7 +106,10 @@ describe('layoutPlan', () => {
 	});
 
 	it('continues a procedure longer than a page onto page 3', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(90) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(90)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.kind)).toEqual(['stage', 'continued', 'continued']);
 		const shown = pages.flatMap((p) =>
 			p.kind === 'continued' ? p.procedure.flatMap((b) => b.lines) : []
@@ -108,7 +118,10 @@ describe('layoutPlan', () => {
 	});
 
 	it('numbers footers page x of y', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(40) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.footer.right)).toEqual(['Page 1 of 2', 'Page 2 of 2']);
 		expect(pages[0].footer.left).toBe('DRRC November · Stage 3');
 	});

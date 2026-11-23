@@ -29,6 +29,16 @@ const docWith = (stageName: string): PlanDocument => {
 };
 
 describe('unsaved-edit journal', () => {
+	it('reads an entry written before schema version 2 as version 2', () => {
+		const s = memoryStorage();
+		const { steps, ...brief } = emptyPlanDocument().brief;
+		void steps;
+		const old = { ...emptyPlanDocument(), brief: { ...brief, procedure: 'Start\nEngage T1' } };
+		s.setItem(journalKey('p1'), JSON.stringify({ at: '2026-11-21T10:00:01.000Z', document: old }));
+		const doc = readNewerJournal(s, 'p1', '2026-11-21T10:00:00.000Z');
+		expect(doc?.brief.steps.map((step) => step.text)).toEqual(['Start', 'Engage T1']);
+	});
+
 	it('returns an entry written after the last save', () => {
 		const s = memoryStorage();
 		writeJournal(s, 'p1', docWith('Gauntlet'), '2026-11-21T10:00:01.000Z');

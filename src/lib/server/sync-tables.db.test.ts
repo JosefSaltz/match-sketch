@@ -41,7 +41,7 @@ function planRow(ownerId: string) {
 		widthFt: 90,
 		depthFt: 60,
 		unit: 'yd' as const,
-		schemaVersion: 1,
+		schemaVersion: 2,
 		document: emptyPlanDocument()
 	};
 }

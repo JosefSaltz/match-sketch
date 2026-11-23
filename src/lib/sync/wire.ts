@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { PlanDocumentSchema } from '../model/plan';
+import { PLAN_SCHEMA_VERSION } from '../model/plan';
+import { AnyPlanDocumentSchema, readPlanDocument } from '../model/upgrade';
 import {
 	CanvasInputSchema,
 	MatchInputSchema,
@@ -17,7 +18,7 @@ export type SyncTable = 'canvases' | 'matches' | 'plans';
 export const SYNC_TABLES: readonly SyncTable[] = ['canvases', 'matches', 'plans'];
 
 /** The plan document schema this app understands. */
-export const SUPPORTED_SCHEMA_VERSION = 1;
+export const SUPPORTED_SCHEMA_VERSION = PLAN_SCHEMA_VERSION;
 
 export const MAX_PUSH_RECORDS = 50;
 export const MAX_PULL_RECORDS = 200;
@@ -46,8 +47,10 @@ export const WireRecordSchema = z.discriminatedUnion('table', [
 	z.object({
 		table: z.literal('plans'),
 		...planFields,
-		schemaVersion: z.literal(SUPPORTED_SCHEMA_VERSION),
-		document: PlanDocumentSchema
+		// An app from before schema version 2 (a stale tab) still pushes version 1; the server
+		// stores it upgraded.
+		schemaVersion: z.literal([1, SUPPORTED_SCHEMA_VERSION]),
+		document: AnyPlanDocumentSchema
 	})
 ]);
 export type WireRecord = z.infer<typeof WireRecordSchema>;
@@ -127,8 +130,8 @@ export function fromServer(record: ServerRecord): CanvasRecord | MatchRecord | P
 		case 'matches':
 			return { ...withoutTable(record), dirty: 0 };
 		case 'plans': {
-			if (record.schemaVersion !== SUPPORTED_SCHEMA_VERSION) throw new Error('newer-schema');
-			const document = PlanDocumentSchema.parse(record.document);
+			if (record.schemaVersion > SUPPORTED_SCHEMA_VERSION) throw new Error('newer-schema');
+			const document = readPlanDocument(record.document);
 			return {
 				...withoutTable(record),
 				schemaVersion: SUPPORTED_SCHEMA_VERSION,

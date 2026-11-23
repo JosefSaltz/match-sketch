@@ -14,8 +14,10 @@ test('a signed-in device opens and edits offline, then syncs (Review Focus #5)',
 	await page.goto('/');
 	await createCanvas(page, { name: 'Bay 4', width: '30', depth: '20', unit: 'Yards' });
 	const planId = await createPlanFromCanvas(page, 'Bay 4');
-	await page.goto('/');
+	// Catch the push on the editor: reloading the home page first syncs at once and can skip
+	// the pending state.
 	await pushed(page);
+	await page.goto('/');
 	// The service worker precaches the whole app (about 1.5 MB) before it takes control; under
 	// a parallel test run that can take a while.
 	await page.waitForFunction(() => navigator.serviceWorker?.controller !== null, null, {

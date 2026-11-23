@@ -17,7 +17,7 @@ export function upgradeV1(doc: PlanDocumentV1): PlanDocument {
 /** Either version of a plan document, parsed as version 2. */
 export const AnyPlanDocumentSchema = z.union([
 	PlanDocumentSchema,
-	PlanDocumentV1Schema.transform(upgradeV1)
+	PlanDocumentV1Schema.transform(upgradeV1).pipe(PlanDocumentSchema)
 ]);
 
 /**
@@ -28,6 +28,6 @@ export function readPlanDocument(document: unknown): PlanDocument {
 	const v2 = PlanDocumentSchema.safeParse(document);
 	if (v2.success) return v2.data;
 	const v1 = PlanDocumentV1Schema.safeParse(document);
-	if (v1.success) return upgradeV1(v1.data);
+	if (v1.success) return PlanDocumentSchema.parse(upgradeV1(v1.data));
 	throw v2.error;
 }

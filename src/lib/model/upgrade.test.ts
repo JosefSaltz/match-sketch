@@ -35,3 +35,13 @@ describe('readPlanDocument', () => {
 		expect(() => readPlanDocument(null)).toThrow();
 	});
 });
+
+describe('long procedures', () => {
+	it('upgrades a version 1 procedure with a very long line', () => {
+		const { steps, ...brief } = emptyPlanDocument().brief;
+		void steps;
+		const long = 'Engage every target. '.repeat(400);
+		const doc = readPlanDocument({ ...emptyPlanDocument(), brief: { ...brief, procedure: long } });
+		expect(doc.brief.steps[0].text).toBe(long);
+	});
+});

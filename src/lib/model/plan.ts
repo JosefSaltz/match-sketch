@@ -32,7 +32,8 @@ export type Mark = z.infer<typeof MarkSchema>;
 /** One line of the stage procedure, with what its walkthrough step highlights. */
 export const StepSchema = z.object({
 	id: z.uuid(),
-	text: z.string().max(2000),
+	// No length limit on a line: version 1 procedures had none, and a pasted paragraph is one line.
+	text: z.string(),
 	marks: z.array(MarkSchema).max(200),
 	arrows: z.array(z.uuid()).max(200)
 });
@@ -45,7 +46,7 @@ export const StageBriefSchema = z.object({
 	startPosition: z.string(),
 	gunReady: z.string(),
 	/** The stage procedure, one step per line (spec §7.2, §7.10). */
-	steps: z.array(StepSchema).max(500),
+	steps: z.array(StepSchema).max(5000),
 	roundCount: z.string(),
 	parTime: z.string(),
 	targetsOverride: z.string().nullable(),

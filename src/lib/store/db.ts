@@ -45,8 +45,12 @@ export class MatchSketchDB extends Dexie {
 					.modify((plan: { schemaVersion: number; document: unknown; share?: unknown }) => {
 						plan.share ??= null;
 						if (plan.schemaVersion !== 1) return;
-						plan.document = readPlanDocument(plan.document);
-						plan.schemaVersion = PLAN_SCHEMA_VERSION;
+						try {
+							plan.document = readPlanDocument(plan.document);
+							plan.schemaVersion = PLAN_SCHEMA_VERSION;
+						} catch {
+							// A plan this app can't read stays as it was rather than keep the store closed.
+						}
 					});
 				await tx
 					.table('matches')

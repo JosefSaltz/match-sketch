@@ -13,12 +13,15 @@ FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/var/cache/pnpm \
 	pnpm install --store-dir /var/cache/pnpm --frozen-lockfile
 COPY . .
-# The public Supabase URL and publishable key are inlined into the bundle (src/env.ts).
+# The public Supabase URL and publishable key, and the feature flags, are inlined into the
+# bundle (src/env.ts).
 ARG SUPABASE_URL
 ARG SUPABASE_PUBLISHABLE_KEY
+ARG FEATURE_DRAFT_FROM_TEXT=false
 # SvelteKit's route analysis also checks the private, runtime-only variables. Placeholders pass
 # that check and are never inlined; the container reads and checks the real ones when it starts.
 RUN SUPABASE_URL="$SUPABASE_URL" SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+	FEATURE_DRAFT_FROM_TEXT="$FEATURE_DRAFT_FROM_TEXT" \
 	SUPABASE_SECRET_KEY=build-placeholder DATABASE_URL=postgresql://build-placeholder/postgres \
 	pnpm build
 

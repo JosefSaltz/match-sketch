@@ -7,6 +7,8 @@ services:
         # Inlined into the bundle at build time (src/env.ts): set them as build variables.
         SUPABASE_URL: ${SUPABASE_URL:?}
         SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?}
+        # Feature flag: `true` turns on Draft from text (it also needs ANTHROPIC_API_KEY below).
+        FEATURE_DRAFT_FROM_TEXT: ${FEATURE_DRAFT_FROM_TEXT:-false}
     environment:
       # Coolify routes the app's domain to port 3000 inside the container.
       - SERVICE_FQDN_APP_3000

@@ -46,6 +46,7 @@ Don't use the Supabase MCP `apply_migration` tool for schema changes. It records
 ## Draft from text
 
 - **What it is:** the editor's "Draft from text" asks Claude Opus 5.5 (through `POST /api/drafts`) to lay out the stage from its description.
+- **Feature flag:** it is off unless `FEATURE_DRAFT_FROM_TEXT=true` at build time. While off, the editor has no Draft button, the admin page shows no model spend, and `POST /api/drafts` answers 404. Turning it on or off needs a rebuild (a Coolify redeploy). Locally, `scripts/local-env.ts` turns it on; run `FEATURE_DRAFT_FROM_TEXT=false pnpm dev` to see the app without it.
 - **Logging:** every request is a row in `ai_drafts`, holding the tokens, the estimated cost, the status, and the request and response.
 - **Limits:**
   - one running draft per user;
@@ -61,6 +62,7 @@ Don't use the Supabase MCP `apply_migration` tool for schema changes. It records
 | -------------------------- | ---------------------- | -------------------------------------------------------------------------------------------- |
 | `SUPABASE_URL`             | build (inlined)        | Supabase dashboard → Project Settings → API (`https://<ref>.supabase.co`)                    |
 | `SUPABASE_PUBLISHABLE_KEY` | build (inlined)        | Supabase dashboard → API Keys → publishable key (`sb_publishable_…`)                         |
+| `FEATURE_DRAFT_FROM_TEXT`  | build (inlined)        | Feature flag: `true` turns on Draft from text. Default off.                                  |
 | `SUPABASE_SECRET_KEY`      | runtime (server only)  | Supabase dashboard → API Keys → secret key (`sb_secret_…`). Bypasses RLS, so keep it secret. |
 | `DATABASE_URL`             | runtime (server only)  | Supabase dashboard → Connect → **Session pooler** (port 5432, IPv4), with the DB password    |
 | `ORIGIN`                   | runtime (adapter-node) | The app's public URL, e.g. `https://sketch.example.com` (no trailing slash)                  |
@@ -78,8 +80,8 @@ The app deploys as one Docker image built from `Dockerfile`, through `docker-com
 2. **Domain:** set the `app` service's domain to the public URL with the container port, e.g. `https://sketch.example.com:3000`. The port tells the proxy where to route; visitors still use 443.
 3. **Environment variables:**
    - Set every variable in the table above.
-   - Mark `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` as **build** variables (they are build args).
-   - The other three are runtime variables.
+   - Mark `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `FEATURE_DRAFT_FROM_TEXT` as **build** variables (they are build args).
+   - The rest are runtime variables.
    - Set `ORIGIN` to the same public URL as the domain, without the `:3000`.
 4. **Health:** the compose health check calls `GET /health` (`ok`). Coolify takes an unhealthy container out of routing.
 5. **Deploy.** Pushing to the connected branch redeploys if auto-deploy is on.

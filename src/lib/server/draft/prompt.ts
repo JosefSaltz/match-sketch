@@ -17,7 +17,7 @@ Layout conventions:
 - The start position sits near the uprange edge.
 - Shooting areas (SA-1, SA-2, …), shooting boxes, walls and props the shooter uses are uprange; the targets each one engages are downrange of it.
 - Follow the order of the procedure: SA-1 first, then SA-2, and so on, usually across or downrange.
-- Label things the procedure names: SA-1…SA-n on shooting areas, letters (A, B) on dump boxes, so the drawing matches the text.
+- Label things the procedure names: SA-1…SA-n on shooting areas, letters (A, B) on dump boxes, so the drawing matches the text. Write each label exactly as the procedure writes it ("SA-4", not "SA-4 Rooftop"; "B", not "B (SA-5)"), and leave everything else unlabelled: the symbol already shows what a target or prop is.
 - For a row of identical targets, place one target symbol with a count (for example 4 static steel as one object with count 4) instead of many separate symbols.
 - Keep fixed-size symbols (targets and small props) apart by at least the minimum spacing given, so they don't overlap when printed.
 - Footprints (walls, boxes, fault lines, vehicles, platforms…) are drawn to scale: give widthFt and depthFt, or null to use the catalog size.

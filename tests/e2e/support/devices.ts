@@ -13,7 +13,9 @@ export async function otherDevice(browser: Browser, baseURL: string, account: Ac
 
 /** Waits for the sync indicator to settle on "Synced". */
 export async function synced(page: Page, timeout = 15_000): Promise<void> {
-	await expect(page.getByTestId('sync-status')).toHaveText('Synced', { timeout });
+	await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'Synced', {
+		timeout
+	});
 }
 
 /**
@@ -21,7 +23,10 @@ export async function synced(page: Page, timeout = 15_000): Promise<void> {
  * so this state is reliable to catch), then synced.
  */
 export async function pushed(page: Page): Promise<void> {
-	await expect(page.getByTestId('sync-status')).toHaveText(/Changes pending|Syncing…/);
+	await expect(page.getByTestId('sync-status')).toHaveAttribute(
+		'data-state',
+		/Changes pending|Syncing…/
+	);
 	await synced(page);
 }
 

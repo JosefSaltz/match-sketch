@@ -30,7 +30,7 @@ test('a signed-in device opens and edits offline, then syncs (Review Focus #5)',
 	await page.reload();
 	await expect(page.getByRole('heading', { level: 1, name: 'Match Sketch' })).toBeVisible();
 	expect(documents.at(-1)?.fromServiceWorker()).toBe(true);
-	await expect(page.getByTestId('sync-status')).toHaveText('Offline');
+	await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'Offline');
 	const plans = page.locator('section[aria-labelledby="plans-heading"]').getByRole('listitem');
 	await expect(plans).toHaveCount(1);
 
@@ -38,7 +38,7 @@ test('a signed-in device opens and edits offline, then syncs (Review Focus #5)',
 	await expect(page).toHaveURL(`/plans/${planId}`);
 	await dragFromPalette(page, 'popper', await bayPoint(page, 0.5, 0.5));
 	await expect(page.getByTestId('object')).toHaveCount(1);
-	await expect(page.getByTestId('sync-status')).toHaveText('Offline');
+	await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'Offline');
 
 	await context.setOffline(false);
 	await synced(page);

@@ -51,6 +51,26 @@ test('a plan reaches another device, with its edits and its deletion', async ({
 	await other.context.close();
 });
 
+test("the cloud button pulls another device's plan without waiting for the next round", async ({
+	page,
+	browser,
+	baseURL,
+	account
+}) => {
+	await page.goto('/');
+	await synced(page);
+	const other = await otherDevice(browser, baseURL!, account);
+	await namedPlan(other.page, 'Bay drill');
+	await pushed(other.page);
+	await other.context.close();
+
+	// Well inside the 30 s interval, so only the click can have fetched it.
+	await page.getByRole('button', { name: /Synced\. Sync now/ }).click();
+	await expect(unassigned(page).getByRole('heading', { name: 'Bay drill' })).toBeVisible({
+		timeout: 5_000
+	});
+});
+
 test.describe('with requests routed', () => {
 	// page.route can't see requests that a service worker handles.
 	test.use({ serviceWorkers: 'block' });

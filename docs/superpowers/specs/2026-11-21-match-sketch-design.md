@@ -111,7 +111,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 ### 7.1 Screens
 
 1. **Sign in / accept invite / set password.** (Needs a connection.)
-2. **Home:** _My matches_ (name, date, stage count), _Unassigned plans_ (plans not in a match), and _My canvases_ (name, dimensions). Actions: new match, new plan, new canvas, open, duplicate, delete. A sync status indicator (synced / offline / changes pending / conflict) is always visible.
+2. **Home:** _My matches_ (name, date, stage count), _Unassigned plans_ (plans not in a match), and _My canvases_ (name, dimensions). Actions: new match, new plan, new canvas, open, duplicate, delete. A cloud sync button is always visible: its icon shows the state (synced / syncing / changes pending / offline / failed / conflict), with the words in its tooltip, and clicking it syncs now (or, on a conflict, lists the copies). Sync still runs on its own as well.
 3. **Match:** name, date, ordered list of its stage plans (drag to reorder; stage numbers follow the order unless set by hand). Actions: add new or existing plan, remove, print/PDF the whole match.
 4. **New plan:** pick a canvas from the library or define a new one (name, width, depth, unit) with an option to save it to the library; optionally pick a match. Then the editor opens.
 5. **Editor:**

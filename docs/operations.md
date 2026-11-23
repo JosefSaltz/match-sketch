@@ -94,7 +94,8 @@ These steps change the hosted project, so the operator runs them (or approves ea
 
 1. **Migrations:**
    - Run `supabase link --project-ref zmuadxeutafbnnfopqqx`, then `supabase db push --remote`. CLI v3 asks before it changes a hosted project; pass `--yes` only when you mean it.
-   - Check the result with the Supabase MCP: `list_tables` shows `public.profiles` with RLS on, and `get_advisors` (security) shows nothing new.
+   - Check the result with the Supabase MCP: `list_tables` shows `public.profiles` and `public.share_tokens` with RLS on, and `get_advisors` (security) shows nothing new.
+   - **Plan 7 (share links, schema version 2):** `share_links`, `share_tokens` and `share_tokens_grants` add the share columns and the server-only token table. Plans saved before keep `schema_version` 1 in the database and are upgraded as they are read; an app tab still open from before the deploy can still push, and asks the user to reload once it meets a version 2 plan.
 2. **Auth settings** (dashboard → Authentication):
    - **Sign-ups off:** Sign In / Providers → "Allow new users to sign up" disabled. Email provider stays enabled.
    - **URL Configuration:** Site URL = the app's public URL. Add `https://<domain>/**` to the redirect URLs.

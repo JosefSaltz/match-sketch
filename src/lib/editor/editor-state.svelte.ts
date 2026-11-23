@@ -20,11 +20,14 @@ import { gridChoice, gridSpacing, type GridChoice } from '../geometry/grid';
 import {
 	emptyPlanDocument,
 	type Anchor,
+	type Meaning,
 	type PlanDisplay,
 	type PlanDocument,
-	type StageBrief
+	type StageBrief,
+	type Step
 } from '../model/plan';
 import { stepsFromText } from '../model/procedure';
+import { markObjects, setStepArrows } from './walkthrough';
 import type { Share } from '../model/share';
 import { nextShare, type ShareAction } from '../store/share';
 import { effectiveStageNumber, now, planTitle, type PlanRecord } from '../store/records';
@@ -165,7 +168,12 @@ export class EditorState {
 	/** The plan's read-only link (spec §7.11); not part of the document, so not undoable. */
 	share = $state.raw<Share | null>(null);
 	/** Which tab the right column shows. */
-	panel = $state<'properties' | 'brief'>('properties');
+	panel = $state<'properties' | 'brief' | 'walkthrough'>('properties');
+	/** The walkthrough step being marked (Walkthrough tab), if it still exists. */
+	activeStepId = $state<string | null>(null);
+	activeStep: Step | null = $derived(
+		this.doc.brief.steps.find((s) => s.id === this.activeStepId) ?? null
+	);
 	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
 	#typing: string | null = null;
 	#queue: SaveQueue<{ doc: PlanDocument; at: string }>;
@@ -184,6 +192,22 @@ export class EditorState {
 				if (status === 'saved') deps.journal?.clear();
 			}
 		);
+	}
+
+	/** Marks the selected objects in the active step with `meaning`; `null` clears them. */
+	markSelected(meaning: Meaning | null): void {
+		const step = this.activeStep;
+		const ids = this.selectedObjects.map((o) => o.id);
+		if (!step || !ids.length) return;
+		this.commit(markObjects(this.#current, step.id, ids, meaning));
+	}
+
+	/** Shows the selected arrows in the active step, or stops showing them. */
+	setSelectedArrowsInStep(include: boolean): void {
+		const step = this.activeStep;
+		const ids = this.selectedAnnotations.filter((a) => a.type === 'arrow').map((a) => a.id);
+		if (!step || !ids.length) return;
+		this.commit(setStepArrows(this.#current, step.id, ids, include));
 	}
 
 	/** Turns sharing on or off, or resets the link (see `nextShare`). */

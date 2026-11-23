@@ -5,7 +5,7 @@
 
 	let { editor }: { editor: EditorState } = $props();
 
-	type Tab = 'properties' | 'brief';
+	type Tab = 'properties' | 'brief' | 'walkthrough';
 	const TABS: { id: Tab; label: string }[] = [
 		{ id: 'properties', label: 'Properties' },
 		{ id: 'brief', label: 'Brief' }

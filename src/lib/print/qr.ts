@@ -1,9 +1,13 @@
 import { encode } from 'uqr';
 import type { Rect } from './layout';
 
-/** The QR code for `text` as rows of dark (true) and light modules, with a 2-module quiet zone. */
+/**
+ * The QR code for `text` as rows of dark (true) and light modules, with a 2-module quiet zone.
+ * Error correction L keeps the version low, so modules print as large as the header allows (a
+ * clean laser print needs little correction).
+ */
 export function qrModules(text: string): boolean[][] {
-	return encode(text, { ecc: 'M', border: 2 }).data;
+	return encode(text, { ecc: 'L', border: 2 }).data;
 }
 
 /** One SVG path drawing the dark modules into `rect` (attributes only, for the PDF). */

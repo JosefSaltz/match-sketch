@@ -42,7 +42,7 @@
 7. **Pushes without `share`** (an older app) leave the server's share columns alone. A push whose token belongs to another record is rejected (`invalid`).
 8. **Marks are pruned** when their object or arrow goes: `deleteItems`, `applyDraft`. Duplicated objects get no marks.
 9. **Shared match:** the link shows the match's non-deleted stages in stage order, with stage numbers from `effectiveStageNumber`. Each stage opens at `?stage=<planId>`; a stage id that isn't in the match shows the bad-link screen.
-10. **QR on print:** only on a plan's first (stage) page, in the header's right end: a square the header's height (60 px), ECC `M`, 2-module quiet zone, drawn as one SVG path (attributes only, for svg2pdf), with the two-line caption right-aligned to its left. The title area narrows to fit. Stage link if the plan is shared; else, on a match print, the match link at that stage; else no code.
+10. **QR on print:** only on a plan's first (stage) page, in the header's right end: a square the header's height (60 px), ECC `L` (changed from `M` after review: larger modules), 2-module quiet zone, drawn as one SVG path (attributes only, for svg2pdf), with the two-line caption right-aligned to its left. The title area narrows to fit. Stage link if the plan is shared; else, on a match print, the match link at that stage; else no code.
 
 ## Review Focus
 
@@ -260,7 +260,7 @@ tests/e2e/walkthrough.spec.ts, share.spec.ts, viewer.spec.ts
 **Interfaces:**
 
 - **Produces:**
-  - `qrModules(text: string): boolean[][]` (ECC M, border 2).
+  - `qrModules(text: string): boolean[][]` (ECC L, border 2).
   - `PlanPrintInput.link: string | null`; `PageHeader.qr: { rect: Rect; caption: TextBlock } | null` (Decision 10).
   - `printInput(plan, match, opts, link)`.
   - `stageLink(origin: string, plan: Pick<PlanRecord, 'id' | 'share'>, match: Pick<MatchRecord, 'share'> | null): string | null` in `input.ts`.

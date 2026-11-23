@@ -183,6 +183,18 @@ describe('layoutPlan edge cases (final review)', () => {
 		).toBeLessThanOrEqual(long.header.qr!.caption.x);
 	});
 
+	it('cuts a long match line before the QR code', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const [p] = layoutPlan(
+			input({ link, matchName: 'A very long match name '.repeat(6) }),
+			measure
+		);
+		expect(p.header.sub.endsWith('…')).toBe(true);
+		expect(p.header.titleX + measure(p.header.sub, 12, false)).toBeLessThanOrEqual(
+			p.header.qr!.caption.x
+		);
+	});
+
 	it('prints the QR code only on the stage page, not continued or tile pages', () => {
 		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
 		const long = layoutPlan(

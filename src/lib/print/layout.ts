@@ -186,6 +186,7 @@ function heading(text: string, x: number, y: number, width: number): TextBlock {
 const NUMBER_BLOCK_MIN = 84;
 const TITLE_PX = 24;
 const TITLE_MIN_PX = 14;
+const SUB_PX = 12;
 const QR_CAPTION_W = 62;
 const QR_CAPTION_PX = 8;
 const QR_CAPTION_LINE_H = 10;
@@ -235,11 +236,16 @@ function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): Pag
 	while (title.length > 1 && measure(title.toUpperCase(), titleFontPx, true) > room) {
 		title = `${title.slice(0, -2).trimEnd()}…`;
 	}
+	// The match line shares the room: cut it before it runs under the QR code.
+	let sub = [input.matchName, input.date].filter(Boolean).join(' · ');
+	while (sub.length > 1 && measure(sub, SUB_PX, false) > room) {
+		sub = `${sub.slice(0, -2).trimEnd()}…`;
+	}
 	return {
 		rect,
 		number,
 		title,
-		sub: [input.matchName, input.date].filter(Boolean).join(' · '),
+		sub,
 		titleX,
 		titleFontPx,
 		numberBlockWidth,

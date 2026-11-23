@@ -172,7 +172,7 @@ export class EditorState {
 	/** The walkthrough step being marked (Walkthrough tab), if it still exists. */
 	activeStepId = $state<string | null>(null);
 	activeStep: Step | null = $derived(
-		this.doc.brief.steps.find((s) => s.id === this.activeStepId) ?? null
+		this.doc.brief.steps.find((s) => s.id === this.activeStepId && s.text.trim() !== '') ?? null
 	);
 	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
 	#typing: string | null = null;

@@ -13,9 +13,10 @@ export function pageSize(o: Orientation): { width: number; height: number } {
 /** 0.45 in. */
 export const MARGIN_PX = 43;
 
-/** Fixed printed symbol sizes: 0.35, 0.45 and 0.55 in. */
+/** Fixed printed symbol sizes: 0.35, 0.45, 0.55 and 0.65 in. */
 export const PRINT_SYMBOL_PX: Record<SymbolSize, number> = {
 	small: 33.6,
 	medium: 43.2,
-	large: 52.8
+	large: 52.8,
+	xlarge: 62.4
 };

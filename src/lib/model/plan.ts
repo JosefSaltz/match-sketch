@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
-export const SYMBOL_SIZES = ['small', 'medium', 'large'] as const;
+export const SYMBOL_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 export type SymbolSize = (typeof SYMBOL_SIZES)[number];
 
 /** Fixed on-screen size of symbol glyphs, in px. */
-export const SYMBOL_PX: Record<SymbolSize, number> = { small: 24, medium: 32, large: 44 };
+export const SYMBOL_PX: Record<SymbolSize, number> = {
+	small: 24,
+	medium: 32,
+	large: 44,
+	xlarge: 56
+};
 
 const finite = z.number().refine(Number.isFinite, 'Must be a finite number');
 

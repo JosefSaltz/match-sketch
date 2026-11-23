@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 /** Symbol entries in the catalog: 19 targets, 10 props, the dump box and the shooting position. */
 const SYMBOL_COUNT = 31;
 
-test('every symbol fits inside its box at all three sizes', async ({ page }) => {
+test('every symbol fits inside its box at all four sizes', async ({ page }) => {
 	await page.goto('/symbols');
 	await expect(page.getByRole('heading', { level: 1, name: 'Symbols' })).toBeVisible();
 	const report = await page.evaluate(() => {
@@ -45,7 +45,7 @@ test('every symbol fits inside its box at all three sizes', async ({ page }) => 
 		return { count: holders.length, out };
 	});
 	expect(report.out).toEqual([]);
-	expect(report.count).toBe(3 * SYMBOL_COUNT);
+	expect(report.count).toBe(4 * SYMBOL_COUNT);
 });
 
 test('every footprint draws on the sheet', async ({ page }) => {

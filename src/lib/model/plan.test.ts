@@ -65,6 +65,11 @@ describe('plan document schema', () => {
 		expect(PlanDocumentSchema.safeParse({ ...doc, annotations: [bad] }).success).toBe(false);
 	});
 
+	it('accepts the extra large symbol size', () => {
+		const display = { ...doc.display, symbolSize: 'xlarge' };
+		expect(PlanDocumentSchema.safeParse({ ...doc, display }).success).toBe(true);
+	});
+
 	it('accepts an optional guide spacing and rejects a non-positive one', () => {
 		const display = { ...doc.display, gridFt: 75 };
 		expect(PlanDocumentSchema.safeParse({ ...doc, display }).success).toBe(true);

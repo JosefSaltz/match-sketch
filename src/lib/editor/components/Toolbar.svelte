@@ -34,7 +34,8 @@
 	const SIZE_OPTIONS: { value: SymbolSize; label: string }[] = [
 		{ value: 'small', label: 'Small' },
 		{ value: 'medium', label: 'Medium' },
-		{ value: 'large', label: 'Large' }
+		{ value: 'large', label: 'Large' },
+		{ value: 'xlarge', label: 'Extra large' }
 	];
 	const FIELD = 'inline-flex items-center gap-2';
 	const LABEL = 'font-display text-xs tracking-wide uppercase text-outline-sm';

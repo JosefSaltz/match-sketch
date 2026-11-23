@@ -225,14 +225,21 @@ async function tokenAllowed(db: Db, ownerId: string, record: WireRecord): Promis
 	return m === undefined;
 }
 
+/** The record as if an older app pushed it: without `share`, so the stored one stays. */
+function withoutShare(record: WireRecord): WireRecord {
+	if (record.table === 'canvases') return record;
+	const { share, ...rest } = record;
+	void share;
+	return rest;
+}
+
 async function pushOne(tx: Tx, ownerId: string, item: PushItem): Promise<PushResult> {
-	const { record, baseVersion } = item;
+	const { baseVersion } = item;
+	let { record } = item;
 	const ref = { table: record.table, id: record.id };
 	// Someone else's token, or one another record holds (which would also break the unique index
-	// and the transaction).
-	if (!(await tokenAllowed(tx, ownerId, record))) {
-		return { status: 'rejected', ...ref, reason: 'invalid' };
-	}
+	// and the transaction): the record still syncs, without the link, so its edits never get stuck.
+	if (!(await tokenAllowed(tx, ownerId, record))) record = withoutShare(record);
 	let existing = await findExisting(tx, record.table, record.id);
 	if (!existing) {
 		if (await insertRecord(tx, ownerId, record)) return { status: 'accepted', ...ref, version: 1 };

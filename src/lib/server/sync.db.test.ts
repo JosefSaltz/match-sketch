@@ -5,7 +5,7 @@ import { newShareId } from '../model/share';
 import { readPlanDocument } from '../model/upgrade';
 import { WireRecordSchema, type WireRecord } from '../sync/wire';
 import { createDatabase } from './db/client';
-import { canvases, plans } from './db/schema';
+import { canvases, matches, plans } from './db/schema';
 import { pullChanges, pushRecords } from './sync';
 import { testAdminClient, testDatabaseUrl, uniqueEmail } from './testing/supabase';
 
@@ -140,7 +140,7 @@ describe('share links', () => {
 		expect(row).toMatchObject({ shareId: p.share.id, shareOn: true });
 	});
 
-	it('rejects a token another plan or match holds, and applies the rest', async () => {
+	it('syncs a record whose token another plan or match holds, without the token', async () => {
 		const owner = await createOwner();
 		const other = await createOwner();
 		const theirs = { ...plan(), share: { id: tokenA, on: true } };
@@ -160,8 +160,10 @@ describe('share links', () => {
 			{ record: match, baseVersion: 0 },
 			{ record: fine, baseVersion: 0 }
 		]);
-		expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected', 'accepted']);
-		expect(results[0]).toMatchObject({ reason: 'invalid' });
+		expect(results.map((r) => r.status)).toEqual(['accepted', 'accepted', 'accepted']);
+		const [mine] = await db.select().from(plans).where(eq(plans.id, results[0].id));
+		const [theirMatch] = await db.select().from(matches).where(eq(matches.id, match.id));
+		expect([mine.shareId, theirMatch.shareId]).toEqual([null, null]);
 	});
 });
 
@@ -176,15 +178,16 @@ describe('share tokens stay with their first owner', () => {
 		share: { id: token, on: true }
 	});
 
-	it("rejects a match that borrows a shared plan's id and token", async () => {
+	it("gives a match that borrows a shared plan's id and token no link", async () => {
 		const victim = await createOwner();
 		const attacker = await createOwner();
 		const shared = { ...plan(), share: { id: newShareId(), on: true } };
 		await pushRecords(db, victim, [{ record: shared, baseVersion: 0 }]);
-		const [result] = await pushRecords(db, attacker, [
+		await pushRecords(db, attacker, [
 			{ record: matchWith(shared.id, shared.share.id), baseVersion: 0 }
 		]);
-		expect(result).toMatchObject({ status: 'rejected', reason: 'invalid' });
+		const [match] = await db.select().from(matches).where(eq(matches.id, shared.id));
+		expect(match?.shareId ?? null).toBeNull();
 	});
 
 	it('never hands a reset link to another account, so old QR codes stay safe', async () => {
@@ -197,10 +200,10 @@ describe('share tokens stay with their first owner', () => {
 		await pushRecords(db, victim, [
 			{ record: { ...shared, share: { id: newShareId(), on: true } }, baseVersion: 1 }
 		]);
-		const [result] = await pushRecords(db, attacker, [
-			{ record: { ...plan(), share: { id: old, on: true } }, baseVersion: 0 }
-		]);
-		expect(result).toMatchObject({ status: 'rejected', reason: 'invalid' });
+		const theirs = { ...plan(), share: { id: old, on: true } };
+		await pushRecords(db, attacker, [{ record: theirs, baseVersion: 0 }]);
+		const [row] = await db.select().from(plans).where(eq(plans.id, theirs.id));
+		expect(row.shareId).toBeNull();
 		// The owner may bring their old token back.
 		const [mine] = await pushRecords(db, victim, [
 			{ record: { ...plan(), share: { id: old, on: true } }, baseVersion: 0 }

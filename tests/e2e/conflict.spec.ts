@@ -33,7 +33,7 @@ test('a plan edited on two devices at once keeps both versions (Review Focus #1)
 
 	// A edits offline; B edits online and syncs first.
 	await context.setOffline(true);
-	await expect(page.getByTestId('sync-status')).toHaveText('Offline');
+	await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'Offline');
 	await setStageName(page, 'Bay drill A');
 	await b.page.goto(`/plans/${planId}`);
 	await setStageName(b.page, 'Bay drill B');
@@ -41,7 +41,9 @@ test('a plan edited on two devices at once keeps both versions (Review Focus #1)
 
 	// A comes back: the server's version wins the plan, A's is kept as a copy.
 	await context.setOffline(false);
-	await expect(page.getByTestId('sync-status')).toHaveText('Conflict', { timeout: 15_000 });
+	await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'Conflict', {
+		timeout: 15_000
+	});
 	await page.getByRole('tab', { name: 'Brief' }).click();
 	await expect(briefField(page)).toHaveValue('Bay drill B');
 

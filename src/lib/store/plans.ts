@@ -34,7 +34,8 @@ export async function createPlan(
 		depthFt,
 		unit,
 		schemaVersion: PLAN_SCHEMA_VERSION,
-		document: emptyPlanDocument()
+		document: emptyPlanDocument(),
+		share: null
 	};
 	await db.plans.add(record);
 	return record;
@@ -90,6 +91,7 @@ export async function duplicatePlan(db: MatchSketchDB, id: string): Promise<Plan
 		...newSyncMeta(),
 		// A copy of a stage joins the same match, after its last stage.
 		stageOrder: source.matchId ? await nextStageOrder(db, source.matchId) : null,
+		share: null,
 		document: { ...source.document, brief: { ...source.document.brief, stageName } }
 	};
 	await db.plans.add(record);

@@ -16,7 +16,8 @@ const base: PlanRecord = {
 	depthFt: 900,
 	unit: 'yd',
 	schemaVersion: 2,
-	document: emptyPlanDocument()
+	document: emptyPlanDocument(),
+	share: null
 };
 
 describe('printInput', () => {

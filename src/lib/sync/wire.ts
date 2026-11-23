@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PLAN_SCHEMA_VERSION } from '../model/plan';
+import { ShareSchema } from '../model/share';
 import { AnyPlanDocumentSchema, readPlanDocument } from '../model/upgrade';
 import {
 	CanvasInputSchema,
@@ -41,12 +42,17 @@ const planFields = {
 	unit: CanvasInputSchema.shape.unit
 };
 
+/** An app from before share links pushes no `share`; the server then keeps the stored one. */
+const pushedShare = { share: ShareSchema.nullable().optional() };
+const storedShare = { share: ShareSchema.nullable() };
+
 export const WireRecordSchema = z.discriminatedUnion('table', [
 	z.object({ table: z.literal('canvases'), ...canvasFields }),
-	z.object({ table: z.literal('matches'), ...matchFields }),
+	z.object({ table: z.literal('matches'), ...matchFields, ...pushedShare }),
 	z.object({
 		table: z.literal('plans'),
 		...planFields,
+		...pushedShare,
 		// An app from before schema version 2 (a stale tab) still pushes version 1; the server
 		// stores it upgraded.
 		schemaVersion: z.literal([1, SUPPORTED_SCHEMA_VERSION]),
@@ -63,11 +69,12 @@ const version = { version: z.int().min(1) };
  */
 export const ServerRecordSchema = z.discriminatedUnion('table', [
 	z.object({ table: z.literal('canvases'), ...canvasFields, ...version }),
-	z.object({ table: z.literal('matches'), ...matchFields, ...version }),
+	z.object({ table: z.literal('matches'), ...matchFields, ...version, ...storedShare }),
 	z.object({
 		table: z.literal('plans'),
 		...planFields,
 		...version,
+		...storedShare,
 		schemaVersion: z.int().min(1),
 		document: z.unknown()
 	})

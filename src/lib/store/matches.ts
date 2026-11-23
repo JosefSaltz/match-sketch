@@ -24,7 +24,11 @@ export async function listMatches(db: MatchSketchDB): Promise<MatchRecord[]> {
 }
 
 export async function createMatch(db: MatchSketchDB, input: MatchInput): Promise<MatchRecord> {
-	const record: MatchRecord = { ...newSyncMeta(), ...MatchInputSchema.parse(input) };
+	const record: MatchRecord = {
+		...newSyncMeta(),
+		...MatchInputSchema.parse(input),
+		share: null
+	};
 	await db.matches.add(record);
 	return record;
 }

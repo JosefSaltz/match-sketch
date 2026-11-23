@@ -130,10 +130,13 @@ async function applyConflict(
 				...plan,
 				...meta,
 				stageOrder: plan.matchId ? await nextStageOrder(db, plan.matchId) : null,
+				share: null,
 				document: { ...plan.document, brief: { ...plan.document.brief, stageName: name } }
 			};
+		} else if (sent.table === 'matches') {
+			record = { ...(current as MatchRecord), ...meta, name, share: null };
 		} else {
-			record = { ...(current as CanvasRecord | MatchRecord), ...meta, name };
+			record = { ...(current as CanvasRecord), ...meta, name };
 		}
 		// A deleted record that conflicts with an edit elsewhere needs no copy: the edit wins.
 		if (current.deletedAt === null) await table.add(record);
@@ -171,6 +174,7 @@ export async function keepAsConflictedCopy(
 		...newSyncMeta(),
 		updatedAt: timestamp(),
 		stageOrder: stored.matchId ? await nextStageOrder(db, stored.matchId) : null,
+		share: null,
 		document: { ...document, brief: { ...document.brief, stageName: name } }
 	};
 	await db.plans.add(copy);

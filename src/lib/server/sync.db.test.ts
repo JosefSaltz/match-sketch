@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
+import { newShareId } from '../model/share';
 import { readPlanDocument } from '../model/upgrade';
 import { WireRecordSchema, type WireRecord } from '../sync/wire';
 import { createDatabase } from './db/client';
@@ -113,6 +114,54 @@ describe('plan schema version 2', () => {
 		if (pulled?.table !== 'plans') throw new Error('expected the plan');
 		expect(pulled.schemaVersion).toBe(2);
 		expect(readPlanDocument(pulled.document).brief.steps.map((s) => s.text)).toEqual(['Start']);
+	});
+});
+
+describe('share links', () => {
+	const tokenA = 'AbCdEfGhIjKlMnOpQrStUv';
+
+	it('round-trips a pushed share through pull', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, owner, [{ record: p, baseVersion: 0 }]);
+		const { records } = await pullAll(owner);
+		expect(records.find((r) => r.id === p.id)).toMatchObject({ share: p.share });
+	});
+
+	it('keeps the stored share when an older app pushes none', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, owner, [{ record: p, baseVersion: 0 }]);
+		const { share, ...older } = p;
+		void share;
+		const [result] = await pushRecords(db, owner, [{ record: older, baseVersion: 1 }]);
+		expect(result.status).toBe('accepted');
+		const [row] = await db.select().from(plans).where(eq(plans.id, p.id));
+		expect(row).toMatchObject({ shareId: p.share.id, shareOn: true });
+	});
+
+	it('rejects a token another plan or match holds, and applies the rest', async () => {
+		const owner = await createOwner();
+		const other = await createOwner();
+		const theirs = { ...plan(), share: { id: tokenA, on: true } };
+		await pushRecords(db, other, [{ record: theirs, baseVersion: 0 }]);
+		const match = {
+			table: 'matches' as const,
+			id: crypto.randomUUID(),
+			updatedAt: new Date().toISOString(),
+			deletedAt: null,
+			name: 'SOF',
+			date: '',
+			share: { id: tokenA, on: true }
+		};
+		const fine = plan();
+		const results = await pushRecords(db, owner, [
+			{ record: { ...plan(), share: { id: tokenA, on: false } }, baseVersion: 0 },
+			{ record: match, baseVersion: 0 },
+			{ record: fine, baseVersion: 0 }
+		]);
+		expect(results.map((r) => r.status)).toEqual(['rejected', 'rejected', 'accepted']);
+		expect(results[0]).toMatchObject({ reason: 'invalid' });
 	});
 });
 

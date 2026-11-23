@@ -30,7 +30,7 @@ export class MatchSketchDB extends Dexie {
 			matches: 'id, updatedAt, dirty'
 		});
 		// Plan schema version 2: the procedure became steps. Not marked dirty: the server upgrades
-		// its copy the same way when it reads it.
+		// its copy the same way when it reads it. Plans and matches also gain a share link.
 		this.version(4)
 			.stores({
 				canvases: 'id, name, updatedAt, dirty',
@@ -38,16 +38,23 @@ export class MatchSketchDB extends Dexie {
 				settings: 'key',
 				matches: 'id, updatedAt, dirty'
 			})
-			.upgrade((tx) =>
-				tx
+			.upgrade(async (tx) => {
+				await tx
 					.table('plans')
 					.toCollection()
-					.modify((plan: { schemaVersion: number; document: unknown }) => {
+					.modify((plan: { schemaVersion: number; document: unknown; share?: unknown }) => {
+						plan.share ??= null;
 						if (plan.schemaVersion !== 1) return;
 						plan.document = readPlanDocument(plan.document);
 						plan.schemaVersion = PLAN_SCHEMA_VERSION;
-					})
-			);
+					});
+				await tx
+					.table('matches')
+					.toCollection()
+					.modify((match: { share?: unknown }) => {
+						match.share ??= null;
+					});
+			});
 	}
 }
 

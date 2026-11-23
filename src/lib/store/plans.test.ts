@@ -62,6 +62,14 @@ describe('plan repository', () => {
 		expect(planTitle((await getPlan(db, p.id))!)).toBe('Stage 3 — Bunker');
 	});
 
+	it('starts plans unshared and never copies a share link (Review Focus #1)', async () => {
+		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
+		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		expect(p.share).toBeNull();
+		await db.plans.update(p.id, { share: { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true } });
+		expect((await duplicatePlan(db, p.id)).share).toBeNull();
+	});
+
 	it('duplicates, lists newest first, and soft-deletes', async () => {
 		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
 		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });

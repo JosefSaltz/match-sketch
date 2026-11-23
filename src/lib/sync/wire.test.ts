@@ -17,7 +17,7 @@ const meta = {
 	dirty: 1 as const
 };
 const canvas: CanvasRecord = { ...meta, name: 'Bay 4', widthFt: 90, depthFt: 60, unit: 'yd' };
-const match: MatchRecord = { ...meta, name: 'SOF 2026', date: '2026-05-02' };
+const match: MatchRecord = { ...meta, name: 'SOF 2026', date: '2026-05-02', share: null };
 const plan: PlanRecord = {
 	...meta,
 	matchId: crypto.randomUUID(),
@@ -27,7 +27,8 @@ const plan: PlanRecord = {
 	depthFt: 60,
 	unit: 'yd',
 	schemaVersion: 2,
-	document: emptyPlanDocument()
+	document: emptyPlanDocument(),
+	share: { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true }
 };
 
 /** A plan document as an app before schema version 2 wrote it. */

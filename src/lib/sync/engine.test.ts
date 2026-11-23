@@ -17,6 +17,13 @@ import { conflictName, syncOnce, type Transport } from './engine';
 import type { PullResponse, PushItem, PushResult, ServerRecord, WireRecord } from './wire';
 
 /** An in-memory server with the push/pull rules of src/lib/server/sync.ts. */
+/** A pushed record as the server stores it: a push without `share` keeps none. */
+function stored(record: WireRecord, version: number): ServerRecord {
+	return record.table === 'canvases'
+		? { ...record, version }
+		: { ...record, share: record.share ?? null, version };
+}
+
 class FakeServer implements Transport {
 	rows = new Map<string, { record: ServerRecord; seq: number }>();
 	seq = 0;
@@ -31,7 +38,7 @@ class FakeServer implements Transport {
 				return { status: 'conflict', ...ref, server: row.record };
 			}
 			const version = row ? row.record.version + 1 : 1;
-			this.rows.set(record.id, { record: { ...record, version }, seq: ++this.seq });
+			this.rows.set(record.id, { record: stored(record, version), seq: ++this.seq });
 			return { status: 'accepted', ...ref, version };
 		});
 		if (this.beforeAnswer) await this.beforeAnswer();
@@ -53,7 +60,7 @@ class FakeServer implements Transport {
 	edit(record: WireRecord) {
 		const row = this.rows.get(record.id);
 		this.rows.set(record.id, {
-			record: { ...record, version: (row?.record.version ?? 0) + 1 },
+			record: stored(record, (row?.record.version ?? 0) + 1),
 			seq: ++this.seq
 		});
 	}
@@ -161,6 +168,29 @@ describe('syncOnce: conflicts', () => {
 		await savePlanDocument(db, plan.id, emptyPlanDocument());
 		const outcome = await syncOnce(db, server, () => at);
 		expect(outcome.changed).toContainEqual({ table: 'plans', id: plan.id });
+	});
+
+	it('gives conflicted plan and match copies no share link (Review Focus #1)', async () => {
+		const share = { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true };
+		const plan = await namedPlan('Shared stage');
+		const match = await createMatch(db, { name: 'SOF', date: '2026-05-02' });
+		await db.plans.update(plan.id, { share });
+		await db.matches.update(match.id, { share: { ...share, id: 'BbCdEfGhIjKlMnOpQrStUv' } });
+		await syncOnce(db, server, () => at);
+		for (const id of [plan.id, match.id]) server.edit(server.rows.get(id)!.record as WireRecord);
+		await savePlanDocument(db, plan.id, emptyPlanDocument());
+		await updateMatch(db, match.id, { name: 'SOF Day 2', date: '2026-05-02' });
+
+		const outcome = await syncOnce(db, server, () => at);
+
+		expect(outcome.conflicts).toHaveLength(2);
+		const copies = await Promise.all(
+			outcome.conflicts.map((c) =>
+				c.table === 'plans' ? db.plans.get(c.id) : db.matches.get(c.id)
+			)
+		);
+		expect(copies.map((c) => c?.share)).toEqual([null, null]);
+		expect((await db.plans.get(plan.id))?.share).toEqual(share);
 	});
 
 	it('names conflicted canvas and match copies the same way', async () => {

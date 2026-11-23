@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
 	type AnyPgColumn,
 	bigint,
+	boolean,
 	doublePrecision,
 	index,
 	integer,
@@ -72,6 +73,16 @@ const syncColumns = () => ({
 		.default(sql`nextval('sync_change_seq')`)
 });
 
+/**
+ * A record's read-only link (spec §7.11): the token is kept while sharing is off, so the same
+ * link (and printed QR codes) work again when it is turned back on. Tokens are unique across
+ * plans and matches; the server checks the other table on push.
+ */
+const shareColumns = () => ({
+	shareId: text('share_id').unique(),
+	shareOn: boolean('share_on').notNull().default(false)
+});
+
 /** Owners read their own rows if the Data API is ever granted access (it isn't today). */
 const syncPolicies = (name: string, t: { ownerId: AnyPgColumn; changeSeq: AnyPgColumn }) => [
 	pgPolicy(`${name}_select_own`, {
@@ -98,6 +109,7 @@ export const matches = pgTable(
 	'matches',
 	{
 		...syncColumns(),
+		...shareColumns(),
 		name: text().notNull(),
 		/** `YYYY-MM-DD`, or '' when the match has no date yet (as on the device). */
 		date: text().notNull()
@@ -110,6 +122,7 @@ export const plans = pgTable(
 	'plans',
 	{
 		...syncColumns(),
+		...shareColumns(),
 		matchId: uuid('match_id'),
 		stageOrder: integer('stage_order'),
 		sourceCanvasId: uuid('source_canvas_id'),

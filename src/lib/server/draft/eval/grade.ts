@@ -85,5 +85,7 @@ export function gradeDraft(c: EvalCase, result: DraftResult): Grade {
 		Number(checks.onBay),
 		Number(checks.noOverlap)
 	];
-	return { score: parts.reduce((s, p) => s + p, 0) / parts.length, checks };
+	// A draft that never came back drew nothing; checks that pass on nothing don't count.
+	const usable = result.status !== 'failed' && result.status !== 'refused';
+	return { score: usable ? parts.reduce((s, p) => s + p, 0) / parts.length : 0, checks };
 }

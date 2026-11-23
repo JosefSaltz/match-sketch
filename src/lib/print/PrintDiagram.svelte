@@ -144,8 +144,10 @@
 	const objects = $derived([...doc.objects].sort((a, b) => a.z - b.z));
 	const FADED = 0.25;
 	const marked = $derived(new Set(step?.marks.map((m) => m.objectId) ?? []));
+	/** Whether the step singles anything out; a step that doesn't leaves the drawing as it is. */
+	const focused = $derived(step !== null && (step.marks.length > 0 || step.arrows.length > 0));
 	/** Opacity of an object or arrow in the step: full when it is part of it. */
-	const fade = (inStep: boolean) => (step && !inStep ? FADED : undefined);
+	const fade = (inStep: boolean) => (focused && !inStep ? FADED : undefined);
 	/** Copies drawn behind the front glyph when one object stands for several targets. */
 	function cluster(obj: PlanObject, box: { width: number; height: number }) {
 		const count = obj.count ?? 1;

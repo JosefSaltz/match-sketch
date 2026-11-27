@@ -4,7 +4,9 @@
 	import { sounds } from '#lib/audio/sounds.svelte.js';
 	import { gridChoice, guideOptions } from '#lib/geometry/grid.js';
 	import { getDb } from '#lib/store/index.js';
-	import { setSetting, SOUNDS_SETTING } from '#lib/store/settings.js';
+	import { setSetting, SOUNDS_SETTING, ZONE_UNIT_SETTING } from '#lib/store/settings.js';
+	import type { ZoneUnit } from '#lib/safety/paths.js';
+	import { zoneUnit } from '#lib/safety/zone-unit.svelte.js';
 	import type { SnapSetting } from '#lib/geometry/snap.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import type { SymbolSize } from '#lib/model/plan.js';
@@ -58,6 +60,12 @@
 		}
 	}
 	const hasSteps = $derived(displaySteps(editor.doc.brief.steps).length > 0);
+
+	/** The unit danger zone tags use on this device (remembered like the theme). */
+	function setZoneUnit(unit: ZoneUnit) {
+		zoneUnit.value = unit;
+		setSetting(getDb(), ZONE_UNIT_SETTING, unit).catch(console.error);
+	}
 
 	/** Drag clicks on or off for this device (remembered like the theme). */
 	function toggleSounds() {
@@ -213,6 +221,17 @@
 				{#each LAYER_IDS as id (id)}
 					<Toggle label={layerSource(id).label} bind:checked={editor.dangerZones[id]} />
 				{/each}
+				<label class="mt-1 inline-flex items-center gap-2 text-sm">
+					Distances
+					<select
+						class={SELECT}
+						value={zoneUnit.value}
+						onchange={(e) => setZoneUnit(e.currentTarget.value as ZoneUnit)}
+					>
+						<option value="yd">Yards</option>
+						<option value="m">Meters</option>
+					</select>
+				</label>
 			</div>
 		{/if}
 	</div>

@@ -1,5 +1,4 @@
 /** Clipping, depth-mapped SVG paths and edge tags for danger zones. Pure. Spec §4.4. */
-import { fromFeet, type LengthUnit } from '../geometry/units';
 import type { CanvasSize, Point } from '../geometry/types';
 import { worldToScreen, type Viewport } from '../geometry/viewport';
 import { FT_PER_M, FAN_SOURCES, SPLASH_SOURCES, type LayerId } from './sources';
@@ -142,18 +141,33 @@ export function toPathData(points: Point[], vp: Viewport, closed: boolean): stri
 	return parts.join(' ') + (closed ? ' Z' : '');
 }
 
-const meters = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
-const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-const inUnit = (m: number, unit: LengthUnit) => Math.round(fromFeet(m * FT_PER_M, unit));
+/** The unit edge tags are shown in: yards, or meters (kilometers from 1,000 m). */
+export type ZoneUnit = 'yd' | 'm';
 
-/** "50 yd (45.72 m)": plan unit rounded to whole, source meters as published. */
-export function formatPublished(m: number, unit: LengthUnit): string {
-	return `${whole.format(inUnit(m, unit))} ${unit} (${meters.format(m)} m)`;
+/** A saved unit choice (settings store); anything but 'm' means yards. */
+export function parseZoneUnit(value: string | undefined): ZoneUnit {
+	return value === 'm' ? 'm' : 'yd';
 }
 
-/** "≥ 27–33 yd (25–30 m)". */
-export function formatPublishedRange(fromM: number, toM: number, unit: LengthUnit): string {
-	return `≥ ${whole.format(inUnit(fromM, unit))}–${whole.format(inUnit(toM, unit))} ${unit} (${meters.format(fromM)}–${meters.format(toM)} m)`;
+const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const upTo = (digits: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: digits });
+const YD_PER_M = FT_PER_M / 3;
+
+/** Meters as m below 1,000 and km from there, with `mDigits`/`kmDigits` decimals at most. */
+function metric(m: number, mDigits: number, kmDigits: number): string {
+	return m < 1000 ? `${upTo(mDigits).format(m)} m` : `${upTo(kmDigits).format(m / 1000)} km`;
+}
+
+/** A published distance: "50 yd" (whole yards), or the source's meters as published ("1.211 km"). */
+export function formatPublished(m: number, unit: ZoneUnit): string {
+	return unit === 'yd' ? `${whole.format(m * YD_PER_M)} yd` : metric(m, 2, 3);
+}
+
+/** "≥ 27–33 yd" or "≥ 25–30 m". */
+export function formatPublishedRange(fromM: number, toM: number, unit: ZoneUnit): string {
+	return unit === 'yd'
+		? `≥ ${whole.format(fromM * YD_PER_M)}–${whole.format(toM * YD_PER_M)} yd`
+		: `≥ ${upTo(2).format(fromM)}–${upTo(2).format(toM)} m`;
 }
 
 /** 0 inside the rect, otherwise the Euclidean distance to it. */
@@ -163,9 +177,11 @@ export function distanceOutside(p: Point, r: Rect): number {
 	return Math.hypot(dx, dy);
 }
 
-/** "46 yd past bay": derived distance in the plan unit only, whole number. */
-export function formatPast(ft: number, unit: LengthUnit): string {
-	return `${whole.format(Math.round(fromFeet(Math.max(0, ft), unit)))} ${unit} past bay`;
+/** "46 yd past bay" or "1.79 km past bay": a derived distance, rounded (whole m, 0.01 km). */
+export function formatPast(ft: number, unit: ZoneUnit): string {
+	const m = Math.max(0, ft) / FT_PER_M;
+	const text = unit === 'yd' ? `${whole.format(m * YD_PER_M)} yd` : metric(Math.round(m), 0, 2);
+	return `${text} past bay`;
 }
 
 /** dir is the unit direction (world feet) of the segment crossing the bay edge at `at`, pointing outward. */
@@ -188,7 +204,7 @@ function exitOf(line: Point[], r: Rect): Exit | null {
 }
 
 /** Spec §4.4: published numbers, plus how far each leaving line runs past the bay edge. */
-export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
+export function zoneTags(zones: ZoneSet, r: Rect, unit: ZoneUnit): EdgeTag[] {
 	const tags: EdgeTag[] = [];
 	for (const z of zones.splash) {
 		const src = SPLASH_SOURCES[z.sourceId];

@@ -5,8 +5,11 @@ import {
 	CLICK_SOUND_SETTING,
 	getSetting,
 	SOUNDS_SETTING,
-	THEME_SETTING
+	THEME_SETTING,
+	ZONE_UNIT_SETTING
 } from '#lib/store/settings.js';
+import { parseZoneUnit } from '#lib/safety/paths.js';
+import { zoneUnit } from '#lib/safety/zone-unit.svelte.js';
 import { applyTheme } from '#lib/theme/apply.js';
 import { currentTheme } from '#lib/theme/current.svelte.js';
 import { getTheme } from '#lib/theme/themes.js';
@@ -24,5 +27,6 @@ export const load: LayoutLoad = async () => {
 	currentTheme.id = theme.id;
 	sounds.on = (await getSetting(getDb(), SOUNDS_SETTING)) !== 'off';
 	sounds.click = parseClickParams(await getSetting(getDb(), CLICK_SOUND_SETTING));
+	zoneUnit.value = parseZoneUnit(await getSetting(getDb(), ZONE_UNIT_SETTING));
 	return { themeId: theme.id };
 };

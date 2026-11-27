@@ -12,6 +12,7 @@ import {
 	formatPublished,
 	formatPast,
 	formatPublishedRange,
+	parseZoneUnit,
 	groupTags,
 	toPathData,
 	zoneTags
@@ -208,12 +209,16 @@ describe('toPathData through a scale break', () => {
 
 describe('formatPublished', () => {
 	it('shows the plan unit rounded, then the source meters', () => {
-		expect(formatPublished(45.72, 'yd')).toBe('50 yd (45.72 m)');
-		expect(formatPublished(45.72, 'ft')).toBe('150 ft (45.72 m)');
-		expect(formatPublished(1800, 'yd')).toBe('1,969 yd (1,800 m)');
+		expect(formatPublished(45.72, 'yd')).toBe('50 yd');
+		expect(formatPublished(1800, 'yd')).toBe('1,969 yd');
+		expect(formatPublished(45.72, 'm')).toBe('45.72 m');
+		expect(formatPublished(399, 'm')).toBe('399 m');
+		expect(formatPublished(1211, 'm')).toBe('1.211 km');
+		expect(formatPublished(1800, 'm')).toBe('1.8 km');
 	});
 	it('formats a range', () => {
-		expect(formatPublishedRange(25, 30, 'yd')).toBe('≥ 27–33 yd (25–30 m)');
+		expect(formatPublishedRange(25, 30, 'yd')).toBe('≥ 27–33 yd');
+		expect(formatPublishedRange(25, 30, 'm')).toBe('≥ 25–30 m');
 	});
 });
 
@@ -232,9 +237,8 @@ describe('zoneTags', () => {
 		expect(ric).toHaveLength(2);
 		expect(disp).toHaveLength(2);
 		expect(tags).toHaveLength(4);
-		for (const t of ric)
-			expect(t.text).toBe('W 436 yd (399 m) · Y 1,324 yd (1,211 m) · reaches 1,314 yd past bay');
-		for (const t of disp) expect(t.text).toBe('X 1,969 yd (1,800 m) · 1,959 yd past bay');
+		for (const t of ric) expect(t.text).toBe('W 436 yd · Y 1,324 yd · reaches 1,314 yd past bay');
+		for (const t of disp) expect(t.text).toBe('X 1,969 yd · 1,959 yd past bay');
 		for (const t of tags) {
 			expect(onBoundary(t.at, r)).toBe(true);
 			expect(Math.hypot(t.dir.x, t.dir.y)).toBeCloseTo(1, 9);
@@ -270,7 +274,7 @@ describe('zoneTags', () => {
 		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
 		expect(tags.length).toBeGreaterThan(0);
 		for (const t of tags) {
-			expect(t.text).toBe('≥ 27–33 yd (25–30 m) · no stated limit');
+			expect(t.text).toBe('≥ 27–33 yd · no stated limit');
 			expect(onBoundary(t.at, r)).toBe(true);
 		}
 	});
@@ -278,10 +282,7 @@ describe('zoneTags', () => {
 		const z = splashZone({ id: 'a', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['ar385-splash']);
 		const r = bayRect({ widthFt: 60, depthFt: 30 });
 		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
-		expect(tags.map((t) => t.text)).toEqual([
-			'50 yd (45.72 m) · 46 yd past bay',
-			'50 yd (45.72 m) · 32 yd past bay'
-		]);
+		expect(tags.map((t) => t.text)).toEqual(['50 yd · 46 yd past bay', '50 yd · 32 yd past bay']);
 		expect(tags[0].at.x).toBeCloseTo(0, 6);
 		expect(tags[1].at.x).toBeCloseTo(60, 6);
 		expect(tags[0].dir.x).toBeLessThan(0);
@@ -302,9 +303,28 @@ describe('distanceOutside', () => {
 	});
 });
 
+describe('zoneTags in meters', () => {
+	it('labels a 9mm fan in m and km only', () => {
+		const fan = fanZone(
+			{ id: 'f', x: 30, y: 2 },
+			{ id: 't', x: 30, y: 25 },
+			FAN_SOURCES['fan-9mm']
+		)!;
+		const texts = zoneTags(
+			{ splash: [], fans: [fan] },
+			bayRect({ widthFt: 60, depthFt: 30 }),
+			'm'
+		).map((t) => t.text);
+		expect(texts).toContain('X 1.8 km · 1.79 km past bay');
+		expect(texts).toContain('W 399 m · Y 1.211 km · reaches 1.2 km past bay');
+	});
+});
+
 describe('formatPast', () => {
 	it('rounds to whole units with a past bay label', () => {
 		expect(formatPast(139.358, 'yd')).toBe('46 yd past bay');
+		expect(formatPast(139.358, 'm')).toBe('42 m past bay');
+		expect(formatPast(5877.4, 'm')).toBe('1.79 km past bay');
 	});
 });
 
@@ -405,9 +425,18 @@ describe('groupTags', () => {
 		for (const g of disp) {
 			expect(g.edge).toBe('downrange');
 			expect(g.lines).toEqual([
-				{ text: 'X 1,969 yd (1,800 m) · 1,959 yd past bay', layer: 'fan-9mm' },
-				{ text: 'X 3,390 yd (3,100 m) · 3,381 yd past bay', layer: 'fan-556' }
+				{ text: 'X 1,969 yd · 1,959 yd past bay', layer: 'fan-9mm' },
+				{ text: 'X 3,390 yd · 3,381 yd past bay', layer: 'fan-556' }
 			]);
 		}
+	});
+});
+
+describe('parseZoneUnit', () => {
+	it('reads a saved meters choice and defaults to yards otherwise', () => {
+		expect(parseZoneUnit('m')).toBe('m');
+		expect(parseZoneUnit('yd')).toBe('yd');
+		expect(parseZoneUnit(undefined)).toBe('yd');
+		expect(parseZoneUnit('furlongs')).toBe('yd');
 	});
 });

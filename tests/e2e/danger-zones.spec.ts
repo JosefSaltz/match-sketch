@@ -83,6 +83,26 @@ test('9mm fan needs a shooting position', async ({ page }) => {
 	await expect(legend(page)).toContainText('computed by Match Sketch from this plan');
 });
 
+test('edge tags show one unit, yards or meters as chosen', async ({ page }) => {
+	await place(page, 'steel-static', 0.5, 0.3);
+	await place(page, 'shooting-position', 0.5, 0.9);
+	await setLayer(page, '9mm Luger', true);
+	const tags = page.getByTestId('danger-tag');
+	await expect(tags.filter({ hasText: 'X 1,969 yd · ' }).first()).toBeVisible();
+	await expect(tags.filter({ hasText: '(' })).toHaveCount(0);
+	const toggle = page.getByRole('button', { name: 'Danger zones', exact: true });
+	await toggle.click();
+	await page.getByRole('group', { name: 'Danger zones' }).getByLabel('Distances').selectOption('m');
+	await toggle.click();
+	await expect(tags.filter({ hasText: 'X 1.8 km · ' }).first()).toBeVisible();
+	await expect(tags.filter({ hasText: ' yd' })).toHaveCount(0);
+	// Remembered on this device.
+	await page.reload();
+	await page.getByTestId('bay').waitFor();
+	await setLayer(page, '9mm Luger', true);
+	await expect(tags.filter({ hasText: 'X 1.8 km · ' }).first()).toBeVisible();
+});
+
 test('selecting a target shows only its zones', async ({ page }) => {
 	await place(page, 'steel-static', 0.3, 0.3);
 	await place(page, 'steel-static', 0.7, 0.3);

@@ -13,6 +13,7 @@
 	} from '#lib/safety/paths.js';
 	import { COLOR, DASH, FILL } from '#lib/safety/layer-style.js';
 	import { SPLASH_SOURCES } from '#lib/safety/sources.js';
+	import { zoneUnit } from '#lib/safety/zone-unit.svelte.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -74,7 +75,7 @@
 	}
 
 	const tags = $derived(
-		groupTags(zoneTags(editor.zones, rect, editor.plan.unit), rect).map((g) => {
+		groupTags(zoneTags(editor.zones, rect, zoneUnit.value), rect).map((g) => {
 			const text = placeText(g.edge, worldToScreen(g.at, vp), g.lines.length);
 			return {
 				key: g.key,

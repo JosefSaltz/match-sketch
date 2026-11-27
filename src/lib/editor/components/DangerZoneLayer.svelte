@@ -29,10 +29,26 @@
 		return clipped.length < 3 ? '' : toPathData(densify(clipped, STEP_FT, true), vp, true);
 	};
 
+	const ARROW_PX = 8;
+
+	/** Outward triangle with its tip at the bay edge; direction taken from two points since screen y is flipped. */
+	const arrow = (at: Point, dir: Point): string => {
+		const tip = worldToScreen(at, vp);
+		const ahead = worldToScreen({ x: at.x + dir.x, y: at.y + dir.y }, vp);
+		const len = Math.hypot(ahead.x - tip.x, ahead.y - tip.y) || 1;
+		const ux = (ahead.x - tip.x) / len;
+		const uy = (ahead.y - tip.y) / len;
+		const bx = tip.x - ux * ARROW_PX;
+		const by = tip.y - uy * ARROW_PX;
+		const h = ARROW_PX / 2;
+		return `${tip.x},${tip.y} ${bx - uy * h},${by + ux * h} ${bx + uy * h},${by - ux * h}`;
+	};
+
 	const tags = $derived(
 		zoneTags(editor.zones, rect, editor.plan.unit).map((t) => ({
 			key: t.key,
 			text: t.text,
+			arrow: arrow(t.at, t.dir),
 			...worldToScreen(t.at, vp)
 		}))
 	);
@@ -72,6 +88,7 @@
 		</g>
 	{/each}
 	{#each tags as t (t.key)}
+		<polygon data-testid="danger-exit" class="exit" points={t.arrow} />
 		<text data-testid="danger-tag" class="tag" x={t.x} y={t.y} dy="-0.4em">{t.text}</text>
 	{/each}
 </g>
@@ -93,6 +110,10 @@
 	.line.light {
 		stroke-width: 1;
 		stroke-opacity: 0.45;
+	}
+	.exit {
+		fill: var(--color-danger);
+		stroke: none;
 	}
 	.tag {
 		fill: var(--color-danger);

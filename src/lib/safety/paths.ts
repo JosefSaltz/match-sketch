@@ -163,40 +163,91 @@ export function formatPublishedRange(fromM: number, toM: number, unit: LengthUni
 	return `≥ ${whole.format(inUnit(fromM, unit))}–${whole.format(inUnit(toM, unit))} ${unit} (${meters.format(fromM)}–${meters.format(toM)} m)`;
 }
 
-export type EdgeTag = { key: string; at: Point; text: string };
+/** 0 inside the rect, otherwise the Euclidean distance to it. */
+export function distanceOutside(p: Point, r: Rect): number {
+	const dx = Math.max(r.minX - p.x, 0, p.x - r.maxX);
+	const dy = Math.max(r.minY - p.y, 0, p.y - r.maxY);
+	return Math.hypot(dx, dy);
+}
 
-/** Spec §4.4: published numbers only, one tag per leaving ray, dispersion edge and ricochet side. */
+/** "46 yd past bay": derived distance in the plan unit only, whole number. */
+export function formatPast(ft: number, unit: LengthUnit): string {
+	return `${whole.format(Math.round(fromFeet(Math.max(0, ft), unit)))} ${unit} past bay`;
+}
+
+/** dir is the unit direction (world feet) of the segment crossing the bay edge at `at`, pointing outward. */
+export type EdgeTag = { key: string; at: Point; text: string; dir: Point };
+
+type Exit = { at: Point; dir: Point };
+
+/** Like exitPoint, plus the crossing segment's outward unit direction. */
+function exitOf(line: Point[], r: Rect): Exit | null {
+	const at = exitPoint(line, r);
+	if (!at) return null;
+	for (let i = 0; i + 1 < line.length; i++) {
+		const a = line[i];
+		const b = line[i + 1];
+		if (!isInside(a, r) || isInside(b, r)) continue;
+		const t = clipSegment(a, b, r);
+		if (!t) continue;
+		const len = Math.hypot(b.x - a.x, b.y - a.y);
+		return { at, dir: { x: (b.x - a.x) / len, y: (b.y - a.y) / len } };
+	}
+	return null;
+}
+
+/** Spec §4.4: published numbers, plus how far each leaving line runs past the bay edge. */
 export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 	const tags: EdgeTag[] = [];
 	for (const z of zones.splash) {
 		const src = SPLASH_SOURCES[z.sourceId];
-		const text =
-			src.reachKind === 'minimum' && src.reachFromM !== undefined
-				? formatPublishedRange(src.reachFromM, src.reachM, unit)
-				: formatPublished(src.reachM, unit);
+		const minimum = src.reachKind === 'minimum' && src.reachFromM !== undefined;
+		const published = minimum
+			? formatPublishedRange(src.reachFromM!, src.reachM, unit)
+			: formatPublished(src.reachM, unit);
 		for (const part of ['left', 'right'] as const) {
 			const side = z[part];
-			const at = exitPoint([z.origin, side.beyond ?? side.rayEnd], r);
-			if (at) tags.push({ key: `${z.key}:${part}-ray`, at, text });
+			const ex = exitOf([z.origin, side.beyond ?? side.rayEnd], r);
+			if (!ex) continue;
+			const tail = minimum
+				? 'no stated limit'
+				: formatPast(
+						src.reachM * FT_PER_M - Math.hypot(ex.at.x - z.origin.x, ex.at.y - z.origin.y),
+						unit
+					);
+			tags.push({
+				key: `${z.key}:${part}-ray`,
+				at: ex.at,
+				dir: ex.dir,
+				text: `${published} · ${tail}`
+			});
 		}
 	}
 	for (const z of zones.fans) {
 		const src = FAN_SOURCES[z.sourceId];
 		(['left', 'right'] as const).forEach((part, i) => {
-			const disp = exitPoint([z.origin, z.dispersion[i]], r);
+			const outline = z[part].outline;
+			const disp = exitOf([z.origin, z.dispersion[i]], r);
 			if (disp)
 				tags.push({
 					key: `${z.key}:${part}-dispersion`,
-					at: disp,
-					text: `X ${formatPublished(src.xM, unit)}`
+					at: disp.at,
+					dir: disp.dir,
+					text: `X ${formatPublished(src.xM, unit)} · ${formatPast(
+						src.xM * FT_PER_M - Math.hypot(disp.at.x - z.origin.x, disp.at.y - z.origin.y),
+						unit
+					)}`
 				});
-			const ric = exitPoint(z[part].outline, r);
-			if (ric)
+			const ric = exitOf(outline, r);
+			if (ric) {
+				const reach = Math.max(...outline.slice(1).map((p) => distanceOutside(p, r)));
 				tags.push({
 					key: `${z.key}:${part}-ricochet`,
-					at: ric,
-					text: `W ${formatPublished(src.wM, unit)} · Y ${formatPublished(src.yM, unit)}`
+					at: ric.at,
+					dir: ric.dir,
+					text: `W ${formatPublished(src.wM, unit)} · Y ${formatPublished(src.yM, unit)} · reaches ${formatPast(reach, unit)}`
 				});
+			}
 		});
 	}
 	return tags;

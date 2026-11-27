@@ -7,8 +7,10 @@ import {
 	clipPolygon,
 	clipPolyline,
 	densify,
+	distanceOutside,
 	exitPoint,
 	formatPublished,
+	formatPast,
 	formatPublishedRange,
 	toPathData,
 	zoneTags
@@ -217,9 +219,14 @@ describe('zoneTags', () => {
 		expect(ric).toHaveLength(2);
 		expect(disp).toHaveLength(2);
 		expect(tags).toHaveLength(4);
-		for (const t of ric) expect(t.text).toBe('W 436 yd (399 m) · Y 1,324 yd (1,211 m)');
-		for (const t of disp) expect(t.text).toBe('X 1,969 yd (1,800 m)');
-		for (const t of tags) expect(onBoundary(t.at, r)).toBe(true);
+		for (const t of ric)
+			expect(t.text).toBe('W 436 yd (399 m) · Y 1,324 yd (1,211 m) · reaches 1,314 yd past bay');
+		for (const t of disp) expect(t.text).toBe('X 1,969 yd (1,800 m) · 1,959 yd past bay');
+		for (const t of tags) {
+			expect(onBoundary(t.at, r)).toBe(true);
+			expect(Math.hypot(t.dir.x, t.dir.y)).toBeCloseTo(1, 9);
+			expect(t.dir.y).toBeGreaterThan(0); // fan is at the bay's downrange edge
+		}
 		expect(new Set(tags.map((t) => t.key)).size).toBe(4);
 	});
 	it('has no tags for an AR splash whose rays stay in a big bay', () => {
@@ -234,8 +241,40 @@ describe('zoneTags', () => {
 		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
 		expect(tags.length).toBeGreaterThan(0);
 		for (const t of tags) {
-			expect(t.text).toBe('≥ 27–33 yd (25–30 m)');
+			expect(t.text).toBe('≥ 27–33 yd (25–30 m) · no stated limit');
 			expect(onBoundary(t.at, r)).toBe(true);
 		}
+	});
+	it('adds past-bay remainders to AR splash rays', () => {
+		const z = splashZone({ id: 'a', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['ar385-splash']);
+		const r = bayRect({ widthFt: 60, depthFt: 30 });
+		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
+		expect(tags.map((t) => t.text)).toEqual([
+			'50 yd (45.72 m) · 46 yd past bay',
+			'50 yd (45.72 m) · 32 yd past bay'
+		]);
+		expect(tags[0].at.x).toBeCloseTo(0, 6);
+		expect(tags[1].at.x).toBeCloseTo(60, 6);
+		expect(tags[0].dir.x).toBeLessThan(0);
+		expect(tags[1].dir.x).toBeGreaterThan(0);
+	});
+	it('says no stated limit for Pistol NZ rays', () => {
+		const z = splashZone({ id: 'p', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['pnz-splash']);
+		const tags = zoneTags({ splash: [z], fans: [] }, bayRect({ widthFt: 60, depthFt: 30 }), 'yd');
+		expect(tags.length).toBeGreaterThan(0);
+		for (const t of tags) expect(t.text.endsWith(' · no stated limit')).toBe(true);
+	});
+});
+
+describe('distanceOutside', () => {
+	it('is 0 inside and Euclidean outside', () => {
+		expect(distanceOutside({ x: 5, y: 5 }, r10)).toBe(0);
+		expect(distanceOutside({ x: 13, y: 14 }, r10)).toBe(5);
+	});
+});
+
+describe('formatPast', () => {
+	it('rounds to whole units with a past bay label', () => {
+		expect(formatPast(139.358, 'yd')).toBe('46 yd past bay');
 	});
 });

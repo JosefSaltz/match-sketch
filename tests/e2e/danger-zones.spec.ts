@@ -72,6 +72,10 @@ test('9mm fan needs a shooting position', async ({ page }) => {
 	await place(page, 'shooting-position', 0.5, 0.9);
 	await expect(fan(page)).toHaveCount(1);
 	expect(await page.getByTestId('danger-tag').count()).toBeGreaterThanOrEqual(2);
+	expect(await page.getByTestId('danger-exit').count()).toBeGreaterThanOrEqual(2);
+	await expect(
+		page.getByTestId('danger-tag').filter({ hasText: 'past bay' }).first()
+	).toBeVisible();
 	await expect(legend(page)).toContainText('1 in 1,000,000');
 	await expect(legend(page)).toContainText('Table 5-4');
 });

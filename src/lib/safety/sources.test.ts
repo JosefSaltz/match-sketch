@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { FAN_SOURCES, FT_PER_M, LAYER_IDS, LEGEND_NO_BERMS, SPLASH_SOURCES } from './sources';
+
+const FAN_MEANING =
+	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶5-1b), not where rounds usually go.';
+
+describe('danger zone sources', () => {
+	it('converts meters to feet exactly', () => {
+		expect(45.72 * FT_PER_M).toBeCloseTo(150, 9);
+	});
+
+	it('lists layers in toggle order', () => {
+		expect(LAYER_IDS).toEqual(['ar385-splash', 'pnz-splash', 'fan-9mm', 'fan-556']);
+	});
+
+	it('records the AR 385-63 splash', () => {
+		const s = SPLASH_SOURCES['ar385-splash'];
+		expect(s.label).toBe('AR 385-63 splash');
+		expect(s.angleDeg).toBe(20);
+		expect(s.reachM).toBe(45.72);
+		expect(s.reachKind).toBe('limit');
+		expect(s.reachFromM).toBeUndefined();
+		expect(s.citation).toBe('AR 385-63/MCO 3570.1D (23 May 2025), ¶2-17a(2), Fig. 2-5');
+		expect(s.meaning).toBe(
+			'bullet splatter will angle off the target up to 20 degrees… and travel up to 45 m. The majority of all bullet fragments will exit the target within the 20-degree backsplash area'
+		);
+	});
+
+	it('records the Pistol NZ splash', () => {
+		const s = SPLASH_SOURCES['pnz-splash'];
+		expect(s.label).toBe('Pistol NZ splash');
+		expect(s.angleDeg).toBe(20);
+		expect(s.reachM).toBe(30);
+		expect(s.reachFromM).toBe(25);
+		expect(s.reachKind).toBe('minimum');
+		expect(s.citation).toBe(
+			'Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025)'
+		);
+		expect(s.meaning).toBe(
+			'splatter sideways at least 25–30 metres… you must assume that the side splatter can cause injury at any distance within'
+		);
+	});
+
+	it('records the 9mm fan', () => {
+		const f = FAN_SOURCES['fan-9mm'];
+		expect(f).toMatchObject({
+			label: '9mm Luger',
+			load: 'Ball M882, M1, subsonic',
+			dispersionDeg: 5,
+			xM: 1800,
+			yM: 1211,
+			wM: 399,
+			pDeg: 61.1,
+			qDeg: 30.4,
+			citation: 'AR 385-63, ¶5-1c, Fig. 5-3, Table 5-4 (steel/concrete)',
+			meaning: FAN_MEANING
+		});
+	});
+
+	it('records the 5.56 fan', () => {
+		const f = FAN_SOURCES['fan-556'];
+		expect(f).toMatchObject({
+			label: '5.56 NATO',
+			load: 'M193 Ball',
+			dispersionDeg: 5,
+			xM: 3100,
+			yM: 1666,
+			wM: 323,
+			pDeg: 19.0,
+			qDeg: 26.9,
+			citation: 'AR 385-63, ¶5-1c, Fig. 5-3, Table 5-11 (steel/concrete)',
+			meaning: FAN_MEANING
+		});
+	});
+
+	it('states that berms are not modeled', () => {
+		expect(LEGEND_NO_BERMS).toBe('Berms and baffles are not modeled.');
+	});
+});

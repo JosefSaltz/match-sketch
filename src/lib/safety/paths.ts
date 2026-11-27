@@ -112,14 +112,7 @@ export function clipPolyline(line: Point[], r: Rect): Point[][] {
 
 /** First point where the polyline goes from inside the rect to outside; null if it never does. */
 export function exitPoint(line: Point[], r: Rect): Point | null {
-	for (let i = 0; i + 1 < line.length; i++) {
-		const a = line[i];
-		const b = line[i + 1];
-		if (!isInside(a, r) || isInside(b, r)) continue;
-		const t = clipSegment(a, b, r);
-		if (t) return lerp(a, b, t[1]);
-	}
-	return null;
+	return exitOf(line, r)?.at ?? null;
 }
 
 /** Adds points so no segment is longer than maxStepFt (straight world lines bend through a break). */
@@ -180,10 +173,8 @@ export type EdgeTag = { key: string; at: Point; text: string; dir: Point };
 
 type Exit = { at: Point; dir: Point };
 
-/** Like exitPoint, plus the crossing segment's outward unit direction. */
+/** Where the polyline first leaves the rect, and the crossing segment's outward unit direction. */
 function exitOf(line: Point[], r: Rect): Exit | null {
-	const at = exitPoint(line, r);
-	if (!at) return null;
 	for (let i = 0; i + 1 < line.length; i++) {
 		const a = line[i];
 		const b = line[i + 1];
@@ -191,7 +182,7 @@ function exitOf(line: Point[], r: Rect): Exit | null {
 		const t = clipSegment(a, b, r);
 		if (!t) continue;
 		const len = Math.hypot(b.x - a.x, b.y - a.y);
-		return { at, dir: { x: (b.x - a.x) / len, y: (b.y - a.y) / len } };
+		return { at: lerp(a, b, t[1]), dir: { x: (b.x - a.x) / len, y: (b.y - a.y) / len } };
 	}
 	return null;
 }

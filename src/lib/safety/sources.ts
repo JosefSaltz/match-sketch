@@ -53,14 +53,15 @@ export const SPLASH_SOURCES: Record<SplashSourceId, SplashSource> = {
 		reachM: 30,
 		reachKind: 'minimum',
 		reachFromM: 25,
-		citation: 'Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025)',
+		citation:
+			'Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025), §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1',
 		meaning:
-			'splatter sideways at least 25–30 metres… you must assume that the side splatter can cause injury at any distance within'
+			'splatter sideways at least 25-30 metres… you must assume that the side splatter can cause injury at any distance within the splatter zone'
 	}
 };
 
 const FAN_MEANING =
-	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶5-1b), not where rounds usually go.';
+	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go.';
 
 export const FAN_SOURCES: Record<FanSourceId, FanSource> = {
 	'fan-9mm': {

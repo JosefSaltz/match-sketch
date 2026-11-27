@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FAN_SOURCES, FT_PER_M, LAYER_IDS, LEGEND_NO_BERMS, SPLASH_SOURCES } from './sources';
 
 const FAN_MEANING =
-	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶5-1b), not where rounds usually go.';
+	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go.';
 
 describe('danger zone sources', () => {
 	it('converts meters to feet exactly', () => {
@@ -34,10 +34,10 @@ describe('danger zone sources', () => {
 		expect(s.reachFromM).toBe(25);
 		expect(s.reachKind).toBe('minimum');
 		expect(s.citation).toBe(
-			'Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025)'
+			'Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025), §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1'
 		);
 		expect(s.meaning).toBe(
-			'splatter sideways at least 25–30 metres… you must assume that the side splatter can cause injury at any distance within'
+			'splatter sideways at least 25-30 metres… you must assume that the side splatter can cause injury at any distance within the splatter zone'
 		);
 	});
 

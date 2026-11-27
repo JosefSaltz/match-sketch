@@ -22,7 +22,7 @@ async function place(page: Page, symbolId: string, fx: number, fyFromTop: number
 }
 
 async function setLayer(page: Page, label: string, on: boolean) {
-	const toggle = page.getByRole('button', { name: 'Danger zones' });
+	const toggle = page.getByRole('button', { name: 'Danger zones', exact: true });
 	if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
 	const box = page
 		.getByRole('group', { name: 'Danger zones' })
@@ -121,4 +121,15 @@ test('toggles are not saved with the plan', async ({ page }) => {
 	await expect(page.getByTestId('bay')).toBeVisible();
 	await expect(page.getByTestId('object')).toHaveCount(1);
 	await expect(page.getByTestId('danger-zones').locator('> *')).toHaveCount(0);
+});
+
+test('Escape closes the Danger zones panel and keeps focus on its button', async ({ page }) => {
+	const toggle = page.getByRole('button', { name: 'Danger zones', exact: true });
+	await toggle.click();
+	const panel = page.getByRole('group', { name: 'Danger zones' });
+	await panel.getByRole('checkbox', { name: 'AR 385-63 splash' }).focus();
+	await page.keyboard.press('Escape');
+	await expect(panel).toHaveCount(0);
+	await expect(toggle).toBeFocused();
+	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });

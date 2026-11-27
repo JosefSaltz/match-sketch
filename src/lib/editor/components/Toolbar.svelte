@@ -189,11 +189,14 @@
 			if (zonesOpen && e.key === 'Escape') {
 				e.stopPropagation();
 				zonesOpen = false;
+				// The focused toggle goes away with the panel; keep focus on the control.
+				document.getElementById(`${uid}-zones-button`)?.focus();
 			}
 		}}
 		role="presentation"
 	>
 		<Button
+			id="{uid}-zones-button"
 			aria-expanded={zonesOpen}
 			aria-controls="{uid}-zones"
 			onclick={() => (zonesOpen = !zonesOpen)}

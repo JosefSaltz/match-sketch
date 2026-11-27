@@ -19,6 +19,8 @@ export type SplashSource = {
 	reachFromM?: number;
 	citation: string;
 	meaning: string;
+	/** Shown under the citation: a choice the drawing makes that the source leaves open. */
+	note?: string;
 };
 
 export type FanSource = {
@@ -33,6 +35,8 @@ export type FanSource = {
 	qDeg: number;
 	citation: string;
 	meaning: string;
+	/** Shown under the citation: a choice the drawing makes that the source leaves open. */
+	note?: string;
 };
 
 export const SPLASH_SOURCES: Record<SplashSourceId, SplashSource> = {
@@ -44,7 +48,8 @@ export const SPLASH_SOURCES: Record<SplashSourceId, SplashSource> = {
 		reachKind: 'limit',
 		citation: 'AR 385-63/MCO 3570.1D (23 May 2025), ¶2-17a(2), Fig. 2-5',
 		meaning:
-			'bullet splatter will angle off the target up to 20 degrees… and travel up to 45 m. The majority of all bullet fragments will exit the target within the 20-degree backsplash area'
+			'bullet splatter will angle off the target up to 20 degrees… and travel up to 45 m. The majority of all bullet fragments will exit the target within the 20-degree backsplash area',
+		note: 'Drawn to Fig. 2-5’s 50 yd (45.72 m).'
 	},
 	'pnz-splash': {
 		id: 'pnz-splash',
@@ -88,7 +93,8 @@ export const FAN_SOURCES: Record<FanSourceId, FanSource> = {
 		pDeg: 19.0,
 		qDeg: 26.9,
 		citation: 'AR 385-63, ¶5-1c, Fig. 5-3, Table 5-11 (steel/concrete)',
-		meaning: FAN_MEANING
+		meaning: FAN_MEANING,
+		note: 'M193 is the only 5.56 ball load AR 385-63 gives steel-impact data for (Table 5-11); M855 (Table 5-12) lists only earth and armor.'
 	}
 };
 

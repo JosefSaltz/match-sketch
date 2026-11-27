@@ -105,4 +105,13 @@ describe('danger zone sources', () => {
 			pastBay: '“past bay” distances are computed by Match Sketch from this plan, not published.'
 		});
 	});
+
+	it('adds a note where the drawing makes a choice the source leaves open', () => {
+		expect(SPLASH_SOURCES['ar385-splash'].note).toBe('Drawn to Fig. 2-5’s 50 yd (45.72 m).');
+		expect(FAN_SOURCES['fan-556'].note).toBe(
+			'M193 is the only 5.56 ball load AR 385-63 gives steel-impact data for (Table 5-11); M855 (Table 5-12) lists only earth and armor.'
+		);
+		expect(SPLASH_SOURCES['pnz-splash'].note).toBeUndefined();
+		expect(FAN_SOURCES['fan-9mm'].note).toBeUndefined();
+	});
 });

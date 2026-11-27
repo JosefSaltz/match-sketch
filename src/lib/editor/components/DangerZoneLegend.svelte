@@ -25,8 +25,8 @@
 	function entry(id: LayerId) {
 		const s = layerSource(id);
 		return 'load' in s
-			? { label: `${s.label} (${s.load})`, citation: s.citation, meaning: null }
-			: { label: s.label, citation: s.citation, meaning: `“${s.meaning}”` };
+			? { label: `${s.label} (${s.load})`, citation: s.citation, note: s.note, meaning: null }
+			: { label: s.label, citation: s.citation, note: s.note, meaning: `“${s.meaning}”` };
 	}
 </script>
 
@@ -54,6 +54,7 @@
 					<div>
 						<p class="font-semibold">{e.label}</p>
 						<p class="text-muted">{e.citation}</p>
+						{#if e.note}<p class="text-muted">{e.note}</p>{/if}
 						{#if e.meaning}<p>{e.meaning}</p>{/if}
 					</div>
 				</li>

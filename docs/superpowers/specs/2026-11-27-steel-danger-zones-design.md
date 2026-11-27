@@ -9,7 +9,7 @@ An on-screen overlay in the stage plan editor that draws the ricochet danger zon
 
 **Why:** the user's gun club has concerns, not backed by evidence, that the club's long-standing steel shooting is now dangerous and could send ricochets onto neighboring property. A board member's Google Earth sketch tried to answer this with straight lines of fire, which no published ricochet model uses. This overlay lets the club see the published zones laid over a real stage plan, and serves other Match Sketch users with real steel-safety questions.
 
-**Honesty rule (user accepted, 2026-11-27):** draw each source as published, never tuned toward a reassuring answer. Label every shape with its source and with what it means. The Army danger-zone template is a 1-in-1,000,000 escape envelope (AR 385-63 ¶5-1b), not where rounds usually go. Berms and baffles are not modeled (spec §2 non-goal), so a drawn zone is the open-ground worst case.
+**Honesty rule (user accepted, 2026-11-27):** draw each source as published, never tuned toward a reassuring answer. Label every shape with its source and with what it means. The Army danger-zone template is a 1-in-1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go. Berms and baffles are not modeled (spec §2 non-goal), so a drawn zone is the open-ground worst case.
 
 ## 2. Goals, non-goals, anti-goals
 
@@ -41,7 +41,7 @@ All primary documents were read in full text; the figures were checked visually 
 | Toggle | Source | Geometry |
 |---|---|---|
 | **AR 385-63 splash** | AR 385-63/MCO 3570.1D, 23 May 2025, ¶2-17a(2), Fig. 2-5 (top view) | From the impact point, two rays at **20° off the plate face plane**, toward the shooter's side, one left and one right, each **50 yd (45.72 m)** long. The text says "up to 45 m"; the figure says 50 yd. Use the figure's 45.72 m, the larger of the two. |
-| **Pistol NZ splash** | Pistol New Zealand, *Steel Target Safe Use Guide 2025 V4*, 28 May 2025, pp. on splatter pattern | Fragments leave at **0–20° from the plate surface** in a full circle. In plan view that is the same left and right wedges. Reach: "at least 25–30 metres… you must assume that the side splatter can cause injury at any distance within" it. This is a **minimum, not a limit**: draw solid to 30 m, then dashed to the bay edge, labeled "≥ 25–30 m, no stated limit". |
+| **Pistol NZ splash** | Pistol New Zealand, *Steel Target Safe Use Guide 2025 V4*, 28 May 2025, §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1 | Fragments leave at **0–20° from the plate surface** in a full circle. In plan view that is the same left and right wedges. Reach: "at least 25-30 metres… you must assume that the side splatter can cause injury at any distance within the splatter zone". This is a **minimum, not a limit**: draw solid to 30 m, then dashed to the bay edge, labeled "≥ 25–30 m, no stated limit". |
 
 Each splash zone is drawn as a filled wedge between the face line and the 20° ray, with the ray drawn as an arrow. AR 385-63 defines the angle relative to the plate face, not the line of fire (¶2-17a(2)), so the wedge follows the plate's orientation whatever the shooting position.
 
@@ -67,7 +67,7 @@ Values, steel/concrete impact media:
 | **9mm Luger** | 5-4 | Ball M882, M1, subsonic | 1,800 | 1,211 | 399 | 61.10° | 30.40° |
 | **5.56 NATO** | 5-11 | M193 Ball | 3,100 | 1,666 | 323 | 19.00° | 26.90° |
 
-5.56 uses **M193** (55 gr ball) because it is the only 5.56 load AR 385-63 gives steel-media values for. The NATO-standard M855 (Table 5-12) lists only earth and armor media. The legend says so.
+5.56 uses **M193** (55 gr ball) because it is the only 5.56 ball load AR 385-63 gives steel-media values for (Table 5-11 also gives them for the M196 and M856 tracers and the M862A1 plastic short-range round). The NATO-standard M855 (Table 5-12) lists only earth and armor media. The legend says so.
 
 The fan is drawn as outline polygons with the ricochet-area edges as arrows; the dispersion area is drawn lighter. At bay scale, nearly all of it lies beyond the bay (see §4.4).
 
@@ -113,8 +113,8 @@ A plate faces straight uprange (its face normal points to −y) and turns with t
 - **State:** editor view state only, all off by default. Not saved with the plan, not printed.
 - **Legend:** while any toggle is on, a legend card on the canvas lists each active layer, with a stroke sample, its citation, and its meaning in the source's own words:
   - **AR 385-63 splash:** "bullet splatter will angle off the target up to 20 degrees… and travel up to 45 m. The majority of all bullet fragments will exit the target within the 20-degree backsplash area" (¶2-17a(2)).
-  - **Pistol NZ splash:** "splatter sideways at least 25–30 metres… you must assume that the side splatter can cause injury at any distance within" it.
-  - **9mm and 5.56 fans:** "Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶5-1b), not where rounds usually go." This line appears only while a fan toggle is on.
+  - **Pistol NZ splash:** "splatter sideways at least 25-30 metres… you must assume that the side splatter can cause injury at any distance within the splatter zone" (Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025), §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1).
+  - **9mm and 5.56 fans:** "Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go." This line appears only while a fan toggle is on.
   - **Always:** "Berms and baffles are not modeled."
 - **Labels:** labels live in the legend. On the canvas the only text is the end tags (§4.4).
 

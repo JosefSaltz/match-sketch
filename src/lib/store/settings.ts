@@ -5,6 +5,11 @@ import { now } from './records';
 export const THEME_SETTING = 'theme';
 /** Drag clicks on this device: 'on' (default) or 'off'. */
 export const SOUNDS_SETTING = 'sounds';
+/** How the drag click sounds on this device (JSON ClickParams, tuned on /sounds). */
+export const CLICK_SOUND_SETTING = 'click-sound';
+
+/** The unit danger zone edge tags use on this device: 'yd' (default) or 'm'. */
+export const ZONE_UNIT_SETTING = 'zone-unit';
 
 /** The account whose records this device holds (an auth user id). */
 export const SYNC_OWNER = 'sync-owner';

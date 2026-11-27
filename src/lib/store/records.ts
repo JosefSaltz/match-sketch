@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { LengthUnit } from '../geometry/units';
-import type { PlanDocument } from '../model/plan';
+import type { PLAN_SCHEMA_VERSION, PlanDocument } from '../model/plan';
+import type { Share } from '../model/share';
 
 /** Fields every user-editable record carries so it can sync later (Plan 5). */
 export type SyncMeta = {
@@ -27,8 +28,10 @@ export type PlanRecord = SyncMeta & {
 	widthFt: number;
 	depthFt: number;
 	unit: LengthUnit;
-	schemaVersion: 1;
+	schemaVersion: typeof PLAN_SCHEMA_VERSION;
 	document: PlanDocument;
+	/** Its read-only link (spec §7.11); a copy of the plan never takes it. */
+	share: Share | null;
 };
 
 /** A match groups stage plans; its plans point at it with `matchId` and are ordered by `stageOrder`. */
@@ -36,6 +39,8 @@ export type MatchRecord = SyncMeta & {
 	name: string;
 	/** `YYYY-MM-DD`, or '' when the match has no date yet. */
 	date: string;
+	/** Its read-only link (spec §7.11); a copy of the match never takes it. */
+	share: Share | null;
 };
 
 export const MatchInputSchema = z.object({

@@ -4,6 +4,7 @@ import { normalizeDegrees } from '../geometry/transform';
 import type { CanvasSize, Point } from '../geometry/types';
 import type { Anchor, PlanDocument, PlanObject } from '../model/plan';
 import { nextLabel } from './labels';
+import { pruneMarks } from './walkthrough';
 
 export const MIN_SIZE_FT = 0.5;
 const MAX_COUNT = 99;
@@ -124,13 +125,14 @@ export function deleteItems(doc: PlanDocument, ids: string[]): PlanDocument {
 		const o = end.kind === 'object' ? gone.get(end.objectId) : undefined;
 		return o ? { kind: 'point', x: o.x, y: o.y } : end;
 	};
-	return {
+	// Walkthrough marks and arrows go with what they point at.
+	return pruneMarks({
 		...doc,
 		objects: doc.objects.filter((o) => !remove.has(o.id)),
 		annotations: doc.annotations
 			.filter((a) => !remove.has(a.id))
 			.map((a) => (a.type === 'text' ? a : { ...a, from: detach(a.from), to: detach(a.to) }))
-	};
+	});
 }
 
 export function duplicateObjects(

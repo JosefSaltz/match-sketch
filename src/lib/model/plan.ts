@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
-export const SYMBOL_SIZES = ['small', 'medium', 'large'] as const;
+export const SYMBOL_SIZES = ['small', 'medium', 'large', 'xlarge'] as const;
 export type SymbolSize = (typeof SYMBOL_SIZES)[number];
 
 /** Fixed on-screen size of symbol glyphs, in px. */
-export const SYMBOL_PX: Record<SymbolSize, number> = { small: 24, medium: 32, large: 44 };
+export const SYMBOL_PX: Record<SymbolSize, number> = {
+	small: 24,
+	medium: 32,
+	large: 44,
+	xlarge: 56
+};
 
 const finite = z.number().refine(Number.isFinite, 'Must be a finite number');
 
@@ -22,13 +27,31 @@ export const PlanObjectSchema = z.object({
 });
 export type PlanObject = z.infer<typeof PlanObjectSchema>;
 
+/** What the shooter does with an object in a walkthrough step (spec §7.10), in legend order. */
+export const MEANINGS = ['start', 'move', 'shoot', 'activate', 'avoid'] as const;
+export type Meaning = (typeof MEANINGS)[number];
+
+export const MarkSchema = z.object({ objectId: z.uuid(), meaning: z.enum(MEANINGS) });
+export type Mark = z.infer<typeof MarkSchema>;
+
+/** One line of the stage procedure, with what its walkthrough step highlights. */
+export const StepSchema = z.object({
+	id: z.uuid(),
+	// No length limit on a line: version 1 procedures had none, and a pasted paragraph is one line.
+	text: z.string(),
+	marks: z.array(MarkSchema).max(200),
+	arrows: z.array(z.uuid()).max(200)
+});
+export type Step = z.infer<typeof StepSchema>;
+
 export const StageBriefSchema = z.object({
 	matchName: z.string(),
 	stageNumber: z.string(),
 	stageName: z.string(),
 	startPosition: z.string(),
 	gunReady: z.string(),
-	procedure: z.string(),
+	/** The stage procedure, one step per line (spec §7.2, §7.10). */
+	steps: z.array(StepSchema).max(5000),
 	roundCount: z.string(),
 	parTime: z.string(),
 	targetsOverride: z.string().nullable(),
@@ -75,6 +98,9 @@ export const PlanDisplaySchema = z.object({
 });
 export type PlanDisplay = z.infer<typeof PlanDisplaySchema>;
 
+/** The plan document version `PlanDocumentSchema` describes (`plans.schema_version`). */
+export const PLAN_SCHEMA_VERSION = 2;
+
 export const PlanDocumentSchema = z.object({
 	brief: StageBriefSchema,
 	objects: z.array(PlanObjectSchema),
@@ -92,7 +118,7 @@ export function emptyPlanDocument(): PlanDocument {
 			stageName: '',
 			startPosition: '',
 			gunReady: '',
-			procedure: '',
+			steps: [],
 			roundCount: '',
 			parTime: '',
 			targetsOverride: null,

@@ -1,9 +1,11 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
-import type { WireRecord } from '../sync/wire';
+import { newShareId } from '../model/share';
+import { readPlanDocument } from '../model/upgrade';
+import { WireRecordSchema, type WireRecord } from '../sync/wire';
 import { createDatabase } from './db/client';
-import { canvases, plans } from './db/schema';
+import { canvases, matches, plans } from './db/schema';
 import { pullChanges, pushRecords } from './sync';
 import { testAdminClient, testDatabaseUrl, uniqueEmail } from './testing/supabase';
 
@@ -50,7 +52,7 @@ function plan(): Extract<WireRecord, { table: 'plans' }> {
 		widthFt: 90,
 		depthFt: 60,
 		unit: 'yd',
-		schemaVersion: 1,
+		schemaVersion: 2,
 		document: emptyPlanDocument()
 	};
 }
@@ -73,6 +75,141 @@ afterEach(async () => {
 
 afterAll(async () => {
 	await database.close();
+});
+
+/** A plan document as an app before schema version 2 wrote it. */
+function v1Document(procedure: string) {
+	const { steps, ...brief } = emptyPlanDocument().brief;
+	void steps;
+	return { ...emptyPlanDocument(), brief: { ...brief, procedure } };
+}
+
+describe('plan schema version 2', () => {
+	it('stores a version 1 push from an older app as version 2', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), schemaVersion: 1, document: v1Document('Start\nEngage T1') };
+		const [result] = await pushRecords(db, owner, [
+			{ record: WireRecordSchema.parse(p), baseVersion: 0 }
+		]);
+		expect(result.status).toBe('accepted');
+		const [row] = await db.select().from(plans).where(eq(plans.id, p.id));
+		expect(row.schemaVersion).toBe(2);
+		expect(row.document.brief.steps.map((s) => s.text)).toEqual(['Start', 'Engage T1']);
+	});
+
+	it('pulls a row a version 1 app saved as version 2', async () => {
+		const owner = await createOwner();
+		const p = plan();
+		await db.insert(plans).values({
+			...p,
+			ownerId: owner,
+			version: 1,
+			updatedAt: new Date(p.updatedAt),
+			deletedAt: null,
+			schemaVersion: 1,
+			document: v1Document('Start') as never
+		});
+		const { records } = await pullAll(owner);
+		const pulled = records.find((r) => r.id === p.id);
+		if (pulled?.table !== 'plans') throw new Error('expected the plan');
+		expect(pulled.schemaVersion).toBe(2);
+		expect(readPlanDocument(pulled.document).brief.steps.map((s) => s.text)).toEqual(['Start']);
+	});
+});
+
+describe('share links', () => {
+	const tokenA = 'AbCdEfGhIjKlMnOpQrStUv';
+
+	it('round-trips a pushed share through pull', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, owner, [{ record: p, baseVersion: 0 }]);
+		const { records } = await pullAll(owner);
+		expect(records.find((r) => r.id === p.id)).toMatchObject({ share: p.share });
+	});
+
+	it('keeps the stored share when an older app pushes none', async () => {
+		const owner = await createOwner();
+		const p = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, owner, [{ record: p, baseVersion: 0 }]);
+		const { share, ...older } = p;
+		void share;
+		const [result] = await pushRecords(db, owner, [{ record: older, baseVersion: 1 }]);
+		expect(result.status).toBe('accepted');
+		const [row] = await db.select().from(plans).where(eq(plans.id, p.id));
+		expect(row).toMatchObject({ shareId: p.share.id, shareOn: true });
+	});
+
+	it('syncs a record whose token another plan or match holds, without the token', async () => {
+		const owner = await createOwner();
+		const other = await createOwner();
+		const theirs = { ...plan(), share: { id: tokenA, on: true } };
+		await pushRecords(db, other, [{ record: theirs, baseVersion: 0 }]);
+		const match = {
+			table: 'matches' as const,
+			id: crypto.randomUUID(),
+			updatedAt: new Date().toISOString(),
+			deletedAt: null,
+			name: 'SOF',
+			date: '',
+			share: { id: tokenA, on: true }
+		};
+		const fine = plan();
+		const results = await pushRecords(db, owner, [
+			{ record: { ...plan(), share: { id: tokenA, on: false } }, baseVersion: 0 },
+			{ record: match, baseVersion: 0 },
+			{ record: fine, baseVersion: 0 }
+		]);
+		expect(results.map((r) => r.status)).toEqual(['accepted', 'accepted', 'accepted']);
+		const [mine] = await db.select().from(plans).where(eq(plans.id, results[0].id));
+		const [theirMatch] = await db.select().from(matches).where(eq(matches.id, match.id));
+		expect([mine.shareId, theirMatch.shareId]).toEqual([null, null]);
+	});
+});
+
+describe('share tokens stay with their first owner', () => {
+	const matchWith = (id: string, token: string) => ({
+		table: 'matches' as const,
+		id,
+		updatedAt: new Date().toISOString(),
+		deletedAt: null,
+		name: 'Not yours',
+		date: '',
+		share: { id: token, on: true }
+	});
+
+	it("gives a match that borrows a shared plan's id and token no link", async () => {
+		const victim = await createOwner();
+		const attacker = await createOwner();
+		const shared = { ...plan(), share: { id: newShareId(), on: true } };
+		await pushRecords(db, victim, [{ record: shared, baseVersion: 0 }]);
+		await pushRecords(db, attacker, [
+			{ record: matchWith(shared.id, shared.share.id), baseVersion: 0 }
+		]);
+		const [match] = await db.select().from(matches).where(eq(matches.id, shared.id));
+		expect(match?.shareId ?? null).toBeNull();
+	});
+
+	it('never hands a reset link to another account, so old QR codes stay safe', async () => {
+		const victim = await createOwner();
+		const attacker = await createOwner();
+		const old = newShareId();
+		const shared = { ...plan(), share: { id: old, on: true } };
+		await pushRecords(db, victim, [{ record: shared, baseVersion: 0 }]);
+		// The victim resets the link: the old token is free in plans and matches, but still theirs.
+		await pushRecords(db, victim, [
+			{ record: { ...shared, share: { id: newShareId(), on: true } }, baseVersion: 1 }
+		]);
+		const theirs = { ...plan(), share: { id: old, on: true } };
+		await pushRecords(db, attacker, [{ record: theirs, baseVersion: 0 }]);
+		const [row] = await db.select().from(plans).where(eq(plans.id, theirs.id));
+		expect(row.shareId).toBeNull();
+		// The owner may bring their old token back.
+		const [mine] = await pushRecords(db, victim, [
+			{ record: { ...plan(), share: { id: old, on: true } }, baseVersion: 0 }
+		]);
+		expect(mine.status).toBe('accepted');
+	});
 });
 
 describe('pushRecords', () => {
@@ -196,7 +333,7 @@ describe('pullChanges', () => {
 				widthFt: 90,
 				depthFt: 60,
 				unit: 'yd',
-				schemaVersion: 1,
+				schemaVersion: 2,
 				document: p.document
 			});
 			await new Promise((r) => setTimeout(r, 400));

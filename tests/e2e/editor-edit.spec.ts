@@ -63,6 +63,14 @@ test('symbol size Large draws a bigger glyph', async ({ page }) => {
 	expect((await page.getByTestId('object').boundingBox())!.width).toBeGreaterThan(w0);
 });
 
+test('symbol size Extra large draws a bigger glyph than Large', async ({ page }) => {
+	const size = page.getByRole('combobox', { name: 'Symbol size' });
+	await size.selectOption({ label: 'Large' });
+	const w0 = (await page.getByTestId('object').boundingBox())!.width;
+	await size.selectOption({ label: 'Extra large' });
+	expect((await page.getByTestId('object').boundingBox())!.width).toBeGreaterThan(w0);
+});
+
 test.describe('touch', () => {
 	// Review Focus #5
 	test.use({ hasTouch: true, viewport: { width: 1180, height: 820 } });

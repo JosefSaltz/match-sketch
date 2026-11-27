@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { printInput } from '#lib/print/input.js';
+	import { printInput, stageLink } from '#lib/print/input.js';
 	import { layoutPlan, numberPages } from '#lib/print/layout.js';
 	import { measureText } from '#lib/print/measure.js';
 	import { downloadPdf } from '#lib/print/pdf.js';
@@ -23,7 +23,12 @@
 		const perStage = data.plans.map((plan) => ({
 			plan,
 			pages: layoutPlan(
-				printInput(plan, ctx, { orientation: 'portrait', mode: 'fit' }),
+				printInput(
+					plan,
+					ctx,
+					{ orientation: 'portrait', mode: 'fit' },
+					stageLink(location.origin, plan, match)
+				),
 				measureText
 			)
 		}));

@@ -20,10 +20,16 @@ import { gridChoice, gridSpacing, type GridChoice } from '../geometry/grid';
 import {
 	emptyPlanDocument,
 	type Anchor,
+	type Meaning,
 	type PlanDisplay,
 	type PlanDocument,
-	type StageBrief
+	type StageBrief,
+	type Step
 } from '../model/plan';
+import { stepsFromText } from '../model/procedure';
+import { markObjects, setStepArrows } from './walkthrough';
+import type { Share } from '../model/share';
+import { nextShare, type ShareAction } from '../store/share';
 import { effectiveStageNumber, now, planTitle, type PlanRecord } from '../store/records';
 import {
 	addAnnotation,
@@ -49,6 +55,7 @@ import {
 import { SaveQueue, type SaveStatus } from './save-queue';
 import { DragSwing } from './swing.svelte';
 import { clickStepFt, gridCell } from './grid-cross';
+import { dangerZones, NO_DANGER_ZONES, type DangerToggles, type ZoneSet } from '../safety/zones';
 
 export type { SaveStatus };
 
@@ -109,6 +116,8 @@ export type EditorDeps = {
 	onGridCross?: () => void;
 	/** A synchronous copy of the newest edit that survives a reload (see store/journal). */
 	journal?: { write: (doc: PlanDocument, at: string) => void; clear: () => void };
+	/** Saves the plan's share link (in order with document saves; see plan-saver). */
+	setShare?: (share: Share) => Promise<void>;
 };
 
 const FIT_PADDING_PX = 48;
@@ -149,6 +158,10 @@ export class EditorState {
 	selectedObjects = $derived(this.doc.objects.filter((o) => this.selection.includes(o.id)));
 	/** The selected annotations, in document order. */
 	selectedAnnotations = $derived(this.doc.annotations.filter((a) => this.selection.includes(a.id)));
+	/** Which danger zone layers are drawn. View state only: never committed, saved or shared. */
+	dangerZones = $state<DangerToggles>({ ...NO_DANGER_ZONES });
+	/** The zones to draw, from the live document (so they follow a drag in progress). */
+	zones: ZoneSet = $derived(dangerZones(this.doc, this.dangerZones, this.selection));
 	armedSymbolId = $state<string | null>(null);
 	/** The armed annotation tool; arming one disarms the symbol and the other way round. */
 	tool = $state<AnnotationTool | null>(null);
@@ -157,8 +170,15 @@ export class EditorState {
 	canRedo = $state(false);
 	/** The swing of the items being dragged (visual only). */
 	readonly swing = new DragSwing();
+	/** The plan's read-only link (spec §7.11); not part of the document, so not undoable. */
+	share = $state.raw<Share | null>(null);
 	/** Which tab the right column shows. */
-	panel = $state<'properties' | 'brief'>('properties');
+	panel = $state<'properties' | 'brief' | 'walkthrough'>('properties');
+	/** The walkthrough step being marked (Walkthrough tab), if it still exists. */
+	activeStepId = $state<string | null>(null);
+	activeStep: Step | null = $derived(
+		this.doc.brief.steps.find((s) => s.id === this.activeStepId && s.text.trim() !== '') ?? null
+	);
 	/** The field being typed in; its keystrokes share one undo step (see setBrief). */
 	#typing: string | null = null;
 	#queue: SaveQueue<{ doc: PlanDocument; at: string }>;
@@ -168,6 +188,7 @@ export class EditorState {
 		this.match = match;
 		this.#deps = deps;
 		this.#history = createHistory(plan.document);
+		this.share = plan.share;
 		this.#current = plan.document;
 		this.#queue = new SaveQueue(
 			({ doc, at }) => deps.save(doc, at),
@@ -176,6 +197,34 @@ export class EditorState {
 				if (status === 'saved') deps.journal?.clear();
 			}
 		);
+	}
+
+	/** Marks the selected objects in the active step with `meaning`; `null` clears them. */
+	markSelected(meaning: Meaning | null): void {
+		const step = this.activeStep;
+		const ids = this.selectedObjects.map((o) => o.id);
+		if (!step || !ids.length) return;
+		this.commit(markObjects(this.#current, step.id, ids, meaning));
+	}
+
+	/** Removes one object's mark from the active step. */
+	clearMark(objectId: string): void {
+		const step = this.activeStep;
+		if (step) this.commit(markObjects(this.#current, step.id, [objectId], null));
+	}
+
+	/** Shows the selected arrows in the active step, or stops showing them. */
+	setSelectedArrowsInStep(include: boolean): void {
+		const step = this.activeStep;
+		const ids = this.selectedAnnotations.filter((a) => a.type === 'arrow').map((a) => a.id);
+		if (!step || !ids.length) return;
+		this.commit(setStepArrows(this.#current, step.id, ids, include));
+	}
+
+	/** Turns sharing on or off, or resets the link (see `nextShare`). */
+	changeShare(action: ShareAction): Promise<void> {
+		this.share = nextShare(this.share, action);
+		return this.#deps.setShare?.(this.share) ?? Promise.resolve();
 	}
 
 	/** The typed stage number, else the plan's place in its match. */
@@ -237,6 +286,7 @@ export class EditorState {
 
 	#endDrags(): void {
 		this.#move = null;
+		this.dragOff = false;
 		this.#handle = null;
 		this.#link = null;
 		this.preview = null;
@@ -473,6 +523,14 @@ export class EditorState {
 		this.#typing = null;
 	}
 
+	/**
+	 * Sets the procedure from its text: each line stays the step it was (with its walkthrough
+	 * highlights) as far as the line diff can tell (spec §7.10).
+	 */
+	setProcedure(text: string): void {
+		this.setBrief({ steps: stepsFromText(this.#current.brief.steps, text) }, 'procedure');
+	}
+
 	addNoteSection(): void {
 		const notes = this.#current.brief.notes;
 		this.setBrief({ notes: [...notes, { id: crypto.randomUUID(), title: '', body: '' }] });
@@ -514,6 +572,8 @@ export class EditorState {
 	}
 
 	#move: MoveDrag | null = null;
+	/** A drag has left the stage: releasing now removes what is dragged (like pulling off a dock). */
+	dragOff = $state(false);
 
 	/**
 	 * Starts dragging the current selection, grabbed by object `id` at a screen point. Nothing
@@ -660,14 +720,28 @@ export class EditorState {
 	cancelMove(): void {
 		this.swing.stop();
 		this.#move = null;
+		this.dragOff = false;
 		this.preview = null;
 	}
 
-	/** Commits the previewed move once; a press without movement changes nothing. */
+	/**
+	 * Commits the previewed move once; a press without movement changes nothing. Released off the
+	 * stage (`dragOff`), the dragged items are removed instead, as one undoable step.
+	 */
 	endMove(): void {
-		this.swing.release();
+		const m = this.#move;
 		const preview = this.preview;
 		this.#move = null;
+		if (this.dragOff && m?.started) {
+			this.dragOff = false;
+			this.swing.stop();
+			this.preview = null;
+			// #show drops the removed ids from the selection.
+			this.commit(deleteItems(this.#current, m.ids));
+			return;
+		}
+		this.dragOff = false;
+		this.swing.release();
 		if (preview) this.commit(preview);
 		else this.preview = null;
 	}

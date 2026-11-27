@@ -49,7 +49,7 @@
 	data-testid="object"
 	data-object-id={obj.id}
 	data-symbol-id={obj.symbolId}
-	class="object"
+	class={['object', { leaving: editor.dragOff && editor.selection.includes(obj.id) }]}
 	transform="{editor.swing.transformFor(obj.id)} translate({at.x} {at.y})"
 >
 	<g transform="rotate({obj.rotation})">
@@ -114,7 +114,11 @@
 <style>
 	.object {
 		color: var(--color-text);
-		cursor: move;
+		cursor: grab;
+	}
+	/* Dragged off the stage: about to be removed. */
+	.object.leaving {
+		opacity: 0.35;
 	}
 	.glyph.behind {
 		opacity: 0.55;

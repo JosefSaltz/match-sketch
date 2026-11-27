@@ -35,6 +35,31 @@ export function localEnv(): Record<string, string> {
 	return env;
 }
 
+/**
+ * Stand-ins for `pnpm dev:no-auth` when the stack isn't running: enough for the app to start and
+ * open the editor. Sign-in, sync, sharing and drafting don't work against them.
+ */
+const NO_STACK_ENV: Record<string, string> = {
+	SUPABASE_URL: 'http://127.0.0.1:54321',
+	SUPABASE_PUBLISHABLE_KEY: 'no-stack',
+	SUPABASE_SECRET_KEY: 'no-stack',
+	DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:54322/postgres',
+	FEATURE_DRAFT_FROM_TEXT: 'false'
+};
+
+/** The stack's variables, or with sign-in skipped and no stack, stand-ins and a warning. */
+function envForRun(): Record<string, string> {
+	try {
+		return localEnv();
+	} catch (error) {
+		if (process.env.DEV_SKIP_AUTH !== 'true') throw error;
+		console.warn(
+			'The local Supabase stack is not running: starting with sign-in skipped and stand-in settings. Sync, sharing and drafting will not work.'
+		);
+		return NO_STACK_ENV;
+	}
+}
+
 if (import.meta.main) {
 	const [command, ...args] = process.argv.slice(2);
 	if (!command) {
@@ -43,7 +68,7 @@ if (import.meta.main) {
 	}
 	const child = spawn(command, args, {
 		stdio: 'inherit',
-		env: { ...localEnv(), ...process.env }
+		env: { ...envForRun(), ...process.env }
 	});
 	child.on('exit', (code, signal) => {
 		if (signal) process.kill(process.pid, signal);

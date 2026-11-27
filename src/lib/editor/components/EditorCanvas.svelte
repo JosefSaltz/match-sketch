@@ -3,12 +3,16 @@
 	import type { Corner } from '#lib/geometry/transform.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
-	import { movedBeyond, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
+	import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
+	import DangerZoneLayer from './DangerZoneLayer.svelte';
+	import DangerZoneLegend from './DangerZoneLegend.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
 	import SelectionOverlay from './SelectionOverlay.svelte';
+	import { SYMBOL_PX } from '#lib/model/plan.js';
+	import StepHighlights from '#lib/walkthrough/StepHighlights.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -25,6 +29,14 @@
 	/** The pointer drawing a line or dragging a line's end, if any, and where it last was. */
 	let linking: number | null = null;
 	let linkAt: Point = { x: 0, y: 0 };
+	/** Something is being dragged (objects, or the view when panning): the closed hand shows. */
+	let grabbing = $state(false);
+	/** Where the pointer is (page px) while a drag is off the stage, for the "Release to remove" tag. */
+	let offAt = $state({ x: 0, y: 0 });
+	/** A red trash can, outlined in white so it reads on any background. */
+	const REMOVE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+		"<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6' stroke='white' stroke-width='4.5'/><path d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6' stroke='#b91c1c' stroke-width='2.2'/></g></svg>"
+	)}") 14 14`;
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -157,11 +169,17 @@
 			return;
 		}
 		if (moving === e.pointerId) {
-			editor.updateMove(local(e));
+			const p = local(e);
+			editor.updateMove(p);
+			grabbing = editor.preview !== null;
+			// Pulled off the stage: releasing removes it, so say so before the release.
+			editor.dragOff = grabbing && offStage(p, editor.screen);
+			offAt = { x: e.clientX, y: e.clientY };
 			return;
 		}
 		const action = gestures.move(e.pointerId, local(e));
 		if (!action) return;
+		grabbing = editor.armedSymbolId === null && editor.tool === null;
 		if (action.kind === 'pinch') editor.zoomBy(action.factor, action.at);
 		editor.panBy(action.dx, action.dy);
 	}
@@ -180,6 +198,7 @@
 		if (moving === e.pointerId) {
 			const moved = editor.preview !== null;
 			moving = null;
+			grabbing = false;
 			editor.endMove();
 			if (!moved && narrowTo) editor.select([narrowTo]);
 			narrowTo = null;
@@ -209,13 +228,19 @@
 		}
 		if (tap?.pointerId === e.pointerId) tap = null;
 		gestures.up(e.pointerId);
+		if (moving === null && gestures.active === 0) grabbing = false;
 	}
 </script>
 
 <div class="stage" bind:clientWidth={editor.screenWidth} bind:clientHeight={editor.screenHeight}>
 	<svg
 		{@attach wheelZoom}
-		class={{ armed: editor.armedSymbolId !== null || editor.tool !== null }}
+		class={{
+			armed: editor.armedSymbolId !== null || editor.tool !== null,
+			grabbing,
+			removing: editor.dragOff
+		}}
+		style:--remove-cursor={REMOVE_CURSOR}
 		data-stage
 		width={editor.screenWidth}
 		height={editor.screenHeight}
@@ -228,6 +253,7 @@
 	>
 		<rect class="background" x="0" y="0" width={editor.screenWidth} height={editor.screenHeight} />
 		<BayLayer {editor} />
+		<DangerZoneLayer {editor} />
 		<AnnotationLayer {editor} layer="below" />
 		<g class="objects">
 			{#each objects as obj (obj.id)}
@@ -235,10 +261,31 @@
 			{/each}
 		</g>
 		<AnnotationLayer {editor} layer="above" />
+		{#if editor.panel === 'walkthrough' && editor.activeStep}
+			<StepHighlights
+				doc={editor.doc}
+				step={editor.activeStep}
+				viewport={editor.viewport}
+				symbolPx={SYMBOL_PX[editor.doc.display.symbolSize]}
+				arrows
+			/>
+		{/if}
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>
+	<DangerZoneLegend {editor} />
 </div>
+{#if editor.dragOff}
+	<div
+		data-testid="remove-hint"
+		class="remove-hint"
+		role="status"
+		style:left="{offAt.x + 18}px"
+		style:top="{offAt.y + 18}px"
+	>
+		Release to remove
+	</div>
+{/if}
 
 <style>
 	.stage {
@@ -260,5 +307,28 @@
 	.armed,
 	.armed .background {
 		cursor: crosshair;
+	}
+	/* While dragging, the closed hand wins over every hover cursor underneath. */
+	.grabbing,
+	.grabbing :global(*) {
+		cursor: grabbing !important;
+	}
+	/* Off the stage, the trash can replaces the hand: releasing now removes what is dragged. */
+	.removing,
+	.removing :global(*) {
+		cursor: var(--remove-cursor), no-drop !important;
+	}
+	.remove-hint {
+		position: fixed;
+		z-index: 50;
+		pointer-events: none;
+		padding: 2px 8px;
+		border: 2px solid var(--color-danger);
+		border-radius: 6px;
+		background: #fff;
+		color: var(--color-danger);
+		font-size: 0.8125rem;
+		font-weight: 700;
+		white-space: nowrap;
 	}
 </style>

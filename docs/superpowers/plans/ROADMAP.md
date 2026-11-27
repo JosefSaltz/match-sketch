@@ -20,7 +20,8 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 5a  | Accounts                                    | Done (2026-11-22)         | `2026-11-22-plan-5a-accounts.md`    |
 | 5b  | Sync & offline                              | Done (2026-11-22)         | `2026-11-22-plan-5b-sync-offline.md` |
 | 6   | Draft from text                             | Done (2026-11-22)         | `2026-11-22-plan-6-draft-from-text.md` |
-| 7   | Walkthrough presentation                    | Idea recorded             | spec §7.10                          |
+| 7   | Walkthrough & sharing by link               | Done (2026-11-22)         | `2026-11-22-plan-7-walkthrough-sharing.md` |
+| 8   | Steel ricochet danger zones                 | Built (2026-11-27); e2e run and visual check pending | `2026-11-27-plan-8-steel-danger-zones.md` |
 
 Update this table as plans are written and finished.
 
@@ -146,13 +147,20 @@ The user split Plan 5 into two stacked plans. Both develop and test against the 
 - **Eval first:** before tuning, build an eval set from the MD's seven reference stages (bay sizes guessed until the user supplies real DRRC sizes). Judge on: right symbols, right counts, labels matching the procedure, sensible order of shooting areas and targets, nothing off-canvas, no overlapping symbols. Use the `claude-api` skill's eval guidance.
 - **Tests:** unit tests for placement validation and repair handling, with the model call stubbed; Playwright e2e with the route mocked to a fixed response (draft applied, undo restores, offline disables the button, cap reached shows a message). Real-model runs are part of the eval, not CI.
 
-## Plan 7 — Walkthrough presentation
+## Plan 7 — Walkthrough presentation and sharing by link
 
+- **Settled with the user (2026-11-22):** every user can create and share stages (MDs are the first users, not a separate role). Sharing by read-only link moved into the MVP so shooters can open the walkthrough on their phones, from a QR code on the printout. Spec §1, §7.10, §7.11.
 - **Spec:** §7.10 (user idea, 2026-11-21).
 - **What:** authors tie the course-of-fire steps to color-coded highlights on props and targets (e.g. shoot vs move); viewers page through the steps.
 - **Depends on:** Plan 2 only (stage brief/procedure, annotations such as movement arrows). Placed after Plan 6 by default; it can move up to right after Plan 2 if the user wants it sooner. Printing it as sequence cards builds on Plan 4; a viewer link for shooters needs sharing (after the MVP today).
 - **Brainstorm first:** settle the open questions in spec §7.10 with the user before writing the plan.
 
+## Plan 8 — Steel ricochet danger zones
+
+- **Spec:** `docs/superpowers/specs/2026-11-27-steel-danger-zones-design.md`.
+- **Built:** a view-only editor overlay drawing splash zones and ricochet fans around steel targets from published AR 385-63 and Pistol New Zealand figures, with toolbar toggles and a legend. Not saved, printed or shared.
+- **Pending:** NRA Range Source Book data is a later toggle.
+
 ## After the MVP (spec §10)
 
-Sharing (read-only links, public library, copy onto your canvas and re-fit), open sign-up and terms/billing, canvas features (structures, backstop, slope, safety checks), discipline symbol sets (USPSA, IDPA, PRS, Steel Challenge), sequence cards and RO sheets, A4, "refine with text", linking shooting areas to the targets they engage.
+Sharing beyond read-only links (named accounts, public library, copy onto your canvas and re-fit), open sign-up and terms/billing, canvas features (structures, backstop, slope, safety checks), discipline symbol sets (USPSA, IDPA, PRS, Steel Challenge), sequence cards and RO sheets, A4, "refine with text", linking shooting areas to the targets they engage.

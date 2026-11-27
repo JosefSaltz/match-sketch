@@ -56,7 +56,7 @@ function structure(
 	};
 }
 
-type TargetExtra = Partial<Pick<SymbolEntry, 'plural' | 'keepCase'>>;
+type TargetExtra = Partial<Pick<SymbolEntry, 'plural' | 'keepCase' | 'steel'>>;
 
 /** A standing, front-facing target: countable, anchored at its base. */
 function target(
@@ -88,30 +88,38 @@ export const ENTRIES: readonly CatalogEntry[] = [
 		plural: 'Papers with hard cover'
 	}),
 	target('no-shoot', 'No-shoot', 'paper', ['NS', 'no shoot', 'penalty target']),
-	target('popper', 'Knock-down popper', 'poppers', ['popper', 'pepper popper']),
-	target('popper-static', 'Static popper', 'poppers', []),
-	target('popper-trigger', 'Trigger popper', 'poppers', ['activator', 'activator popper']),
-	target('popper-auto-reset', 'Auto-reset popper', 'poppers', [
-		'auto popper',
-		'self-resetting popper'
-	]),
+	target('popper', 'Knock-down popper', 'poppers', ['popper', 'pepper popper'], { steel: true }),
+	target('popper-static', 'Static popper', 'poppers', [], { steel: true }),
+	target('popper-trigger', 'Trigger popper', 'poppers', ['activator', 'activator popper'], {
+		steel: true
+	}),
+	target(
+		'popper-auto-reset',
+		'Auto-reset popper',
+		'poppers',
+		['auto popper', 'self-resetting popper'],
+		{ steel: true }
+	),
 	target('steel-static', 'Static steel', 'steel', ['steel plate', 'plate'], {
-		plural: 'Static steel'
+		plural: 'Static steel',
+		steel: true
 	}),
 	target('plate-kd', 'KD plate', 'steel', ['knock-down plate', 'falling plate'], {
-		keepCase: true
+		keepCase: true,
+		steel: true
 	}),
-	target('plate-stop', 'Stop plate', 'steel', ['stop target', 'last target']),
-	target('plate-rack', 'Plate rack', 'steel', ['row of plates', 'plate bank']),
+	target('plate-stop', 'Stop plate', 'steel', ['stop target', 'last target'], { steel: true }),
+	target('plate-rack', 'Plate rack', 'steel', ['row of plates', 'plate bank'], { steel: true }),
 	target('ducks', 'Ducks in a row', 'steel', ['duck targets', 'ducks'], {
-		plural: 'Ducks in a row'
+		plural: 'Ducks in a row',
+		steel: true
 	}),
-	target('bottle', 'Bottle', 'steel', ['steel bottle']),
+	target('bottle', 'Bottle', 'steel', ['steel bottle'], { steel: true }),
 	target('swinger', 'Swinger', 'movers', ['swinging target', 'swinging paper']),
 	target('flasher', 'Flasher', 'movers', ['disappearing target', 'bobber']),
-	target('spinner', 'Spinner', 'movers', ['spinning target']),
-	target('texas-star', 'Texas star', 'movers', ['star'], { keepCase: true }),
-	target('whirly-gig', 'Whirly-gig', 'movers', ['whirlygig']),
+	target('spinner', 'Spinner', 'movers', ['spinning target'], { steel: true }),
+	target('texas-star', 'Texas star', 'movers', ['star'], { keepCase: true, steel: true }),
+	target('whirly-gig', 'Whirly-gig', 'movers', ['whirlygig'], { steel: true }),
 	prop('barrel', 'Barrel', ['drum', '55 gallon drum']),
 	prop('barrels-stacked', 'Stacked barrels', ['barrel stack']),
 	prop('tire', 'Tire', ['tyre', 'wheel']),

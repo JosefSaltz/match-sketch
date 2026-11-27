@@ -16,7 +16,7 @@
 	 * black-and-white printer) and for the e2e check that nothing is clipped. Not linked from menus.
 	 */
 	let gray = $state(false);
-	const SIZES = [SYMBOL_PX.small, SYMBOL_PX.medium, SYMBOL_PX.large];
+	const SIZES = [SYMBOL_PX.small, SYMBOL_PX.medium, SYMBOL_PX.large, SYMBOL_PX.xlarge];
 	const groups = CATEGORY_ORDER.map((category) => ({
 		category,
 		label: CATEGORY_LABEL[category],

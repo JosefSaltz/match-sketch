@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getEntry } from '../catalog';
 import { emptyPlanDocument, type PlanDocument } from '../model/plan';
 import { applyDraft } from './apply';
-import { DraftRequestSchema, type DraftPlacement } from './contract';
+import { draftBrief, DraftRequestSchema, type DraftPlacement } from './contract';
 import { minSpacingFt } from './spacing';
 import { validatePlacements } from './validate';
 
@@ -124,7 +124,7 @@ describe('DraftRequestSchema', () => {
 	const request = () => ({
 		planId: crypto.randomUUID(),
 		description: 'Engage the steel from SA-1.',
-		brief: emptyPlanDocument().brief,
+		brief: draftBrief(emptyPlanDocument().brief),
 		canvas: { widthFt: 60, depthFt: 90, unit: 'yd' as const },
 		symbolSize: 'medium' as const
 	});

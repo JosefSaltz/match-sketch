@@ -10,7 +10,8 @@
 	import type { CanvasSize, Point } from '#lib/geometry/types.js';
 	import { formatLength, formatNumber, toFeet, type LengthUnit } from '#lib/geometry/units.js';
 	import { worldToScreen, type Viewport } from '#lib/geometry/viewport.js';
-	import type { LinkAnnotation, PlanDocument, PlanObject } from '#lib/model/plan.js';
+	import type { LinkAnnotation, PlanDocument, PlanObject, Step } from '#lib/model/plan.js';
+	import StepHighlights from '#lib/walkthrough/StepHighlights.svelte';
 	import type { Rect } from './layout.js';
 	import { markupFor } from './symbol-markup.js';
 
@@ -31,6 +32,11 @@
 		tiles?: Rect[];
 		/** Thumbnails leave out the arrow, scale bar and labels. */
 		bare?: boolean;
+		/**
+		 * A walkthrough step to show (spec §7.10): its marked objects and arrows stand out, everything
+		 * else fades back.
+		 */
+		step?: Step | null;
 	};
 	let {
 		doc,
@@ -41,7 +47,8 @@
 		symbolPx,
 		depth,
 		tiles = [],
-		bare = false
+		bare = false,
+		step = null
 	}: Props = $props();
 
 	const INK = '#1c1c1a';
@@ -135,6 +142,12 @@
 	}
 
 	const objects = $derived([...doc.objects].sort((a, b) => a.z - b.z));
+	const FADED = 0.25;
+	const marked = $derived(new Set(step?.marks.map((m) => m.objectId) ?? []));
+	/** Whether the step singles anything out; a step that doesn't leaves the drawing as it is. */
+	const focused = $derived(step !== null && (step.marks.length > 0 || step.arrows.length > 0));
+	/** Opacity of an object or arrow in the step: full when it is part of it. */
+	const fade = (inStep: boolean) => (focused && !inStep ? FADED : undefined);
 	/** Copies drawn behind the front glyph when one object stands for several targets. */
 	function cluster(obj: PlanObject, box: { width: number; height: number }) {
 		const count = obj.count ?? 1;
@@ -279,22 +292,25 @@
 	{#each links as l (l.a.id)}
 		{#if l.a.type === 'arrow'}
 			{@const stop = Math.max(0, l.len - 10)}
-			<line
-				x1={l.p.x}
-				y1={l.p.y}
-				x2={l.p.x + l.u.x * stop}
-				y2={l.p.y + l.u.y * stop}
-				stroke={INK}
-				stroke-width="1.8"
-				stroke-dasharray="6 4"
-			/>
-			<path
-				d="M{l.q.x} {l.q.y} L{l.q.x - l.u.x * 11 + l.n.x * 5} {l.q.y - l.u.y * 11 + l.n.y * 5} L{l.q
-					.x -
-					l.u.x * 11 -
-					l.n.x * 5} {l.q.y - l.u.y * 11 - l.n.y * 5} Z"
-				fill={INK}
-			/>
+			{@const shown = step?.arrows.includes(l.a.id) ?? false}
+			<g opacity={fade(shown)} data-print-arrow={l.a.id}>
+				<line
+					x1={l.p.x}
+					y1={l.p.y}
+					x2={l.p.x + l.u.x * stop}
+					y2={l.p.y + l.u.y * stop}
+					stroke={INK}
+					stroke-width={shown ? 3 : 1.8}
+					stroke-dasharray="6 4"
+				/>
+				<path
+					d="M{l.q.x} {l.q.y} L{l.q.x - l.u.x * 11 + l.n.x * 5} {l.q.y - l.u.y * 11 + l.n.y * 5} L{l
+						.q.x -
+						l.u.x * 11 -
+						l.n.x * 5} {l.q.y - l.u.y * 11 - l.n.y * 5} Z"
+					fill={INK}
+				/>
+			</g>
 		{:else}
 			{@const ft = measureFt(doc, l.a)}
 			<line x1={l.p.x} y1={l.p.y} x2={l.q.x} y2={l.q.y} stroke={INK} stroke-width="1.2" />
@@ -316,7 +332,11 @@
 		{@const pos = at(obj)}
 		{@const box = localBox(obj, entry, scale, symbolPx)}
 		{@const bounds = rotatedBounds(box, obj.rotation)}
-		<g data-print-object={obj.symbolId} transform="translate({pos.x} {pos.y})">
+		<g
+			data-print-object={obj.symbolId}
+			transform="translate({pos.x} {pos.y})"
+			opacity={fade(marked.has(obj.id))}
+		>
 			<g transform="rotate({obj.rotation})">
 				{#if entry?.kind === 'footprint'}
 					{#each footprintShapes(entry.footprint.style, box.width, box.height) as s, i (i)}
@@ -373,6 +393,10 @@
 			{/if}
 		</g>
 	{/each}
+
+	{#if step}
+		<StepHighlights {doc} {step} viewport={vp} {symbolPx} />
+	{/if}
 
 	{#if !bare}
 		{#each texts as t (t.id)}

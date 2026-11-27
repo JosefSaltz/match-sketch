@@ -36,7 +36,7 @@ describe('plan repository', () => {
 			depthFt: 75,
 			unit: 'yd',
 			sourceCanvasId: bay.id,
-			schemaVersion: 1
+			schemaVersion: 2
 		});
 		expect(p.document).toEqual(emptyPlanDocument());
 		await updateCanvas(db, bay.id, { name: 'Bay A', widthFt: 300, depthFt: 75, unit: 'yd' });
@@ -60,6 +60,14 @@ describe('plan repository', () => {
 		await savePlanDocument(db, p.id, good);
 		expect((await getPlan(db, p.id))?.document).toEqual(good);
 		expect(planTitle((await getPlan(db, p.id))!)).toBe('Stage 3 — Bunker');
+	});
+
+	it('starts plans unshared and never copies a share link (Review Focus #1)', async () => {
+		const bay = await createCanvas(db, { name: 'Bay A', widthFt: 150, depthFt: 75, unit: 'yd' });
+		const p = await createPlan(db, { canvas: bay, sourceCanvasId: bay.id });
+		expect(p.share).toBeNull();
+		await db.plans.update(p.id, { share: { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true } });
+		expect((await duplicatePlan(db, p.id)).share).toBeNull();
 	});
 
 	it('duplicates, lists newest first, and soft-deletes', async () => {

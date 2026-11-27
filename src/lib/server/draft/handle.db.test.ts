@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import type { DraftOutput } from '../../draft/contract';
+import { draftBrief, type DraftOutput } from '../../draft/contract';
 import { emptyPlanDocument } from '../../model/plan';
 import { createDatabase } from '../db/client';
 import { aiDrafts } from '../db/schema';
@@ -72,7 +72,7 @@ function body() {
 	return {
 		planId: crypto.randomUUID(),
 		description: 'Engage two poppers from SA-1.',
-		brief: emptyPlanDocument().brief,
+		brief: draftBrief(emptyPlanDocument().brief),
 		canvas: { widthFt: 60, depthFt: 90, unit: 'yd' },
 		symbolSize: 'medium'
 	};

@@ -1,11 +1,13 @@
 import { getEntry } from '../catalog';
 import type { PlanDocument, PlanObject } from '../model/plan';
+import { pruneMarks } from '../editor/walkthrough';
 import type { Placement } from './contract';
 
 /**
  * The plan with its objects replaced by the draft (spec §7.5 step 5). Arrows and measure lines
  * tied to a replaced object go with it; text labels, point-to-point lines, the brief, the scale
- * break and display settings stay. One commit, so one undo step.
+ * break and display settings stay; walkthrough marks on replaced objects go. One commit, so one
+ * undo step.
  */
 export function applyDraft(doc: PlanDocument, placements: Placement[]): PlanDocument {
 	// Footprints (walls, boxes, berms) go underneath, so they never hide a target or prop.
@@ -28,5 +30,5 @@ export function applyDraft(doc: PlanDocument, placements: Placement[]): PlanDocu
 	const annotations = doc.annotations.filter(
 		(a) => a.type === 'text' || (a.from.kind === 'point' && a.to.kind === 'point')
 	);
-	return { ...doc, objects, annotations };
+	return pruneMarks({ ...doc, objects, annotations });
 }

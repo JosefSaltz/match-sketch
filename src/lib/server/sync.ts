@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, ne, sql } from 'drizzle-orm';
 import {
 	MAX_PULL_RECORDS,
 	type PullResponse,
@@ -8,8 +8,11 @@ import {
 	type SyncTable,
 	type WireRecord
 } from '../sync/wire';
+import { PLAN_SCHEMA_VERSION } from '../model/plan';
+import type { Share } from '../model/share';
+import { readPlanDocument } from '../model/upgrade';
 import type { Database } from './db/client';
-import { canvases, matches, plans } from './db/schema';
+import { canvases, matches, plans, shareTokens } from './db/schema';
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 type Db = Database | Tx;
@@ -19,6 +22,9 @@ type MatchRow = typeof matches.$inferSelect;
 type PlanRow = typeof plans.$inferSelect;
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
+
+const share = (row: { shareId: string | null; shareOn: boolean }): Share | null =>
+	row.shareId ? { id: row.shareId, on: row.shareOn } : null;
 
 function canvasRecord(row: CanvasRow): ServerRecord {
 	const { id, version, updatedAt, deletedAt, name, widthFt, depthFt, unit } = row;
@@ -44,8 +50,19 @@ function matchRecord(row: MatchRow): ServerRecord {
 		updatedAt: updatedAt.toISOString(),
 		deletedAt: iso(deletedAt),
 		name,
-		date
+		date,
+		share: share(row)
 	};
+}
+
+/** Rows a version 1 app saved go out as version 2 (spec §7.10); newer ones as they are. */
+function upgradedDocument(row: PlanRow): { schemaVersion: number; document: unknown } {
+	if (row.schemaVersion !== 1) return { schemaVersion: row.schemaVersion, document: row.document };
+	try {
+		return { schemaVersion: PLAN_SCHEMA_VERSION, document: readPlanDocument(row.document) };
+	} catch {
+		return { schemaVersion: row.schemaVersion, document: row.document };
+	}
 }
 
 function planRecord(row: PlanRow): ServerRecord {
@@ -61,8 +78,8 @@ function planRecord(row: PlanRow): ServerRecord {
 		widthFt: row.widthFt,
 		depthFt: row.depthFt,
 		unit: row.unit,
-		schemaVersion: row.schemaVersion,
-		document: row.document
+		share: share(row),
+		...upgradedDocument(row)
 	};
 }
 
@@ -85,10 +102,17 @@ async function findExisting(db: Db, table: SyncTable, id: string): Promise<Exist
 	}
 }
 
+/** The share columns to write; none when an older app's push left `share` out (keep them). */
+function shareValues(record: WireRecord): { shareId?: string | null; shareOn?: boolean } {
+	if (record.table === 'canvases' || record.share === undefined) return {};
+	return { shareId: record.share?.id ?? null, shareOn: record.share?.on ?? false };
+}
+
 /** The record's columns, without the table, id, owner or version. */
 function fields(record: WireRecord) {
 	const updatedAt = new Date(record.updatedAt);
 	const deletedAt = record.deletedAt ? new Date(record.deletedAt) : null;
+	const shared = shareValues(record);
 	switch (record.table) {
 		case 'canvases': {
 			const { name, widthFt, depthFt, unit } = record;
@@ -99,11 +123,12 @@ function fields(record: WireRecord) {
 		}
 		case 'matches': {
 			const { name, date } = record;
-			return { table: record.table, values: { updatedAt, deletedAt, name, date } };
+			return { table: record.table, values: { updatedAt, deletedAt, name, date, ...shared } };
 		}
 		case 'plans': {
 			const { matchId, stageOrder, sourceCanvasId, widthFt, depthFt, unit } = record;
-			const { schemaVersion, document } = record;
+			const { document } = record;
+			const schemaVersion = PLAN_SCHEMA_VERSION;
 			return {
 				table: record.table,
 				values: {
@@ -116,7 +141,8 @@ function fields(record: WireRecord) {
 					depthFt,
 					unit,
 					schemaVersion,
-					document
+					document,
+					...shared
 				}
 			};
 		}
@@ -168,9 +194,52 @@ async function updateRecord(db: Db, record: WireRecord, version: number): Promis
 	}
 }
 
+/**
+ * Whether the record may use its share token: the token must be this owner's (the first push
+ * of a token claims it for good) and no other plan or match may hold it.
+ */
+async function tokenAllowed(db: Db, ownerId: string, record: WireRecord): Promise<boolean> {
+	if (record.table === 'canvases' || !record.share) return true;
+	const token = record.share.id;
+	// The primary key settles concurrent claims: a second claimant waits, then reads the owner.
+	await db.insert(shareTokens).values({ token, ownerId }).onConflictDoNothing();
+	const [claim] = await db
+		.select({ ownerId: shareTokens.ownerId })
+		.from(shareTokens)
+		.where(eq(shareTokens.token, token));
+	if (claim?.ownerId !== ownerId) return false;
+	// Only the record itself is left out, in its own table.
+	const otherPlan = record.table === 'plans' ? ne(plans.id, record.id) : undefined;
+	const otherMatch = record.table === 'matches' ? ne(matches.id, record.id) : undefined;
+	const [p] = await db
+		.select({ id: plans.id })
+		.from(plans)
+		.where(and(eq(plans.shareId, token), otherPlan))
+		.limit(1);
+	if (p) return false;
+	const [m] = await db
+		.select({ id: matches.id })
+		.from(matches)
+		.where(and(eq(matches.shareId, token), otherMatch))
+		.limit(1);
+	return m === undefined;
+}
+
+/** The record as if an older app pushed it: without `share`, so the stored one stays. */
+function withoutShare(record: WireRecord): WireRecord {
+	if (record.table === 'canvases') return record;
+	const { share, ...rest } = record;
+	void share;
+	return rest;
+}
+
 async function pushOne(tx: Tx, ownerId: string, item: PushItem): Promise<PushResult> {
-	const { record, baseVersion } = item;
+	const { baseVersion } = item;
+	let { record } = item;
 	const ref = { table: record.table, id: record.id };
+	// Someone else's token, or one another record holds (which would also break the unique index
+	// and the transaction): the record still syncs, without the link, so its edits never get stuck.
+	if (!(await tokenAllowed(tx, ownerId, record))) record = withoutShare(record);
 	let existing = await findExisting(tx, record.table, record.id);
 	if (!existing) {
 		if (await insertRecord(tx, ownerId, record)) return { status: 'accepted', ...ref, version: 1 };

@@ -1,3 +1,4 @@
+import { stepsFromText } from '../model/procedure';
 import { describe, expect, it } from 'vitest';
 import { emptyPlanDocument } from '../model/plan';
 import {
@@ -19,7 +20,7 @@ const brief = {
 	stageName: 'Bunker Down',
 	startPosition: 'Standing in Box A',
 	gunReady: 'Loaded, holstered',
-	procedure: 'Engage T1–T4 from Box A.\nMove to Box B.',
+	steps: stepsFromText([], 'Engage T1–T4 from Box A.\nMove to Box B.'),
 	roundCount: '21 rds',
 	parTime: '120 s'
 };
@@ -37,6 +38,7 @@ function input(extra: Partial<PlanPrintInput> = {}): PlanPrintInput {
 		unit: 'yd',
 		orientation: 'portrait',
 		mode: 'fit',
+		link: null,
 		...extra
 	};
 }
@@ -83,13 +85,19 @@ describe('layoutPlan', () => {
 	});
 
 	it('does not double-number steps the MD numbered', () => {
-		const [p] = layoutPlan(input({ brief: { ...brief, procedure: '1. Start\n2) Move' } }), measure);
+		const [p] = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], '1. Start\n\n2) Move') } }),
+			measure
+		);
 		if (p.kind !== 'stage') throw new Error('expected a stage page');
 		expect(p.procedure.flatMap((b) => b.lines)).toEqual(['1. Start', '2. Move']);
 	});
 
 	it('moves a long procedure and the notes to page 2 with a pointer', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(40) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.kind)).toEqual(['stage', 'continued']);
 		const [first, second] = pages;
 		if (first.kind !== 'stage' || second.kind !== 'continued') throw new Error('kinds');
@@ -99,7 +107,10 @@ describe('layoutPlan', () => {
 	});
 
 	it('continues a procedure longer than a page onto page 3', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(90) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(90)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.kind)).toEqual(['stage', 'continued', 'continued']);
 		const shown = pages.flatMap((p) =>
 			p.kind === 'continued' ? p.procedure.flatMap((b) => b.lines) : []
@@ -108,7 +119,10 @@ describe('layoutPlan', () => {
 	});
 
 	it('numbers footers page x of y', () => {
-		const pages = layoutPlan(input({ brief: { ...brief, procedure: lines(40) } }), measure);
+		const pages = layoutPlan(
+			input({ brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
 		expect(pages.map((p) => p.footer.right)).toEqual(['Page 1 of 2', 'Page 2 of 2']);
 		expect(pages[0].footer.left).toBe('DRRC November · Stage 3');
 	});
@@ -142,6 +156,55 @@ describe('layoutPlan edge cases (final review)', () => {
 		if (p.kind !== 'stage') throw new Error('expected a stage page');
 		return p;
 	};
+
+	it('puts the QR code to a shared link at the right of the stage header', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const [plain] = layoutPlan(input(), measure);
+		const [shared] = layoutPlan(input({ link }), measure);
+		expect(plain.header.qr).toBeNull();
+		const qr = shared.header.qr!;
+		expect(qr.link).toBe(link);
+		const h = shared.header.rect;
+		expect(qr.rect).toEqual({
+			x: h.x + h.width - h.height,
+			y: h.y,
+			width: h.height,
+			height: h.height
+		});
+		expect(qr.caption.lines).toEqual(['Scan for the', 'walkthrough']);
+		expect(qr.caption.x + qr.caption.width).toBeLessThanOrEqual(qr.rect.x);
+		// The title area ends before the caption.
+		const long = layoutPlan(
+			input({ link, title: 'A very long stage name '.repeat(4) }),
+			measure
+		)[0];
+		expect(
+			long.header.titleX + measure(long.header.title.toUpperCase(), long.header.titleFontPx, true)
+		).toBeLessThanOrEqual(long.header.qr!.caption.x);
+	});
+
+	it('cuts a long match line before the QR code', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const [p] = layoutPlan(
+			input({ link, matchName: 'A very long match name '.repeat(6) }),
+			measure
+		);
+		expect(p.header.sub.endsWith('…')).toBe(true);
+		expect(p.header.titleX + measure(p.header.sub, 12, false)).toBeLessThanOrEqual(
+			p.header.qr!.caption.x
+		);
+	});
+
+	it('prints the QR code only on the stage page, not continued or tile pages', () => {
+		const link = 'https://ms.example/s/AbCdEfGhIjKlMnOpQrStUv';
+		const long = layoutPlan(
+			input({ link, brief: { ...brief, steps: stepsFromText([], lines(40)) } }),
+			measure
+		);
+		expect(long.map((p) => p.header.qr !== null)).toEqual([true, false]);
+		const tiled = layoutPlan(input({ link, mode: { tileScaleFtPerIn: 10 } }), measure);
+		expect(tiled.filter((p) => p.header.qr !== null).map((p) => p.kind)).toEqual(['stage']);
+	});
 
 	it('shrinks a long stage name to fit the header', () => {
 		const title = 'Moving Targets Through The Shoot House Of Horrors And Back Again Twice';

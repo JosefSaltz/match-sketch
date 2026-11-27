@@ -4,6 +4,9 @@
 	import { resolve } from '$app/paths';
 	import ConfirmDialog from '#lib/components/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/Dialog.svelte';
+	import ShareDialog from '#lib/components/ShareDialog.svelte';
+	import { shareUrl } from '#lib/model/share.js';
+	import { nextShare, saveMatchShare, type ShareAction } from '#lib/store/share.js';
 	import { formatDimensions } from '#lib/geometry/units.js';
 	import { moveItem, reorderIndex } from '#lib/matches/reorder.js';
 	import { getDb } from '#lib/store/index.js';
@@ -34,6 +37,7 @@
 
 	let pickingTheme = $state(false);
 	let adding = $state(false);
+	let sharing = $state(false);
 	let unassigned = $state<PlanRecord[]>([]);
 
 	const order = $derived(plans.map((p) => p.id));
@@ -61,6 +65,12 @@
 		handled = revision;
 		untrack(() => void invalidateAll());
 	});
+
+	/** Turns the match's link on or off, or resets it (spec §7.11). */
+	async function changeShare(action: ShareAction) {
+		if (!match) return;
+		match = await saveMatchShare(getDb(), match.id, nextShare(match.share, action));
+	}
 
 	type FieldEvent = Event & { currentTarget: HTMLInputElement };
 
@@ -223,6 +233,7 @@
 					<Button href={`${resolve('/(app)/plans/new')}?match=${m.id}`}>New stage</Button>
 					<Button onclick={openAdd}>Add existing plan</Button>
 					<Button href={resolve('/(app)/matches/[id]/print', { id: m.id })}>Print match</Button>
+					<Button onclick={() => (sharing = true)}>Share</Button>
 				</div>
 				{#if plans.length}
 					<ol
@@ -321,6 +332,16 @@
 			</div>
 		</div>
 	</Dialog>
+{/if}
+
+{#if sharing && match}
+	<ShareDialog
+		title="Share match"
+		share={match.share}
+		link={match.share ? shareUrl(location.origin, match.share.id) : null}
+		onaction={(action: ShareAction) => void changeShare(action).catch(console.error)}
+		onclose={() => (sharing = false)}
+	/>
 {/if}
 
 {#if deleting}

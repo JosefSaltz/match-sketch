@@ -1,0 +1,442 @@
+import { describe, expect, it } from 'vitest';
+import type { Viewport } from '../geometry/viewport';
+import { worldToScreen } from '../geometry/viewport';
+import { FAN_SOURCES, SPLASH_SOURCES } from './sources';
+import {
+	bayRect,
+	clipPolygon,
+	clipPolyline,
+	densify,
+	distanceOutside,
+	exitPoint,
+	formatPublished,
+	formatPast,
+	formatPublishedRange,
+	parseZoneUnit,
+	groupTags,
+	toPathData,
+	zoneTags
+} from './paths';
+import { fanZone, splashZone } from './zones';
+
+const r10 = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
+const inside = (p: { x: number; y: number }, r = r10) =>
+	p.x >= r.minX - 1e-9 && p.x <= r.maxX + 1e-9 && p.y >= r.minY - 1e-9 && p.y <= r.maxY + 1e-9;
+/** Outward unit normal of the bay edge p sits on (p must be on exactly one edge). */
+const outwardNormal = (p: { x: number; y: number }, r: typeof r10) => {
+	const hits = [
+		{ on: Math.abs(p.x - r.minX) < 1e-6, n: { x: -1, y: 0 } },
+		{ on: Math.abs(p.x - r.maxX) < 1e-6, n: { x: 1, y: 0 } },
+		{ on: Math.abs(p.y - r.minY) < 1e-6, n: { x: 0, y: -1 } },
+		{ on: Math.abs(p.y - r.maxY) < 1e-6, n: { x: 0, y: 1 } }
+	].filter((h) => h.on);
+	expect(hits).toHaveLength(1);
+	return hits[0].n;
+};
+const onBoundary = (p: { x: number; y: number }, r: typeof r10) =>
+	inside(p, r) &&
+	(Math.abs(p.x - r.minX) < 1e-6 ||
+		Math.abs(p.x - r.maxX) < 1e-6 ||
+		Math.abs(p.y - r.minY) < 1e-6 ||
+		Math.abs(p.y - r.maxY) < 1e-6);
+
+describe('bayRect', () => {
+	it('spans 0..width and 0..depth', () => {
+		expect(bayRect({ widthFt: 60, depthFt: 30 })).toEqual({ minX: 0, minY: 0, maxX: 60, maxY: 30 });
+	});
+});
+
+describe('clipPolygon', () => {
+	it('keeps inside vertices and adds crossings for a half-outside triangle', () => {
+		const out = clipPolygon(
+			[
+				{ x: 2, y: 2 },
+				{ x: 8, y: 2 },
+				{ x: 5, y: 20 }
+			],
+			r10
+		);
+		expect(out.length).toBeGreaterThan(3);
+		expect(out.every((p) => inside(p))).toBe(true);
+		expect(out).toContainEqual({ x: 2, y: 2 });
+		expect(out).toContainEqual({ x: 8, y: 2 });
+		expect(out.some((p) => p.y === 10)).toBe(true);
+	});
+	it('returns [] for a polygon fully outside', () => {
+		expect(
+			clipPolygon(
+				[
+					{ x: 20, y: 20 },
+					{ x: 30, y: 20 },
+					{ x: 25, y: 30 }
+				],
+				r10
+			)
+		).toEqual([]);
+	});
+});
+
+describe('clipPolyline', () => {
+	it('returns one piece with ends on the edges for a line crossing twice', () => {
+		const pieces = clipPolyline(
+			[
+				{ x: -5, y: 5 },
+				{ x: 15, y: 5 }
+			],
+			r10
+		);
+		expect(pieces).toEqual([
+			[
+				{ x: 0, y: 5 },
+				{ x: 10, y: 5 }
+			]
+		]);
+	});
+});
+
+describe('exitPoint', () => {
+	it('finds where a line leaves the rect', () => {
+		expect(
+			exitPoint(
+				[
+					{ x: 5, y: 5 },
+					{ x: 5, y: 50 }
+				],
+				r10
+			)
+		).toEqual({ x: 5, y: 10 });
+	});
+	it('is null for a line that starts outside and never enters', () => {
+		expect(
+			exitPoint(
+				[
+					{ x: 20, y: 5 },
+					{ x: 20, y: 50 }
+				],
+				r10
+			)
+		).toBeNull();
+	});
+	it('is null when the line stays inside', () => {
+		expect(
+			exitPoint(
+				[
+					{ x: 1, y: 1 },
+					{ x: 9, y: 9 }
+				],
+				r10
+			)
+		).toBeNull();
+	});
+	it('counts a point on the boundary as inside when the next is outside', () => {
+		expect(
+			exitPoint(
+				[
+					{ x: 5, y: 10 },
+					{ x: 5, y: 20 }
+				],
+				r10
+			)
+		).toEqual({ x: 5, y: 10 });
+	});
+});
+
+describe('densify', () => {
+	it('splits a 100 ft segment into 11 collinear points at step 10', () => {
+		const out = densify(
+			[
+				{ x: 0, y: 0 },
+				{ x: 0, y: 100 }
+			],
+			10
+		);
+		expect(out).toHaveLength(11);
+		expect(out.every((p) => p.x === 0)).toBe(true);
+		expect(out[10]).toEqual({ x: 0, y: 100 });
+	});
+	it('also splits the closing segment of a closed ring without repeating the start', () => {
+		const out = densify(
+			[
+				{ x: 0, y: 0 },
+				{ x: 10, y: 0 },
+				{ x: 10, y: 10 }
+			],
+			5,
+			true
+		);
+		expect(out).toHaveLength(7);
+		expect(out[0]).toEqual({ x: 0, y: 0 });
+	});
+});
+
+describe('toPathData through a scale break', () => {
+	const vp: Viewport = {
+		scale: 2,
+		offsetX: 10,
+		offsetY: 700,
+		depth: { fromFt: 90, toFt: 300, drawnFt: 75 }
+	};
+	it('stays finite and ends where worldToScreen puts the last point', () => {
+		const pts = densify(
+			[
+				{ x: 10, y: 0 },
+				{ x: 10, y: 300 }
+			],
+			10
+		);
+		const d = toPathData(pts, vp, false);
+		expect(d).not.toMatch(/NaN|Infinity/);
+		const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+		expect(nums.every(Number.isFinite)).toBe(true);
+		expect(d.startsWith('M')).toBe(true);
+		const last = worldToScreen({ x: 10, y: 300 }, vp);
+		expect(nums.slice(-2)).toEqual([last.x, last.y].map((v) => Number(v.toFixed(2))));
+	});
+	it('closes with Z when closed', () => {
+		expect(
+			toPathData(
+				[
+					{ x: 0, y: 0 },
+					{ x: 1, y: 0 },
+					{ x: 1, y: 1 }
+				],
+				{ scale: 1, offsetX: 0, offsetY: 0 },
+				true
+			)
+		).toMatch(/Z$/);
+	});
+});
+
+describe('formatPublished', () => {
+	it('shows the plan unit rounded, then the source meters', () => {
+		expect(formatPublished(45.72, 'yd')).toBe('50 yd');
+		expect(formatPublished(1800, 'yd')).toBe('1,969 yd');
+		expect(formatPublished(45.72, 'm')).toBe('45.72 m');
+		expect(formatPublished(399, 'm')).toBe('399 m');
+		expect(formatPublished(1211, 'm')).toBe('1.211 km');
+		expect(formatPublished(1800, 'm')).toBe('1.8 km');
+	});
+	it('formats a range', () => {
+		expect(formatPublishedRange(25, 30, 'yd')).toBe('≥ 27–33 yd');
+		expect(formatPublishedRange(25, 30, 'm')).toBe('≥ 25–30 m');
+	});
+});
+
+describe('zoneTags', () => {
+	it('tags two ricochet sides and two dispersion edges of a 9mm fan', () => {
+		const bay = { widthFt: 60, depthFt: 30 };
+		const r = bayRect(bay);
+		const fan = fanZone(
+			{ id: 'f', x: 30, y: 2 },
+			{ id: 't', x: 30, y: 25 },
+			FAN_SOURCES['fan-9mm']
+		)!;
+		const tags = zoneTags({ splash: [], fans: [fan] }, r, 'yd');
+		const ric = tags.filter((t) => t.text.startsWith('W '));
+		const disp = tags.filter((t) => t.text.startsWith('X '));
+		expect(ric).toHaveLength(2);
+		expect(disp).toHaveLength(2);
+		expect(tags).toHaveLength(4);
+		for (const t of ric) expect(t.text).toBe('W 436 yd · Y 1,324 yd · reaches 1,314 yd past bay');
+		for (const t of disp) expect(t.text).toBe('X 1,969 yd · 1,959 yd past bay');
+		for (const t of tags) {
+			expect(onBoundary(t.at, r)).toBe(true);
+			expect(Math.hypot(t.dir.x, t.dir.y)).toBeCloseTo(1, 9);
+		}
+		expect(new Set(tags.map((t) => t.key)).size).toBe(4);
+	});
+	it('points every tag outward through the edge it sits on, left, right and downrange', () => {
+		const r = bayRect({ widthFt: 60, depthFt: 30 });
+		const fan = fanZone(
+			{ id: 'f', x: 30, y: 2 },
+			{ id: 't', x: 30, y: 25 },
+			FAN_SOURCES['fan-9mm']
+		)!;
+		const tags = zoneTags({ splash: [], fans: [fan] }, r, 'yd');
+		const normals = tags.map((t) => outwardNormal(t.at, r));
+		// The ricochet areas leave through the side edges, the dispersion edges through the far edge.
+		expect(normals).toContainEqual({ x: -1, y: 0 });
+		expect(normals).toContainEqual({ x: 1, y: 0 });
+		expect(normals).toContainEqual({ x: 0, y: 1 });
+		tags.forEach((t, i) => {
+			expect(t.dir.x * normals[i].x + t.dir.y * normals[i].y).toBeGreaterThan(0);
+		});
+	});
+	it('has no tags for an AR splash whose rays stay in a big bay', () => {
+		const z = splashZone({ id: 'a', x: 200, y: 200, rotation: 0 }, SPLASH_SOURCES['ar385-splash']);
+		expect(
+			zoneTags({ splash: [z], fans: [] }, bayRect({ widthFt: 400, depthFt: 400 }), 'yd')
+		).toEqual([]);
+	});
+	it('tags a Pistol NZ ray with the range at the bay edge', () => {
+		const z = splashZone({ id: 'p', x: 30, y: 15, rotation: 0 }, SPLASH_SOURCES['pnz-splash']);
+		const r = bayRect({ widthFt: 60, depthFt: 30 });
+		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
+		expect(tags.length).toBeGreaterThan(0);
+		for (const t of tags) {
+			expect(t.text).toBe('≥ 27–33 yd · no stated limit');
+			expect(onBoundary(t.at, r)).toBe(true);
+		}
+	});
+	it('adds past-bay remainders to AR splash rays', () => {
+		const z = splashZone({ id: 'a', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['ar385-splash']);
+		const r = bayRect({ widthFt: 60, depthFt: 30 });
+		const tags = zoneTags({ splash: [z], fans: [] }, r, 'yd');
+		expect(tags.map((t) => t.text)).toEqual(['50 yd · 46 yd past bay', '50 yd · 32 yd past bay']);
+		expect(tags[0].at.x).toBeCloseTo(0, 6);
+		expect(tags[1].at.x).toBeCloseTo(60, 6);
+		expect(tags[0].dir.x).toBeLessThan(0);
+		expect(tags[1].dir.x).toBeGreaterThan(0);
+	});
+	it('says no stated limit for Pistol NZ rays', () => {
+		const z = splashZone({ id: 'p', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['pnz-splash']);
+		const tags = zoneTags({ splash: [z], fans: [] }, bayRect({ widthFt: 60, depthFt: 30 }), 'yd');
+		expect(tags.length).toBeGreaterThan(0);
+		for (const t of tags) expect(t.text.endsWith(' · no stated limit')).toBe(true);
+	});
+});
+
+describe('distanceOutside', () => {
+	it('is 0 inside and Euclidean outside', () => {
+		expect(distanceOutside({ x: 5, y: 5 }, r10)).toBe(0);
+		expect(distanceOutside({ x: 13, y: 14 }, r10)).toBe(5);
+	});
+});
+
+describe('zoneTags in meters', () => {
+	it('labels a 9mm fan in m and km only', () => {
+		const fan = fanZone(
+			{ id: 'f', x: 30, y: 2 },
+			{ id: 't', x: 30, y: 25 },
+			FAN_SOURCES['fan-9mm']
+		)!;
+		const texts = zoneTags(
+			{ splash: [], fans: [fan] },
+			bayRect({ widthFt: 60, depthFt: 30 }),
+			'm'
+		).map((t) => t.text);
+		expect(texts).toContain('X 1.8 km · 1.79 km past bay');
+		expect(texts).toContain('W 399 m · Y 1.211 km · reaches 1.2 km past bay');
+	});
+});
+
+describe('formatPast', () => {
+	it('rounds to whole units with a past bay label', () => {
+		expect(formatPast(139.358, 'yd')).toBe('46 yd past bay');
+		expect(formatPast(139.358, 'm')).toBe('42 m past bay');
+		expect(formatPast(5877.4, 'm')).toBe('1.79 km past bay');
+	});
+});
+
+describe('groupTags', () => {
+	const r = bayRect({ widthFt: 60, depthFt: 30 });
+	const down = { x: 0, y: 1 };
+	it('stacks tags that leave at the same point under one arrow, in order', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'first', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 40, y: 30 }, dir: down, text: 'alone', layer: 'fan-9mm' },
+				{ key: 'c', at: { x: 20 + 1e-9, y: 30 }, dir: down, text: 'second', layer: 'fan-9mm' }
+			],
+			r
+		);
+		expect(groups).toEqual([
+			{
+				key: 'a+c',
+				at: { x: 20, y: 30 },
+				dir: down,
+				edge: 'downrange',
+				lines: [
+					{ text: 'first', layer: 'fan-9mm' },
+					{ text: 'second', layer: 'fan-9mm' }
+				]
+			},
+			{
+				key: 'b',
+				at: { x: 40, y: 30 },
+				dir: down,
+				edge: 'downrange',
+				lines: [{ text: 'alone', layer: 'fan-9mm' }]
+			}
+		]);
+	});
+	it('keeps tags apart once their points differ by more than the tolerance', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'one', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20.001, y: 30 }, dir: down, text: 'two', layer: 'fan-9mm' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.lines.map((l) => l.text))).toEqual([['one'], ['two']]);
+	});
+	it('shows a repeated line once', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.lines.map((l) => l.text))).toEqual([['same']]);
+	});
+	it('names the edge each group leaves by, using the direction at a corner', () => {
+		const groups = groupTags(
+			[
+				{ key: 'l', at: { x: 0, y: 10 }, dir: { x: -1, y: 0 }, text: 'l', layer: 'fan-9mm' },
+				{ key: 'r', at: { x: 60, y: 10 }, dir: { x: 1, y: 0 }, text: 'r', layer: 'fan-9mm' },
+				{ key: 'u', at: { x: 30, y: 0 }, dir: { x: 0, y: -1 }, text: 'u', layer: 'fan-9mm' },
+				{ key: 'c', at: { x: 60, y: 30 }, dir: { x: 0.8, y: 0.6 }, text: 'c', layer: 'fan-9mm' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.edge)).toEqual(['left', 'right', 'uprange', 'right']);
+	});
+	it('tags each line with the layer it belongs to', () => {
+		const f = { id: 'f', x: 30, y: 2 };
+		const t = { id: 't', x: 30, y: 25 };
+		const fan = fanZone(f, t, FAN_SOURCES['fan-556'])!;
+		const plate = splashZone({ id: 'p', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['pnz-splash']);
+		const tags = zoneTags({ splash: [plate], fans: [fan] }, r, 'yd');
+		expect(new Set(tags.filter((t) => t.key.startsWith('fan-556')).map((t) => t.layer))).toEqual(
+			new Set(['fan-556'])
+		);
+		expect(new Set(tags.filter((t) => t.key.startsWith('pnz-splash')).map((t) => t.layer))).toEqual(
+			new Set(['pnz-splash'])
+		);
+	});
+	it('keeps the same text from two layers as two lines', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-556' }
+			],
+			r
+		);
+		expect(groups[0].lines).toHaveLength(2);
+	});
+	it('merges the 9mm and 5.56 dispersion edges, which leave at the same points', () => {
+		const f = { id: 'f', x: 30, y: 2 };
+		const t = { id: 't', x: 30, y: 25 };
+		const fans = [fanZone(f, t, FAN_SOURCES['fan-9mm'])!, fanZone(f, t, FAN_SOURCES['fan-556'])!];
+		const groups = groupTags(zoneTags({ splash: [], fans }, r, 'yd'), r);
+		const disp = groups.filter((g) => g.lines.some((l) => l.text.startsWith('X ')));
+		expect(disp).toHaveLength(2);
+		for (const g of disp) {
+			expect(g.edge).toBe('downrange');
+			expect(g.lines).toEqual([
+				{ text: 'X 1,969 yd · 1,959 yd past bay', layer: 'fan-9mm' },
+				{ text: 'X 3,390 yd · 3,381 yd past bay', layer: 'fan-556' }
+			]);
+		}
+	});
+});
+
+describe('parseZoneUnit', () => {
+	it('reads a saved meters choice and defaults to yards otherwise', () => {
+		expect(parseZoneUnit('m')).toBe('m');
+		expect(parseZoneUnit('yd')).toBe('yd');
+		expect(parseZoneUnit(undefined)).toBe('yd');
+		expect(parseZoneUnit('furlongs')).toBe('yd');
+	});
+});

@@ -13,7 +13,7 @@ Match Sketch replaces that with a purpose-built designer: a bay-sized grid in re
 
 The core of the product is the **designer**. Drafting from text is one way into it, required for the MVP, but not the center.
 
-**Users:** match directors (authors). Shooters and ROs consume the printed output. Later, MDs share plans with each other.
+**Users:** anyone who designs or shoots stages. Every user is the same kind of user: they create stage plans and share them, and anyone with a shared link can view a stage read-only and page through its walkthrough (§7.10, §7.11). Match directors are the first users being onboarded and demoed to; shooters and ROs use the printout and the shared link. (Corrected by the user 2026-11-22; this said MDs author and shooters only consume printouts.)
 
 **Reference material:** the MD's deck `DRRC SOF 2025.pptx` (local attachment, not committed). Odd slides (1, 3, 5, 7, 8, 10, 12) are the MD's current color plans and are the reference. Even slides are black-and-white scans of 1989 SOF match plans — historical background only. Slide 14 is a printable sheet of sequence cards for a "draw a sequence from the bucket" stage.
 
@@ -97,7 +97,7 @@ The core of the product is the **designer**. Drafting from text is one way into 
 - **Sign-in:** Supabase Auth with email + password (works offline once a session exists; magic links don't help offline). Public sign-up is disabled in Supabase; the operator invites MDs with Supabase's built-in invite email from a minimal admin page (`profiles.role = 'admin'`).
 - **Authorization:** enforced in SvelteKit server code (every query scoped to the signed-in user). Supabase row-level security is also enabled on user tables as a backstop.
 - **Cost ceiling:** besides the per-user daily draft cap, a site-wide daily spend ceiling on model calls (computed from logged token usage) disables drafting for the day when hit.
-- **Crowded targets:** target symbols carry a `count` (e.g. one "KD ×4" object instead of four), drawn as a compact cluster with a count badge; the Targets tally sums counts. Positions are exactly where the MD puts them — nothing auto-moves at print time. A per-plan **symbol size** setting (small / medium / large) helps dense stages. The model is told the minimum spacing that keeps symbols from overlapping at fit-to-page scale.
+- **Crowded targets:** target symbols carry a `count` (e.g. one "KD ×4" object instead of four), drawn as a compact cluster with a count badge; the Targets tally sums counts. Positions are exactly where the MD puts them — nothing auto-moves at print time. A per-plan **symbol size** setting (small / medium / large / extra large) helps dense stages. The model is told the minimum spacing that keeps symbols from overlapping at fit-to-page scale.
 - **Distances:** a **measure** annotation: the MD draws a line between two objects or points and it shows the true distance in the plan's units, updates as objects move, and prints. No automatic "which SA engages which target" links in the MVP.
 - **Offline architecture:** local-first document sync (§7.9). The editor and print routes render in the browser from local data.
 - **Hosting:** the operator's own Coolify server, deploying from the git repository with Coolify's Docker Compose build pack. The app is a Docker image built with SvelteKit's Node adapter (`@sveltejs/adapter-node`). Supabase stays hosted on supabase.com. (Corrected by the user 2026-11-22; this was Vercel.)
@@ -129,7 +129,7 @@ Fields, taken from the reference plans:
 - Match name (taken from the match when the plan belongs to one; free text otherwise), stage number, stage name (optional)
 - Start position
 - Gun ready condition
-- Stage procedure (long text; the main free-text field)
+- Stage procedure (long text; the main free-text field). Stored as an ordered list of **steps**, one per line, so walkthrough highlights stay attached to their step as the text changes (§7.10; schema version 2). It is still written, read and printed as one block.
 - Round count (free text; often per gun/caliber, e.g. "21 rds battle rifle / 37 rds intermediate")
 - Targets (computed tally, overridable)
 - Par time
@@ -209,8 +209,9 @@ Tables (Postgres via Drizzle; `owner_id` references the Supabase auth user):
 
 - `profiles`: id (= auth user id), display name, role (`md` | `admin`), created_at.
 - `canvases`: id, owner_id, name, width_ft, depth_ft, display_unit (`ft` | `yd`), sync columns.
-- `matches`: id, owner_id, name, date, sync columns.
-- `plans`: id, owner_id, match_id (nullable), stage_order (within the match), source_canvas_id (nullable), title fields (match name for unassigned plans, stage number, stage name), width_ft, depth_ft, display_unit, `document` (jsonb), schema_version, sync columns.
+- `matches`: id, owner_id, name, date, share columns, sync columns.
+- `plans`: id, owner_id, match_id (nullable), stage_order (within the match), source_canvas_id (nullable), title fields (match name for unassigned plans, stage number, stage name), width_ft, depth_ft, display_unit, `document` (jsonb), schema_version, share columns, sync columns.
+- **Share columns** (§7.11): `share_id` (the link's random token, unique, nullable) and `share_on` (boolean).
 - `ai_drafts`: id, owner_id, plan_id, model, input tokens, output tokens, estimated cost, status, error, created_at. (Optionally the request and response bodies, for debugging and the eval.) Server-only; not synced.
 
 **Sync columns** on every user-editable record: `version` (integer, incremented by the server on each accepted write), `updated_at`, `deleted_at` (soft delete, so deletions sync), and a server-assigned change sequence used as the pull cursor. Record ids are UUIDs generated on the client so records can be created offline.
@@ -229,20 +230,37 @@ The plan `document` jsonb holds the brief, the objects list, labels, measure lin
 - **Schema changes:** a client that receives a record with a newer `schema_version` than it understands asks the user to reload to update the app; it doesn't overwrite the record.
 - **Sign-out** clears the local store after warning if there are unsynced changes.
 
-### 7.10 Walkthrough presentation (planned; roadmap Plan 7)
+### 7.10 Walkthrough presentation (roadmap Plan 7; settled with the user 2026-11-22)
 
-The user's idea: a "walkthrough" that explains a stage step by step.
+A "walkthrough" explains a stage step by step, following the course of fire.
 
-- **Authoring:** the MD builds an ordered list of steps that follow the course of fire. Each step ties some text (the step of the stage procedure) to **highlights** on the relevant objects: props, targets, shooting areas, fault lines.
-- **Meaning by color:** a highlight's color says what the shooter does with that object, for example **shoot** vs **move**. Colors come from a fixed, legible set with a legend, so meaning is never color-only (shape or label backs it up, per the anti-goals in §2).
-- **Viewing:** viewers page through the walkthrough one step at a time (next/previous, step n of N). The stage drawing stays the same plan; each step only changes what is highlighted and which text shows.
+- **Steps are the procedure.** The stage procedure is stored as an ordered list of steps, one per line of the procedure text (§7.2). The procedure field still reads and edits as one block of text; each line keeps its step (and its highlights) through edits, including lines inserted or deleted above it. Blank lines are kept in the text but are not steps in the walkthrough or in print. Existing plans migrate by splitting the procedure into lines (schema version 1 → 2).
+- **Highlights:** each step can mark objects on the bay with one meaning each. The meanings are fixed, and each pairs a color with a badge shape so it reads in black and white and for colorblind viewers (anti-goals, §2):
 
-To settle when Plan 7 is written (not before):
+  | Meaning | For | Color | Badge |
+  | --- | --- | --- | --- |
+  | Start | start position, box, gun location | green | flag |
+  | Move | the shooting area or position to go to | blue | arrow |
+  | Shoot | targets engaged in this step | red-orange | crosshair |
+  | Activate | the popper, door or swinger that triggers a mover | amber | lightning bolt |
+  | Avoid | no-shoots, fault lines | gray | slashed circle |
 
-- The full set of meanings beyond shoot and move (e.g. activate, avoid/no-shoot, reload point, start position) and their colors.
-- Whether steps are authored freely or built from the stage procedure as structured steps (Plan 2 kept the procedure as one text field, line breaks included; Plan 7 can split it into steps by line, or migrate it with a `schemaVersion` bump.)
-- Who views it and where: presenting on the MD's device at the stage briefing; printed as sequence cards (§10); a read-only viewer link for shooters (needs sharing, which is after the MVP today).
-- What else a step can carry: movement arrows (Plan 2 annotations), a zoomed view of part of the bay, notes.
+  One meaning per object per step; an object that is both shot and activates a mover is marked Activate.
+- **Arrows:** a step can include existing movement arrows (§7.3). There is no separate arrow tool for steps.
+- **Viewing:** viewers page through the steps one at a time (previous / next, "Step n of N"). The drawing stays the same plan; each step shows its text, its highlights with a legend of the meanings it uses, and its arrows. Objects and arrows not in the step fade back.
+- **Who views it and where:** the author presents it from the editor on their own device (no sharing needed), and anyone with a shared link views it read-only on any device, phones included (§7.11).
+
+Builder's calls (Plan 7): highlights are authored in a Walkthrough tab of the editor's side panel, by picking a step and marking the selected objects with a meaning; deleting an object removes its marks; a draft from text keeps the procedure (it replaces objects, so their marks go with them).
+
+### 7.11 Sharing by link (roadmap Plan 7; settled with the user 2026-11-22)
+
+- **What can be shared:** a single stage plan, or a whole match (its stages in match order). Any user can share what they own.
+- **The link:** "Anyone with the link can view." No account is needed to open it. Viewers see the diagram, the brief and the walkthrough, read-only, and can print or download the PDF.
+- **Live:** a viewer always sees the plan as it is now (as last synced by its owner), so fixes made after the link went out, or after a printout was handed out, show up.
+- **A link is stable for good:** turning sharing off makes it stop working; turning it back on brings back the same link, so printed QR codes work again. **Reset link** makes a new link (with a warning that printed QR codes stop working).
+- **Offline:** an owner can turn sharing on or off offline; it takes effect when the device syncs. Viewing a shared link needs a connection.
+- **QR code on print:** while a plan's link is on, its printed stage page carries a small QR code to the link, with "Scan for the walkthrough". On a match print, each stage gets its own code: the stage's own link if it is shared, else the match link opened at that stage.
+- Not in the MVP: sharing with named accounts, saving a shared stage to your account, a public library (§10).
 
 ## 8. Left to the builder
 
@@ -271,7 +289,7 @@ To settle when Plan 7 is written (not before):
 
 ## 10. After the MVP
 
-- Sharing: share a plan by link (read-only), publish to a public library, copy a published stage onto your own canvas and let the model re-fit it.
+- Sharing beyond links (read-only links are in the MVP, §7.11): share with named accounts, publish to a public library, save a shared stage to your own account, copy a published stage onto your own canvas and let the model re-fit it.
 - Open sign-up with verification, terms/privacy pages, and possibly paid plans.
 - Linking shooting areas to the targets they engage, so distances from each SA can be labeled automatically.
 - Canvas features: permanent structures, berms, backstop direction, slope; safety checks (targets in front of the backstop).

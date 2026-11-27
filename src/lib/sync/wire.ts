@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { PlanDocumentSchema } from '../model/plan';
+import { PLAN_SCHEMA_VERSION } from '../model/plan';
+import { ShareSchema } from '../model/share';
+import { AnyPlanDocumentSchema, readPlanDocument } from '../model/upgrade';
 import {
 	CanvasInputSchema,
 	MatchInputSchema,
@@ -17,7 +19,7 @@ export type SyncTable = 'canvases' | 'matches' | 'plans';
 export const SYNC_TABLES: readonly SyncTable[] = ['canvases', 'matches', 'plans'];
 
 /** The plan document schema this app understands. */
-export const SUPPORTED_SCHEMA_VERSION = 1;
+export const SUPPORTED_SCHEMA_VERSION = PLAN_SCHEMA_VERSION;
 
 export const MAX_PUSH_RECORDS = 50;
 export const MAX_PULL_RECORDS = 200;
@@ -40,14 +42,21 @@ const planFields = {
 	unit: CanvasInputSchema.shape.unit
 };
 
+/** An app from before share links pushes no `share`; the server then keeps the stored one. */
+const pushedShare = { share: ShareSchema.nullable().optional() };
+const storedShare = { share: ShareSchema.nullable() };
+
 export const WireRecordSchema = z.discriminatedUnion('table', [
 	z.object({ table: z.literal('canvases'), ...canvasFields }),
-	z.object({ table: z.literal('matches'), ...matchFields }),
+	z.object({ table: z.literal('matches'), ...matchFields, ...pushedShare }),
 	z.object({
 		table: z.literal('plans'),
 		...planFields,
-		schemaVersion: z.literal(SUPPORTED_SCHEMA_VERSION),
-		document: PlanDocumentSchema
+		...pushedShare,
+		// An app from before schema version 2 (a stale tab) still pushes version 1; the server
+		// stores it upgraded.
+		schemaVersion: z.literal([1, SUPPORTED_SCHEMA_VERSION]),
+		document: AnyPlanDocumentSchema
 	})
 ]);
 export type WireRecord = z.infer<typeof WireRecordSchema>;
@@ -60,11 +69,12 @@ const version = { version: z.int().min(1) };
  */
 export const ServerRecordSchema = z.discriminatedUnion('table', [
 	z.object({ table: z.literal('canvases'), ...canvasFields, ...version }),
-	z.object({ table: z.literal('matches'), ...matchFields, ...version }),
+	z.object({ table: z.literal('matches'), ...matchFields, ...version, ...storedShare }),
 	z.object({
 		table: z.literal('plans'),
 		...planFields,
 		...version,
+		...storedShare,
 		schemaVersion: z.int().min(1),
 		document: z.unknown()
 	})
@@ -127,8 +137,8 @@ export function fromServer(record: ServerRecord): CanvasRecord | MatchRecord | P
 		case 'matches':
 			return { ...withoutTable(record), dirty: 0 };
 		case 'plans': {
-			if (record.schemaVersion !== SUPPORTED_SCHEMA_VERSION) throw new Error('newer-schema');
-			const document = PlanDocumentSchema.parse(record.document);
+			if (record.schemaVersion > SUPPORTED_SCHEMA_VERSION) throw new Error('newer-schema');
+			const document = readPlanDocument(record.document);
 			return {
 				...withoutTable(record),
 				schemaVersion: SUPPORTED_SCHEMA_VERSION,

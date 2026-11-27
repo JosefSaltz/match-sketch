@@ -55,3 +55,24 @@ test('the PDF downloads with the network off', async ({ page, context }) => {
 	expect(pageCount(pdf)).toBe(1);
 	await context.setOffline(false);
 });
+
+test('a shared plan prints its QR code, in the preview and the PDF', async ({ page }) => {
+	await page.getByRole('button', { name: 'Share' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Share stage' });
+	await dialog.getByRole('switch').check();
+	await dialog.getByRole('button', { name: 'Done' }).click();
+	await openPrint(page);
+	const qr = page.getByTestId('print-page').first().getByTestId('share-qr');
+	await expect(qr).toHaveCount(1);
+	await expect(page.getByTestId('print-page').first()).toContainText('Scan for the');
+	const pdf = await downloadPdfText(page);
+	expect(pageCount(pdf)).toBe(1);
+	expect(pdf).not.toMatch(/\/Subtype\s*\/Image/);
+
+	await page.getByRole('link', { name: 'Back to plan' }).click();
+	await page.getByRole('button', { name: 'Share' }).click();
+	await dialog.getByRole('switch').uncheck();
+	await dialog.getByRole('button', { name: 'Done' }).click();
+	await openPrint(page);
+	await expect(page.getByTestId('share-qr')).toHaveCount(0);
+});

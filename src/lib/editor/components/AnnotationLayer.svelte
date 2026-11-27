@@ -170,7 +170,7 @@
 
 <style>
 	.annotation {
-		cursor: move;
+		cursor: grab;
 		color: var(--color-text);
 	}
 	.annotation.selected {

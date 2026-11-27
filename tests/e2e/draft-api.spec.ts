@@ -1,11 +1,12 @@
 import { expect, test as signedOut } from '@playwright/test';
+import { draftBrief } from '../../src/lib/draft/contract';
 import { emptyPlanDocument } from '../../src/lib/model/plan';
 import { test } from './fixtures';
 
 const body = () => ({
 	planId: crypto.randomUUID(),
 	description: 'Engage two poppers from SA-1.',
-	brief: emptyPlanDocument().brief,
+	brief: draftBrief(emptyPlanDocument().brief),
 	canvas: { widthFt: 60, depthFt: 90, unit: 'yd' },
 	symbolSize: 'medium'
 });

@@ -36,6 +36,41 @@ describe("the editor's plan saver", () => {
 		expect(saver.bases).toEqual(['2026-11-22T10:00:00.000Z']);
 	});
 
+	it('saves a share change asked for mid-save after it, with no conflicted copy (Review Focus #5)', async () => {
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		const onStale = vi.fn();
+		const saver = createPlanSaver({ db, planId: plan.id, base: plan.updatedAt, onStale });
+		const share = { id: 'AbCdEfGhIjKlMnOpQrStUv', on: true };
+		const saving = saver.save(named('Edited'), new Date().toISOString());
+		const sharing = saver.setShare(share);
+		expect(saver.bases).toHaveLength(3);
+		await Promise.all([saving, sharing]);
+		expect(await getPlan(db, plan.id)).toMatchObject({
+			share,
+			document: { brief: { stageName: 'Edited' } }
+		});
+		expect(onStale).not.toHaveBeenCalled();
+		expect(await db.plans.count()).toBe(1);
+		expect(saver.bases).toEqual([saver.base]);
+	});
+
+	it('keeps edits after a share change on a stale plan as a conflicted copy', async () => {
+		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
+		const onStale = vi.fn();
+		const saver = createPlanSaver({ db, planId: plan.id, base: plan.updatedAt, onStale });
+		// Another tab or a pull replaced the plan.
+		await db.plans.update(plan.id, {
+			document: named('Theirs'),
+			updatedAt: '2026-11-22T09:00:00.000Z'
+		});
+		await saver.setShare({ id: 'AbCdEfGhIjKlMnOpQrStUv', on: true });
+		await saver.save(named('Mine'), new Date().toISOString());
+		expect(onStale).toHaveBeenCalledOnce();
+		expect((await getPlan(db, plan.id))?.document.brief.stageName).toBe('Theirs');
+		const names = (await db.plans.toArray()).map((p) => p.document.brief.stageName);
+		expect(names.some((n) => n.startsWith('Mine (conflicted copy'))).toBe(true);
+	});
+
 	it("keeps an edit made on a stale plan as a conflicted copy instead of overwriting the other device's version", async () => {
 		const plan = await createPlan(db, { canvas: bay, sourceCanvasId: null });
 		const onStale = vi.fn();

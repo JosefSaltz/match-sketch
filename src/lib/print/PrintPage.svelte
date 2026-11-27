@@ -6,6 +6,7 @@
 	import { PRINT_FONT } from './measure.js';
 	import { PRINT_SYMBOL_PX } from './page.js';
 	import PrintDiagram from './PrintDiagram.svelte';
+	import { qrModules, qrPath } from './qr.js';
 
 	/** One printed page as a single SVG, styled only with attributes (it is also the PDF page). */
 	let { page, plan }: { page: PrintPage; plan: PlanRecord } = $props();
@@ -96,6 +97,14 @@
 			<text x={page.header.titleX} y={r.y + 49} font-family={PRINT_FONT} font-size="12" fill="#333">
 				{page.header.sub}
 			</text>
+		{/if}
+		{#if page.header.qr}
+			{@const q = page.header.qr}
+			<g data-testid="share-qr">
+				<rect x={q.rect.x} y={q.rect.y} width={q.rect.width} height={q.rect.height} fill="#fff" />
+				<path d={qrPath(qrModules(q.link), q.rect)} fill={INK} />
+			</g>
+			{@render block(q.caption)}
 		{/if}
 	{:else}
 		{@const r = page.header.rect}

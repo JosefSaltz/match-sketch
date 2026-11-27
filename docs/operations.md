@@ -10,6 +10,7 @@ Development and tests use the local Supabase stack in Docker. They never touch t
 pnpm db:start        # start the local stack (Postgres, Auth, Mailpit, Studio)
 pnpm db:reset        # re-create the local database from supabase/migrations
 pnpm dev             # the app on http://localhost:5173
+pnpm dev:no-auth     # the app with sign-in skipped; works without the stack
 pnpm test:unit       # unit tests (no stack needed)
 pnpm test:db         # database tests against the local stack
 pnpm test:e2e        # Playwright, against a production build on http://localhost:4173
@@ -19,6 +20,7 @@ pnpm test:e2e        # Playwright, against a production build on http://localhos
 - Tests refuse to run unless `SUPABASE_URL` and `DATABASE_URL` point at this machine. The test accounts have known passwords and must never reach the hosted project.
 - Invite emails land in Mailpit at http://127.0.0.1:54324. Studio is at http://127.0.0.1:54323.
 - `pnpm users:promote <email>` makes a local user an admin.
+- `pnpm dev:no-auth` sets `DEV_SKIP_AUTH=true`: app pages open without signing in, a banner says so, and sync stays off, so plans live only in that browser. If the stack isn't running, it starts with stand-in settings, and sign-in, sync, sharing and drafting don't work. Only `vite dev` honors the flag; a build ignores it.
 
 ### Schema changes
 
@@ -94,7 +96,8 @@ These steps change the hosted project, so the operator runs them (or approves ea
 
 1. **Migrations:**
    - Run `supabase link --project-ref zmuadxeutafbnnfopqqx`, then `supabase db push --remote`. CLI v3 asks before it changes a hosted project; pass `--yes` only when you mean it.
-   - Check the result with the Supabase MCP: `list_tables` shows `public.profiles` with RLS on, and `get_advisors` (security) shows nothing new.
+   - Check the result with the Supabase MCP: `list_tables` shows `public.profiles` and `public.share_tokens` with RLS on, and `get_advisors` (security) shows nothing new.
+   - **Plan 7 (share links, schema version 2):** `share_links`, `share_tokens` and `share_tokens_grants` add the share columns and the server-only token table. Plans saved before keep `schema_version` 1 in the database and are upgraded as they are read; an app tab still open from before the deploy can still push, and asks the user to reload once it meets a version 2 plan.
 2. **Auth settings** (dashboard → Authentication):
    - **Sign-ups off:** Sign In / Providers → "Allow new users to sign up" disabled. Email provider stays enabled.
    - **URL Configuration:** Site URL = the app's public URL. Add `https://<domain>/**` to the redirect URLs.

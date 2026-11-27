@@ -1,10 +1,15 @@
-import type { Point } from '../geometry/types';
+import type { Point, Size } from '../geometry/types';
 
 /** How far a pointer may move, in px, and still count as a tap rather than a drag. */
 export const TAP_SLOP_PX = 4;
 
 export function movedBeyond(a: Point, b: Point, px = TAP_SLOP_PX): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) > px;
+}
+
+/** A pointer (stage px) outside the stage: dropping a dragged item there removes it. */
+export function offStage(p: Point, size: Size): boolean {
+	return p.x < 0 || p.y < 0 || p.x > size.width || p.y > size.height;
 }
 
 export type GestureAction =

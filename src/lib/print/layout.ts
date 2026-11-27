@@ -2,6 +2,7 @@ import { toDrawn, type DepthMap } from '../geometry/depth-map';
 import type { CanvasSize } from '../geometry/types';
 import { toFeet, type LengthUnit } from '../geometry/units';
 import type { StageBrief } from '../model/plan';
+import { displaySteps } from '../model/procedure';
 import { MARGIN_PX, PX_PER_IN, pageSize, type Orientation } from './page';
 import { wrapText, type Measure } from './wrap';
 
@@ -29,6 +30,8 @@ export type PageHeader = {
 	/** Width of the black stage-number block; 0 when there is no number. */
 	numberBlockWidth: number;
 	numberFontPx: number;
+	/** The QR code to the shared link at the header's right end (spec §7.11), if shared. */
+	qr: { rect: Rect; caption: TextBlock; link: string } | null;
 };
 export type PageFooter = { y: number; left: string; right: string };
 export type Fact = { label: string; box: Rect; block: TextBlock };
@@ -78,6 +81,8 @@ export type PlanPrintInput = {
 	unit: LengthUnit;
 	orientation: Orientation;
 	mode: 'fit' | { tileScaleFtPerIn: number };
+	/** The viewer link printed as a QR code on the stage page; null when not shared. */
+	link: string | null;
 };
 
 const HEADER_H = 60;
@@ -118,19 +123,15 @@ export function tileArea(o: Orientation): Rect {
 	return { x: f.x, y, width: f.width, height: f.bottom - y };
 }
 
-/** The procedure as numbered steps, one per non-empty line (numbers the MD typed are replaced). */
-function steps(procedure: string): string[] {
-	return procedure
-		.split('\n')
-		.map((l) => l.trim().replace(/^\d+[.)]\s*/, ''))
-		.filter(Boolean)
-		.map((l, i) => `${i + 1}. ${l}`);
+/** The procedure as numbered steps (numbers typed into the procedure are replaced). */
+function numberedSteps(brief: StageBrief): string[] {
+	return displaySteps(brief.steps).map((s, i) => `${i + 1}. ${s.text}`);
 }
 
 type Line = { text: string; bold: boolean; part: 'facts' | 'procedure' | 'notes' };
 
 function procedureLines(brief: StageBrief, width: number, measure: Measure): Line[] {
-	return steps(brief.procedure).flatMap((s) =>
+	return numberedSteps(brief).flatMap((s) =>
 		wrapText(s, width, BODY_PX, measure).map((text) => ({
 			text,
 			bold: false,
@@ -185,6 +186,10 @@ function heading(text: string, x: number, y: number, width: number): TextBlock {
 const NUMBER_BLOCK_MIN = 84;
 const TITLE_PX = 24;
 const TITLE_MIN_PX = 14;
+const SUB_PX = 12;
+const QR_CAPTION_W = 62;
+const QR_CAPTION_PX = 8;
+const QR_CAPTION_LINE_H = 10;
 
 function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): PageHeader {
 	const f = frame(o);
@@ -205,7 +210,23 @@ function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): Pag
 		);
 	}
 	const titleX = rect.x + (number ? numberBlockWidth + 14 : 12);
-	const room = rect.x + rect.width - titleX - 8;
+	// The QR code is a square the header's height at its right end, its caption to the left.
+	const qrRect = input.link
+		? { x: rect.x + rect.width - HEADER_H, y: rect.y, width: HEADER_H, height: HEADER_H }
+		: null;
+	const caption: TextBlock | null = qrRect
+		? {
+				x: qrRect.x - QR_CAPTION_W - 4,
+				y: rect.y + (HEADER_H - 2 * QR_CAPTION_LINE_H) / 2 - 2,
+				width: QR_CAPTION_W,
+				lines: ['Scan for the', 'walkthrough'],
+				fontPx: QR_CAPTION_PX,
+				lineHeight: QR_CAPTION_LINE_H,
+				bold: true
+			}
+		: null;
+	const right = caption ? caption.x : rect.x + rect.width;
+	const room = right - titleX - 8;
 	// Shrink a long name to fit; if it still doesn't, cut it with an ellipsis.
 	let title = input.title;
 	let titleFontPx = TITLE_PX;
@@ -215,15 +236,21 @@ function headerFor(input: PlanPrintInput, o: Orientation, measure: Measure): Pag
 	while (title.length > 1 && measure(title.toUpperCase(), titleFontPx, true) > room) {
 		title = `${title.slice(0, -2).trimEnd()}…`;
 	}
+	// The match line shares the room: cut it before it runs under the QR code.
+	let sub = [input.matchName, input.date].filter(Boolean).join(' · ');
+	while (sub.length > 1 && measure(sub, SUB_PX, false) > room) {
+		sub = `${sub.slice(0, -2).trimEnd()}…`;
+	}
 	return {
 		rect,
 		number,
 		title,
-		sub: [input.matchName, input.date].filter(Boolean).join(' · '),
+		sub,
 		titleX,
 		titleFontPx,
 		numberBlockWidth,
-		numberFontPx
+		numberFontPx,
+		qr: qrRect && caption && input.link ? { rect: qrRect, caption, link: input.link } : null
 	};
 }
 
@@ -237,7 +264,8 @@ function slimHeader(input: PlanPrintInput, o: Orientation, title: string): PageH
 		titleX: f.x,
 		titleFontPx: 13,
 		numberBlockWidth: 0,
-		numberFontPx: 0
+		numberFontPx: 0,
+		qr: null
 	};
 }
 

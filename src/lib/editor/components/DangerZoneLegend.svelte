@@ -1,0 +1,99 @@
+<script lang="ts">
+	import { COLOR, DASH } from '#lib/safety/layer-style.js';
+	import {
+		FAN_SOURCES,
+		LAYER_IDS,
+		LEGEND_MARKS,
+		LEGEND_NO_BERMS,
+		LEGEND_NO_FIRING_POINT,
+		LEGEND_NO_STEEL,
+		layerSource,
+		type LayerId
+	} from '#lib/safety/sources.js';
+	import { isFiringPoint, isSteel } from '#lib/safety/zones.js';
+	import type { EditorState } from '../editor-state.svelte.js';
+
+	let { editor }: { editor: EditorState } = $props();
+
+	const uid = $props.id();
+	let expanded = $state(true);
+
+	const active = $derived(LAYER_IDS.filter((id) => editor.dangerZones[id]));
+	const fanOn = $derived(active.some((id) => id in FAN_SOURCES));
+	const marks = $derived([
+		...(fanOn ? [LEGEND_MARKS.dispersion, LEGEND_MARKS.fanLetters] : []),
+		...(editor.dangerZones['pnz-splash'] ? [LEGEND_MARKS.noLimit] : []),
+		LEGEND_MARKS.pastBay
+	]);
+	const noFiringPoint = $derived(fanOn && !editor.doc.objects.some(isFiringPoint));
+	const noSteel = $derived(active.length > 0 && !editor.doc.objects.some(isSteel));
+
+	function entry(id: LayerId) {
+		const s = layerSource(id);
+		return 'load' in s
+			? { label: `${s.label} (${s.load})`, citation: s.citation, note: s.note, meaning: null }
+			: { label: s.label, citation: s.citation, note: s.note, meaning: `“${s.meaning}”` };
+	}
+</script>
+
+{#if active.length > 0}
+	<div
+		role="region"
+		class="absolute right-3 bottom-3 flex max-h-[calc(100%-1.5rem)] max-w-xs flex-col rounded-lg border-[3px] border-black bg-white text-xs shadow-[3px_3px_0_#000]"
+		data-testid="danger-legend"
+		aria-label="Danger zones legend"
+	>
+		<button
+			type="button"
+			class="focus-ring flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 font-semibold"
+			aria-expanded={expanded}
+			aria-controls="{uid}-body"
+			onclick={() => (expanded = !expanded)}
+		>
+			Legend
+			<span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+		</button>
+		<div id="{uid}-body" class="overflow-y-auto px-3 pb-3" hidden={!expanded}>
+			<ul class="grid gap-2">
+				{#each active as id (id)}
+					{@const e = entry(id)}
+					<li class="grid grid-cols-[auto_1fr] items-start gap-x-2">
+						<svg width="28" height="10" viewBox="0 0 28 10" aria-hidden="true" class="mt-1">
+							<line
+								x1="0"
+								y1="5"
+								x2="28"
+								y2="5"
+								stroke={COLOR[id]}
+								stroke-width="2"
+								stroke-dasharray={DASH[id]}
+							/>
+						</svg>
+						<div>
+							<p class="font-semibold">{e.label}</p>
+							<p class="text-muted">{e.citation}</p>
+							{#if e.note}<p class="text-muted">{e.note}</p>{/if}
+							{#if e.meaning}<p>{e.meaning}</p>{/if}
+						</div>
+					</li>
+				{/each}
+			</ul>
+			{#if fanOn}
+				<p class="mt-2">{FAN_SOURCES['fan-9mm'].meaning}</p>
+			{/if}
+			<p class="mt-2 font-semibold">Marks</p>
+			<ul class="grid gap-1">
+				{#each marks as mark (mark)}
+					<li>{mark}</li>
+				{/each}
+			</ul>
+			{#if noSteel}
+				<p class="mt-2 font-semibold">{LEGEND_NO_STEEL}</p>
+			{/if}
+			{#if noFiringPoint}
+				<p class="mt-2 font-semibold">{LEGEND_NO_FIRING_POINT}</p>
+			{/if}
+			<p class="mt-2 text-muted">{LEGEND_NO_BERMS}</p>
+		</div>
+	</div>
+{/if}

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
 	type AnyPgColumn,
 	bigint,
+	boolean,
 	doublePrecision,
 	index,
 	integer,
@@ -72,6 +73,16 @@ const syncColumns = () => ({
 		.default(sql`nextval('sync_change_seq')`)
 });
 
+/**
+ * A record's read-only link (spec §7.11): the token is kept while sharing is off, so the same
+ * link (and printed QR codes) work again when it is turned back on. Tokens are unique across
+ * plans and matches; the server checks the other table on push.
+ */
+const shareColumns = () => ({
+	shareId: text('share_id').unique(),
+	shareOn: boolean('share_on').notNull().default(false)
+});
+
 /** Owners read their own rows if the Data API is ever granted access (it isn't today). */
 const syncPolicies = (name: string, t: { ownerId: AnyPgColumn; changeSeq: AnyPgColumn }) => [
 	pgPolicy(`${name}_select_own`, {
@@ -98,6 +109,7 @@ export const matches = pgTable(
 	'matches',
 	{
 		...syncColumns(),
+		...shareColumns(),
 		name: text().notNull(),
 		/** `YYYY-MM-DD`, or '' when the match has no date yet (as on the device). */
 		date: text().notNull()
@@ -110,6 +122,7 @@ export const plans = pgTable(
 	'plans',
 	{
 		...syncColumns(),
+		...shareColumns(),
 		matchId: uuid('match_id'),
 		stageOrder: integer('stage_order'),
 		sourceCanvasId: uuid('source_canvas_id'),
@@ -121,6 +134,18 @@ export const plans = pgTable(
 	},
 	(t) => syncPolicies('plans', t)
 );
+
+/**
+ * Every share token ever used, with the account that first used it. A token never moves to
+ * another account, even after its record resets the link or is deleted, so a printed QR code
+ * can't be taken over. No foreign key: a token outlives its account for the same reason.
+ * Server only: RLS on, no policies, no grants.
+ */
+export const shareTokens = pgTable('share_tokens', {
+	token: text().primaryKey(),
+	ownerId: uuid('owner_id').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+}).enableRLS();
 
 export const draftStatus = pgEnum('draft_status', [
 	/** Running: the row reserves the draft's worst-case cost until it is settled. */

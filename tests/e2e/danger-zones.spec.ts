@@ -77,7 +77,10 @@ test('9mm fan needs a shooting position', async ({ page }) => {
 		page.getByTestId('danger-tag').filter({ hasText: 'past bay' }).first()
 	).toBeVisible();
 	await expect(legend(page)).toContainText('1 in 1,000,000');
+	await expect(legend(page)).toContainText('AR 385-63 ¶3-1b');
 	await expect(legend(page)).toContainText('Table 5-4');
+	await expect(legend(page)).toContainText('Thin lines: dispersion area');
+	await expect(legend(page)).toContainText('computed by Match Sketch from this plan');
 });
 
 test('selecting a target shows only its zones', async ({ page }) => {
@@ -132,4 +135,28 @@ test('Escape closes the Danger zones panel and keeps focus on its button', async
 	await expect(panel).toHaveCount(0);
 	await expect(toggle).toBeFocused();
 	await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('nothing is drawn without steel targets', async ({ page }) => {
+	await place(page, 'paper', 0.5, 0.3);
+	await place(page, 'shooting-position', 0.5, 0.9);
+	for (const label of ['AR 385-63 splash', 'Pistol NZ splash', '9mm Luger', '5.56 NATO'])
+		await setLayer(page, label, true);
+	await expect(splash(page)).toHaveCount(0);
+	await expect(fan(page)).toHaveCount(0);
+	await expect(legend(page)).toContainText('No steel targets on the plan.');
+});
+
+test('the legend collapses and expands', async ({ page }) => {
+	await place(page, 'steel-static', 0.5, 0.3);
+	await setLayer(page, 'AR 385-63 splash', true);
+	const region = page.getByRole('region', { name: 'Danger zones legend' });
+	const button = region.getByRole('button', { name: 'Legend' });
+	await expect(button).toHaveAttribute('aria-expanded', 'true');
+	await expect(region).toContainText('¶2-17a(2)');
+	await button.click();
+	await expect(button).toHaveAttribute('aria-expanded', 'false');
+	await expect(region.getByText('¶2-17a(2)', { exact: false })).toBeHidden();
+	await button.click();
+	await expect(region.getByText('¶2-17a(2)', { exact: false })).toBeVisible();
 });

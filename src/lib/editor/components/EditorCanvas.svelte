@@ -6,6 +6,7 @@
 	import { movedBeyond, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
+	import DangerZoneLayer from './DangerZoneLayer.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
 	import SelectionOverlay from './SelectionOverlay.svelte';
@@ -230,6 +231,7 @@
 	>
 		<rect class="background" x="0" y="0" width={editor.screenWidth} height={editor.screenHeight} />
 		<BayLayer {editor} />
+		<DangerZoneLayer {editor} />
 		<AnnotationLayer {editor} layer="below" />
 		<g class="objects">
 			{#each objects as obj (obj.id)}

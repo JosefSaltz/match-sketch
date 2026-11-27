@@ -55,6 +55,7 @@ import {
 import { SaveQueue, type SaveStatus } from './save-queue';
 import { DragSwing } from './swing.svelte';
 import { clickStepFt, gridCell } from './grid-cross';
+import { dangerZones, NO_DANGER_ZONES, type DangerToggles, type ZoneSet } from '../safety/zones';
 
 export type { SaveStatus };
 
@@ -157,6 +158,10 @@ export class EditorState {
 	selectedObjects = $derived(this.doc.objects.filter((o) => this.selection.includes(o.id)));
 	/** The selected annotations, in document order. */
 	selectedAnnotations = $derived(this.doc.annotations.filter((a) => this.selection.includes(a.id)));
+	/** Which danger zone layers are drawn. View state only: never committed, saved or shared. */
+	dangerZones = $state<DangerToggles>({ ...NO_DANGER_ZONES });
+	/** The zones to draw, from the live document (so they follow a drag in progress). */
+	zones: ZoneSet = $derived(dangerZones(this.doc, this.dangerZones, this.selection));
 	armedSymbolId = $state<string | null>(null);
 	/** The armed annotation tool; arming one disarms the symbol and the other way round. */
 	tool = $state<AnnotationTool | null>(null);

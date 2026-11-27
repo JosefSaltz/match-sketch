@@ -6,8 +6,10 @@
 		clipPolygon,
 		clipPolyline,
 		densify,
+		groupTags,
 		toPathData,
-		zoneTags
+		zoneTags,
+		type BayEdge
 	} from '#lib/safety/paths.js';
 	import { DASH } from '#lib/safety/dash.js';
 	import { SPLASH_SOURCES } from '#lib/safety/sources.js';
@@ -44,13 +46,44 @@
 		return `${tip.x},${tip.y} ${bx - uy * h},${by + ux * h} ${bx + uy * h},${by - ux * h}`;
 	};
 
+	const FONT_PX = 10;
+	const LINE_PX = 12;
+	/** Text sits this far inside the bay edge, clear of the arrowhead. */
+	const GAP_PX = ARROW_PX + 4;
+	/** Screen x follows world x; downrange is up on screen, so the downrange edge is the top one. */
+	const ANCHOR: Record<BayEdge, 'start' | 'end' | 'middle'> = {
+		left: 'start',
+		right: 'end',
+		uprange: 'middle',
+		downrange: 'middle'
+	};
+
+	/** Where the first line's baseline goes, keeping the whole stack inside the bay. */
+	function placeText(edge: BayEdge, tip: Point, count: number): Point {
+		const stack = (count - 1) * LINE_PX;
+		switch (edge) {
+			case 'left':
+				return { x: tip.x + GAP_PX, y: tip.y - stack / 2 + FONT_PX * 0.35 };
+			case 'right':
+				return { x: tip.x - GAP_PX, y: tip.y - stack / 2 + FONT_PX * 0.35 };
+			case 'downrange':
+				return { x: tip.x, y: tip.y + GAP_PX + FONT_PX };
+			case 'uprange':
+				return { x: tip.x, y: tip.y - GAP_PX - stack };
+		}
+	}
+
 	const tags = $derived(
-		zoneTags(editor.zones, rect, editor.plan.unit).map((t) => ({
-			key: t.key,
-			text: t.text,
-			arrow: arrow(t.at, t.dir),
-			...worldToScreen(t.at, vp)
-		}))
+		groupTags(zoneTags(editor.zones, rect, editor.plan.unit), rect).map((g) => {
+			const text = placeText(g.edge, worldToScreen(g.at, vp), g.lines.length);
+			return {
+				key: g.key,
+				lines: g.lines,
+				anchor: ANCHOR[g.edge],
+				arrow: arrow(g.at, g.dir),
+				...text
+			};
+		})
 	);
 </script>
 
@@ -89,7 +122,11 @@
 	{/each}
 	{#each tags as t (t.key)}
 		<polygon data-testid="danger-exit" class="exit" points={t.arrow} />
-		<text data-testid="danger-tag" class="tag" x={t.x} y={t.y} dy="-0.4em">{t.text}</text>
+		<text data-testid="danger-tag" class="tag" text-anchor={t.anchor} font-size={FONT_PX}>
+			{#each t.lines as line, i (i)}
+				<tspan x={t.x} y={t.y + i * LINE_PX}>{line}</tspan>
+			{/each}
+		</text>
 	{/each}
 </g>
 
@@ -117,9 +154,7 @@
 	}
 	.tag {
 		fill: var(--color-danger);
-		font-size: 10px;
 		font-weight: 700;
-		text-anchor: middle;
 		paint-order: stroke;
 		stroke: #fff;
 		stroke-width: 3px;

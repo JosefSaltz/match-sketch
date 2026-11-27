@@ -22,7 +22,7 @@
 			return { label: s.label, citation: s.citation, meaning: `“${s.meaning}”` };
 		}
 		const f = FAN_SOURCES[id as keyof typeof FAN_SOURCES];
-		return { label: `${f.label} (${f.load})`, citation: f.citation, meaning: f.meaning };
+		return { label: `${f.label} (${f.load})`, citation: f.citation, meaning: null };
 	}
 </script>
 
@@ -50,11 +50,14 @@
 					<div>
 						<p class="font-semibold">{e.label}</p>
 						<p class="text-muted">{e.citation}</p>
-						<p>{e.meaning}</p>
+						{#if e.meaning}<p>{e.meaning}</p>{/if}
 					</div>
 				</li>
 			{/each}
 		</ul>
+		{#if fanOn}
+			<p class="mt-2">{FAN_SOURCES['fan-9mm'].meaning}</p>
+		{/if}
 		{#if noFiringPoint}
 			<p class="mt-2 font-semibold">
 				Add a shooting position or shooting box to see the ricochet fan.

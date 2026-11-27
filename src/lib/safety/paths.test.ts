@@ -20,6 +20,17 @@ import { fanZone, splashZone } from './zones';
 const r10 = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
 const inside = (p: { x: number; y: number }, r = r10) =>
 	p.x >= r.minX - 1e-9 && p.x <= r.maxX + 1e-9 && p.y >= r.minY - 1e-9 && p.y <= r.maxY + 1e-9;
+/** Outward unit normal of the bay edge p sits on (p must be on exactly one edge). */
+const outwardNormal = (p: { x: number; y: number }, r: typeof r10) => {
+	const hits = [
+		{ on: Math.abs(p.x - r.minX) < 1e-6, n: { x: -1, y: 0 } },
+		{ on: Math.abs(p.x - r.maxX) < 1e-6, n: { x: 1, y: 0 } },
+		{ on: Math.abs(p.y - r.minY) < 1e-6, n: { x: 0, y: -1 } },
+		{ on: Math.abs(p.y - r.maxY) < 1e-6, n: { x: 0, y: 1 } }
+	].filter((h) => h.on);
+	expect(hits).toHaveLength(1);
+	return hits[0].n;
+};
 const onBoundary = (p: { x: number; y: number }, r: typeof r10) =>
 	inside(p, r) &&
 	(Math.abs(p.x - r.minX) < 1e-6 ||
@@ -172,6 +183,7 @@ describe('toPathData through a scale break', () => {
 			10
 		);
 		const d = toPathData(pts, vp, false);
+		expect(d).not.toMatch(/NaN|Infinity/);
 		const nums = d.match(/-?\d+(\.\d+)?/g)!.map(Number);
 		expect(nums.every(Number.isFinite)).toBe(true);
 		expect(d.startsWith('M')).toBe(true);
@@ -225,9 +237,25 @@ describe('zoneTags', () => {
 		for (const t of tags) {
 			expect(onBoundary(t.at, r)).toBe(true);
 			expect(Math.hypot(t.dir.x, t.dir.y)).toBeCloseTo(1, 9);
-			expect(t.dir.y).toBeGreaterThan(0); // fan is at the bay's downrange edge
 		}
 		expect(new Set(tags.map((t) => t.key)).size).toBe(4);
+	});
+	it('points every tag outward through the edge it sits on, left, right and downrange', () => {
+		const r = bayRect({ widthFt: 60, depthFt: 30 });
+		const fan = fanZone(
+			{ id: 'f', x: 30, y: 2 },
+			{ id: 't', x: 30, y: 25 },
+			FAN_SOURCES['fan-9mm']
+		)!;
+		const tags = zoneTags({ splash: [], fans: [fan] }, r, 'yd');
+		const normals = tags.map((t) => outwardNormal(t.at, r));
+		// The ricochet areas leave through the side edges, the dispersion edges through the far edge.
+		expect(normals).toContainEqual({ x: -1, y: 0 });
+		expect(normals).toContainEqual({ x: 1, y: 0 });
+		expect(normals).toContainEqual({ x: 0, y: 1 });
+		tags.forEach((t, i) => {
+			expect(t.dir.x * normals[i].x + t.dir.y * normals[i].y).toBeGreaterThan(0);
+		});
 	});
 	it('has no tags for an AR splash whose rays stay in a big bay', () => {
 		const z = splashZone({ id: 'a', x: 200, y: 200, rotation: 0 }, SPLASH_SOURCES['ar385-splash']);

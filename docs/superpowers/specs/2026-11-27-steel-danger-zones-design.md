@@ -1,7 +1,7 @@
 # Steel ricochet danger zones — Design
 
 Date: 2026-11-27
-Status: Draft for approval
+Status: Approved 2026-11-27
 
 ## 1. What this is and why
 

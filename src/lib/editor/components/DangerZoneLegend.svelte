@@ -4,7 +4,7 @@
 		FAN_SOURCES,
 		LAYER_IDS,
 		LEGEND_NO_BERMS,
-		SPLASH_SOURCES,
+		layerSource,
 		type LayerId
 	} from '#lib/safety/sources.js';
 	import { isFiringPoint } from '#lib/safety/zones.js';
@@ -17,12 +17,10 @@
 	const noFiringPoint = $derived(fanOn && !editor.doc.objects.some(isFiringPoint));
 
 	function entry(id: LayerId) {
-		if (id in SPLASH_SOURCES) {
-			const s = SPLASH_SOURCES[id as keyof typeof SPLASH_SOURCES];
-			return { label: s.label, citation: s.citation, meaning: `“${s.meaning}”` };
-		}
-		const f = FAN_SOURCES[id as keyof typeof FAN_SOURCES];
-		return { label: `${f.label} (${f.load})`, citation: f.citation, meaning: null };
+		const s = layerSource(id);
+		return 'load' in s
+			? { label: `${s.label} (${s.load})`, citation: s.citation, meaning: null }
+			: { label: s.label, citation: s.citation, meaning: `“${s.meaning}”` };
 	}
 </script>
 

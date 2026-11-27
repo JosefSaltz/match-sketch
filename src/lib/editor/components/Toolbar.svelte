@@ -13,7 +13,7 @@
 	import ThemePicker from '#lib/theme/ThemePicker.svelte';
 	import Button from '#lib/ui/Button.svelte';
 	import Toggle from '#lib/ui/Toggle.svelte';
-	import { FAN_SOURCES, LAYER_IDS, SPLASH_SOURCES } from '#lib/safety/sources.js';
+	import { LAYER_IDS, layerSource } from '#lib/safety/sources.js';
 	import Wordmark from '#lib/ui/Wordmark.svelte';
 	import type { EditorState } from '../editor-state.svelte.js';
 	import DraftDialog from './DraftDialog.svelte';
@@ -50,10 +50,6 @@
 	let sharing = $state(false);
 	let presenting = $state(false);
 	let zonesOpen = $state(false);
-	const LAYER_LABEL = (id: (typeof LAYER_IDS)[number]) =>
-		id in SPLASH_SOURCES
-			? SPLASH_SOURCES[id as keyof typeof SPLASH_SOURCES].label
-			: FAN_SOURCES[id as keyof typeof FAN_SOURCES].label;
 	/** A press anywhere outside the Danger zones control closes its panel. */
 	function closeZonesOutside(e: PointerEvent) {
 		const target = e.target;
@@ -212,7 +208,7 @@
 				class="absolute top-full right-0 z-30 mt-2 grid gap-1 rounded-lg border-[3px] border-black bg-white p-3 shadow-[3px_3px_0_#000]"
 			>
 				{#each LAYER_IDS as id (id)}
-					<Toggle label={LAYER_LABEL(id)} bind:checked={editor.dangerZones[id]} />
+					<Toggle label={layerSource(id).label} bind:checked={editor.dangerZones[id]} />
 				{/each}
 			</div>
 		{/if}

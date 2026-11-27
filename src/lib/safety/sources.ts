@@ -92,4 +92,11 @@ export const FAN_SOURCES: Record<FanSourceId, FanSource> = {
 	}
 };
 
+/** The source record behind a toggle, splash or fan. */
+export function layerSource(id: LayerId): SplashSource | FanSource {
+	return id in SPLASH_SOURCES
+		? SPLASH_SOURCES[id as SplashSourceId]
+		: FAN_SOURCES[id as FanSourceId];
+}
+
 export const LEGEND_NO_BERMS = 'Berms and baffles are not modeled.';

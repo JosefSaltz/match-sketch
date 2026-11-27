@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { FAN_SOURCES, FT_PER_M, LAYER_IDS, LEGEND_NO_BERMS, SPLASH_SOURCES } from './sources';
+import {
+	FAN_SOURCES,
+	FT_PER_M,
+	LAYER_IDS,
+	LEGEND_NO_BERMS,
+	SPLASH_SOURCES,
+	layerSource
+} from './sources';
 
 const FAN_MEANING =
 	'Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go.';
@@ -11,6 +18,16 @@ describe('danger zone sources', () => {
 
 	it('lists layers in toggle order', () => {
 		expect(LAYER_IDS).toEqual(['ar385-splash', 'pnz-splash', 'fan-9mm', 'fan-556']);
+	});
+
+	it('looks up every layer source by id', () => {
+		expect(LAYER_IDS.map((id) => layerSource(id).id)).toEqual(LAYER_IDS);
+		expect(LAYER_IDS.map((id) => layerSource(id).label)).toEqual([
+			'AR 385-63 splash',
+			'Pistol NZ splash',
+			'9mm Luger',
+			'5.56 NATO'
+		]);
 	});
 
 	it('records the AR 385-63 splash', () => {

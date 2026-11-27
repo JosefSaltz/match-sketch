@@ -21,7 +21,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 5b  | Sync & offline                              | Done (2026-11-22)         | `2026-11-22-plan-5b-sync-offline.md` |
 | 6   | Draft from text                             | Done (2026-11-22)         | `2026-11-22-plan-6-draft-from-text.md` |
 | 7   | Walkthrough & sharing by link               | Done (2026-11-22)         | `2026-11-22-plan-7-walkthrough-sharing.md` |
-| 8   | Steel ricochet danger zones                 | Done (2026-11-27)         | `2026-11-27-plan-8-steel-danger-zones.md` |
+| 8   | Steel ricochet danger zones                 | Built (2026-11-27); e2e run and visual check pending | `2026-11-27-plan-8-steel-danger-zones.md` |
 
 Update this table as plans are written and finished.
 

@@ -19,7 +19,7 @@
 - **Branch:** `feat/danger-zones`, stacked on `feat/walkthrough`. Commits follow AGENTS.md: atomic, `type(scope): description`, each leaving type check, lint and tests passing. Suggested scopes: `catalog`, `safety`, `editor`, `plans`.
 - **Svelte code:** every `.svelte` / `.svelte.ts` edit goes through the Svelte MCP autofixer (or the `svelte:svelte-file-editor` agent) until it reports no issues.
 - **Units:** meters to feet is `m / 0.3048` exactly (so 45.72 m = 150 ft). World coordinates are feet, x to the right, y downrange; origin at the bay's uprange-left corner.
-- **Numbers are published values only.** Copy them from spec §3 exactly. Never derive a value into a label (spec §4.4).
+- **Numbers come from the sources.** Copy them from spec §3 exactly. The only derived numbers allowed in labels are the "past bay" distances from Task 7, which spec §4.4 defines and which carry that label.
 - **Legend copy** is fixed verbatim by spec §4.5. The Pistol NZ quote ends "at any distance within" exactly as the source text is cut there; do not complete it.
 - **Display only:** toggles all start off. They are not saved with the plan, not printed, and not shown in shared links.
 - **Accessibility:** the layer and legend must read in grayscale. Each layer gets a distinct stroke dash pattern, and color is only a bonus.
@@ -423,3 +423,47 @@ Rendering rules:
   Fix anything that doesn't, then rerun step 4.
 - [ ] **Step 6: Update the roadmap.** Add a row to `ROADMAP.md`: `| 8 | Steel ricochet danger zones | Done (date) | 2026-11-27-plan-8-steel-danger-zones.md |`, plus a short section pointing at the spec and noting that NRA Range Source Book data is a pending later toggle.
 - [ ] **Step 7: Commit** in two commits: `feat(editor): toggle danger zones and explain them in a legend` (code and e2e), then `docs(plans): mark Plan 8 done` (roadmap).
+
+---
+
+### Task 7: Past-the-bay distances and exit arrowheads (user request, 2026-11-27)
+
+Spec §4.4 was amended: where a line leaves the bay, it ends in an outward arrowhead, and its tag adds how far it continues past the edge.
+
+**Files:**
+
+- Modify: `src/lib/safety/paths.ts` (`zoneTags`, plus a new `EdgeTag` field)
+- Modify: `src/lib/safety/paths.test.ts`
+- Modify: `src/lib/editor/components/DangerZoneLayer.svelte` (arrowheads)
+- Modify: `tests/e2e/danger-zones.spec.ts`
+
+**Interfaces:**
+
+- Consumes: Task 3 zones, Task 4 helpers.
+- Produces:
+  - `EdgeTag` gains `dir: Point`: the unit direction of the line where it crosses the bay edge, pointing outward, used to draw the arrowhead.
+  - `export function distanceOutside(p: Point, r: Rect): number`: 0 inside the rect, otherwise the Euclidean distance to it.
+  - `export function formatPast(ft: number, unit: LengthUnit): string`: `"46 yd past bay"`, a whole number with en-US separators.
+- Tag texts (spec §4.4):
+  - **Splash, 'limit':** `` `${formatPublished(reachM)} · ${formatPast(reachFt − |exit − origin|)}` ``.
+  - **Splash, 'minimum':** `` `${formatPublishedRange(...)} · no stated limit` ``.
+  - **Dispersion edge:** `` `X ${formatPublished(xM)} · ${formatPast(xFt − |exit − F|)}` ``.
+  - **Ricochet side:** `` `W … · Y … · reaches ${formatPast(max distanceOutside(A|B|C))}` ``, which reads "reaches 1,314 yd past bay".
+
+- [ ] **Step 1: Update the failing tests in `paths.test.ts`.**
+  - `distanceOutside`: (5,5) in a 10×10 rect gives 0; (13,14) gives 5.
+  - `formatPast(139.358, 'yd')` gives `'46 yd past bay'`.
+  - The existing 9mm `zoneTags` case (unit `'yd'`, a 60×30 ft bay, fan from (30,2) to (30,25)):
+    - the dispersion tags read `'X 1,969 yd (1,800 m) · 1,959 yd past bay'`;
+    - the ricochet tags read `'W 436 yd (399 m) · Y 1,324 yd (1,211 m) · reaches 1,314 yd past bay'`;
+    - every tag's `dir` is a unit vector pointing out of the bay (its dot product with the outward normal of the edge it sits on is > 0).
+  - A new AR splash case: a plate at (10,25), rotation 0, in a 60×30 ft bay, unit `'yd'`. It gives exactly two splash tags: `'50 yd (45.72 m) · 46 yd past bay'` (left, at x = 0) and `'50 yd (45.72 m) · 32 yd past bay'` (right, at x = 60).
+  - A Pistol NZ splash in the same position: both tags end with `' · no stated limit'`.
+- [ ] **Step 2: Run them.** Run `npm run test:unit -- --run src/lib/safety`. Expected: FAIL on the new texts and the missing `dir`.
+- [ ] **Step 3: Implement** `distanceOutside`, `formatPast`, `dir`, and the new tag texts in `paths.ts`.
+- [ ] **Step 4: Run them.** Expected: PASS.
+- [ ] **Step 5: Draw the arrowheads.** In `DangerZoneLayer.svelte`, draw an outward arrowhead at each tag's `at`, pointing along `dir` in screen space. Screen y is flipped, so map the direction through `worldToScreen`, or take it from two points. Size it about 8 px, filled with `var(--color-danger)`, with `data-testid="danger-exit"`. Run the Svelte autofixer until clean.
+- [ ] **Step 6: Extend the e2e spec.** In the 9mm test, after the shooting position is placed: `danger-exit` count is at least 2, and at least one `danger-tag` contains `'past bay'`.
+- [ ] **Step 7: Check.** Run `npm run check && npm run lint && npm run test:unit -- --run`, then `npx playwright test --list tests/e2e/danger-zones.spec.ts`. Expected: clean, all pass, and the spec parses.
+- [ ] **Step 8: Commit** `feat(safety): show how far danger zone lines run past the bay`.
+

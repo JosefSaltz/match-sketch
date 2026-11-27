@@ -21,6 +21,7 @@ Every plan follows the spec's testing rule: Vitest unit tests for logic, Playwri
 | 5b  | Sync & offline                              | Done (2026-11-22)         | `2026-11-22-plan-5b-sync-offline.md` |
 | 6   | Draft from text                             | Done (2026-11-22)         | `2026-11-22-plan-6-draft-from-text.md` |
 | 7   | Walkthrough & sharing by link               | Done (2026-11-22)         | `2026-11-22-plan-7-walkthrough-sharing.md` |
+| 8   | Steel ricochet danger zones                 | Done (2026-11-27)         | `2026-11-27-plan-8-steel-danger-zones.md` |
 
 Update this table as plans are written and finished.
 
@@ -153,6 +154,12 @@ The user split Plan 5 into two stacked plans. Both develop and test against the 
 - **What:** authors tie the course-of-fire steps to color-coded highlights on props and targets (e.g. shoot vs move); viewers page through the steps.
 - **Depends on:** Plan 2 only (stage brief/procedure, annotations such as movement arrows). Placed after Plan 6 by default; it can move up to right after Plan 2 if the user wants it sooner. Printing it as sequence cards builds on Plan 4; a viewer link for shooters needs sharing (after the MVP today).
 - **Brainstorm first:** settle the open questions in spec §7.10 with the user before writing the plan.
+
+## Plan 8 — Steel ricochet danger zones
+
+- **Spec:** `docs/superpowers/specs/2026-11-27-steel-danger-zones-design.md`.
+- **Built:** a view-only editor overlay drawing splash zones and ricochet fans around steel targets from published AR 385-63 and Pistol New Zealand figures, with toolbar toggles and a legend. Not saved, printed or shared.
+- **Pending:** NRA Range Source Book data is a later toggle.
 
 ## After the MVP (spec §10)
 

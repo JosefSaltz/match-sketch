@@ -99,4 +99,18 @@ export function layerSource(id: LayerId): SplashSource | FanSource {
 		: FAN_SOURCES[id as FanSourceId];
 }
 
+/** What the canvas marks mean; the legend shows the lines that apply to the active layers. */
+export const LEGEND_MARKS = {
+	/** While a fan is on. */
+	dispersion:
+		'Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3).',
+	/** While a fan is on. */
+	fanLetters:
+		'X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
+	/** While Pistol NZ splash is on. */
+	noLimit: 'Dotted continuation: Pistol NZ gives no outer limit.',
+	/** While any layer is on. */
+	pastBay: '“past bay” distances are computed by Match Sketch from this plan, not published.'
+} as const;
+
 export const LEGEND_NO_BERMS = 'Berms and baffles are not modeled.';

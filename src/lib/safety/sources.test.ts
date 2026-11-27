@@ -3,6 +3,7 @@ import {
 	FAN_SOURCES,
 	FT_PER_M,
 	LAYER_IDS,
+	LEGEND_MARKS,
 	LEGEND_NO_BERMS,
 	SPLASH_SOURCES,
 	layerSource
@@ -92,5 +93,16 @@ describe('danger zone sources', () => {
 
 	it('states that berms are not modeled', () => {
 		expect(LEGEND_NO_BERMS).toBe('Berms and baffles are not modeled.');
+	});
+
+	it('explains the marks on the canvas', () => {
+		expect(LEGEND_MARKS).toEqual({
+			dispersion:
+				'Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3).',
+			fanLetters:
+				'X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
+			noLimit: 'Dotted continuation: Pistol NZ gives no outer limit.',
+			pastBay: '“past bay” distances are computed by Match Sketch from this plan, not published.'
+		});
 	});
 });

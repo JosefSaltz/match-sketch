@@ -3,6 +3,7 @@
 	import {
 		FAN_SOURCES,
 		LAYER_IDS,
+		LEGEND_MARKS,
 		LEGEND_NO_BERMS,
 		layerSource,
 		type LayerId
@@ -14,6 +15,11 @@
 
 	const active = $derived(LAYER_IDS.filter((id) => editor.dangerZones[id]));
 	const fanOn = $derived(active.some((id) => id in FAN_SOURCES));
+	const marks = $derived([
+		...(fanOn ? [LEGEND_MARKS.dispersion, LEGEND_MARKS.fanLetters] : []),
+		...(editor.dangerZones['pnz-splash'] ? [LEGEND_MARKS.noLimit] : []),
+		LEGEND_MARKS.pastBay
+	]);
 	const noFiringPoint = $derived(fanOn && !editor.doc.objects.some(isFiringPoint));
 
 	function entry(id: LayerId) {
@@ -56,6 +62,12 @@
 		{#if fanOn}
 			<p class="mt-2">{FAN_SOURCES['fan-9mm'].meaning}</p>
 		{/if}
+		<p class="mt-2 font-semibold">Marks</p>
+		<ul class="grid gap-1">
+			{#each marks as mark (mark)}
+				<li>{mark}</li>
+			{/each}
+		</ul>
 		{#if noFiringPoint}
 			<p class="mt-2 font-semibold">
 				Add a shooting position or shooting box to see the ricochet fan.

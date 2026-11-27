@@ -28,7 +28,7 @@
 
 {#if active.length > 0}
 	<aside
-		class="pointer-events-none absolute bottom-3 left-3 max-w-xs rounded-lg border-[3px] border-black bg-white p-3 text-xs shadow-[3px_3px_0_#000]"
+		class="pointer-events-none absolute right-3 bottom-3 max-w-xs rounded-lg border-[3px] border-black bg-white p-3 text-xs shadow-[3px_3px_0_#000]"
 		data-testid="danger-legend"
 		aria-label="Danger zones legend"
 	>

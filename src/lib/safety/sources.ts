@@ -120,3 +120,8 @@ export const LEGEND_MARKS = {
 } as const;
 
 export const LEGEND_NO_BERMS = 'Berms and baffles are not modeled.';
+/** While any layer is on and the plan has no steel target to draw from. */
+export const LEGEND_NO_STEEL = 'No steel targets on the plan.';
+/** While a fan is on and the plan has no firing point. */
+export const LEGEND_NO_FIRING_POINT =
+	'Add a shooting position or shooting box to see the ricochet fan.';

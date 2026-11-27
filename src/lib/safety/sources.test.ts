@@ -5,6 +5,8 @@ import {
 	LAYER_IDS,
 	LEGEND_MARKS,
 	LEGEND_NO_BERMS,
+	LEGEND_NO_FIRING_POINT,
+	LEGEND_NO_STEEL,
 	SPLASH_SOURCES,
 	layerSource
 } from './sources';
@@ -113,5 +115,12 @@ describe('danger zone sources', () => {
 		);
 		expect(SPLASH_SOURCES['pnz-splash'].note).toBeUndefined();
 		expect(FAN_SOURCES['fan-9mm'].note).toBeUndefined();
+	});
+
+	it('hints at what is missing when a layer has nothing to draw', () => {
+		expect(LEGEND_NO_STEEL).toBe('No steel targets on the plan.');
+		expect(LEGEND_NO_FIRING_POINT).toBe(
+			'Add a shooting position or shooting box to see the ricochet fan.'
+		);
 	});
 });

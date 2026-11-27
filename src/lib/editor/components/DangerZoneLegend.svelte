@@ -5,10 +5,12 @@
 		LAYER_IDS,
 		LEGEND_MARKS,
 		LEGEND_NO_BERMS,
+		LEGEND_NO_FIRING_POINT,
+		LEGEND_NO_STEEL,
 		layerSource,
 		type LayerId
 	} from '#lib/safety/sources.js';
-	import { isFiringPoint } from '#lib/safety/zones.js';
+	import { isFiringPoint, isSteel } from '#lib/safety/zones.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
@@ -21,6 +23,7 @@
 		LEGEND_MARKS.pastBay
 	]);
 	const noFiringPoint = $derived(fanOn && !editor.doc.objects.some(isFiringPoint));
+	const noSteel = $derived(active.length > 0 && !editor.doc.objects.some(isSteel));
 
 	function entry(id: LayerId) {
 		const s = layerSource(id);
@@ -69,10 +72,11 @@
 				<li>{mark}</li>
 			{/each}
 		</ul>
+		{#if noSteel}
+			<p class="mt-2 font-semibold">{LEGEND_NO_STEEL}</p>
+		{/if}
 		{#if noFiringPoint}
-			<p class="mt-2 font-semibold">
-				Add a shooting position or shooting box to see the ricochet fan.
-			</p>
+			<p class="mt-2 font-semibold">{LEGEND_NO_FIRING_POINT}</p>
 		{/if}
 		<p class="mt-2 text-muted">{LEGEND_NO_BERMS}</p>
 	</aside>

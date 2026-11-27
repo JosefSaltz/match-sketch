@@ -20,7 +20,7 @@
 - **Svelte code:** every `.svelte` / `.svelte.ts` edit goes through the Svelte MCP autofixer (or the `svelte:svelte-file-editor` agent) until it reports no issues.
 - **Units:** meters to feet is `m / 0.3048` exactly (so 45.72 m = 150 ft). World coordinates are feet, x to the right, y downrange; origin at the bay's uprange-left corner.
 - **Numbers come from the sources.** Copy them from spec §3 exactly. The only derived numbers allowed in labels are the "past bay" distances from Task 7, which spec §4.4 defines and which carry that label.
-- **Legend copy** is fixed verbatim by spec §4.5. The Pistol NZ quote ends "at any distance within" exactly as the source text is cut there; do not complete it.
+- **Legend copy** is fixed verbatim by spec §4.5. The Pistol NZ quote ends "…within the splatter zone", the end of the source's clause; do not cut it shorter.
 - **Display only:** toggles all start off. They are not saved with the plan, not printed, and not shown in shared links.
 - **Accessibility:** the layer and legend must read in grayscale. Each layer gets a distinct stroke dash pattern, and color is only a bonus.
 - **Commands:** `npm run test:unit -- --run`, `npm run check`, `npm run lint`, `npm run test:e2e -- <spec>`.
@@ -131,10 +131,10 @@ export const LEGEND_NO_BERMS = 'Berms and baffles are not modeled.';
   - `45.72 * FT_PER_M` ≈ `150` to 9 decimal places.
   - Each `meaning` equals the spec §4.5 text:
     - Both fans share the 1-in-1,000,000 line.
-    - Pistol NZ's line is cut off after "at any distance within".
+    - Pistol NZ's line ends "…within the splatter zone".
   - Each `citation` names its document, paragraph and figure or table:
     - **AR splash:** "AR 385-63/MCO 3570.1D (23 May 2025), ¶2-17a(2), Fig. 2-5".
-    - **Pistol NZ:** "Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025)".
+    - **Pistol NZ:** "Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025), §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1".
     - **9mm:** "AR 385-63, ¶5-1c, Fig. 5-3, Table 5-4 (steel/concrete)".
     - **5.56:** "AR 385-63, ¶5-1c, Fig. 5-3, Table 5-11 (steel/concrete)".
   - **Loads:** `'Ball M882, M1, subsonic'` and `'M193 Ball'`.

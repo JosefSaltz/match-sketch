@@ -114,7 +114,7 @@
 <style>
 	.object {
 		color: var(--color-text);
-		cursor: move;
+		cursor: grab;
 	}
 	.glyph.behind {
 		opacity: 0.55;

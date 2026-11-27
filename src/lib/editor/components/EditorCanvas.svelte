@@ -29,6 +29,8 @@
 	/** The pointer drawing a line or dragging a line's end, if any, and where it last was. */
 	let linking: number | null = null;
 	let linkAt: Point = { x: 0, y: 0 };
+	/** Something is being dragged (objects, or the view when panning): the closed hand shows. */
+	let grabbing = $state(false);
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -162,10 +164,12 @@
 		}
 		if (moving === e.pointerId) {
 			editor.updateMove(local(e));
+			grabbing = editor.preview !== null;
 			return;
 		}
 		const action = gestures.move(e.pointerId, local(e));
 		if (!action) return;
+		grabbing = editor.armedSymbolId === null && editor.tool === null;
 		if (action.kind === 'pinch') editor.zoomBy(action.factor, action.at);
 		editor.panBy(action.dx, action.dy);
 	}
@@ -184,6 +188,7 @@
 		if (moving === e.pointerId) {
 			const moved = editor.preview !== null;
 			moving = null;
+			grabbing = false;
 			editor.endMove();
 			if (!moved && narrowTo) editor.select([narrowTo]);
 			narrowTo = null;
@@ -213,13 +218,14 @@
 		}
 		if (tap?.pointerId === e.pointerId) tap = null;
 		gestures.up(e.pointerId);
+		if (moving === null && gestures.active === 0) grabbing = false;
 	}
 </script>
 
 <div class="stage" bind:clientWidth={editor.screenWidth} bind:clientHeight={editor.screenHeight}>
 	<svg
 		{@attach wheelZoom}
-		class={{ armed: editor.armedSymbolId !== null || editor.tool !== null }}
+		class={{ armed: editor.armedSymbolId !== null || editor.tool !== null, grabbing }}
 		data-stage
 		width={editor.screenWidth}
 		height={editor.screenHeight}
@@ -275,5 +281,10 @@
 	.armed,
 	.armed .background {
 		cursor: crosshair;
+	}
+	/* While dragging, the closed hand wins over every hover cursor underneath. */
+	.grabbing,
+	.grabbing :global(*) {
+		cursor: grabbing !important;
 	}
 </style>

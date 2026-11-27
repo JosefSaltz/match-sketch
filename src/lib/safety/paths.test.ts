@@ -12,6 +12,7 @@ import {
 	formatPublished,
 	formatPast,
 	formatPublishedRange,
+	groupTags,
 	toPathData,
 	zoneTags
 } from './paths';
@@ -304,5 +305,77 @@ describe('distanceOutside', () => {
 describe('formatPast', () => {
 	it('rounds to whole units with a past bay label', () => {
 		expect(formatPast(139.358, 'yd')).toBe('46 yd past bay');
+	});
+});
+
+describe('groupTags', () => {
+	const r = bayRect({ widthFt: 60, depthFt: 30 });
+	const down = { x: 0, y: 1 };
+	it('stacks tags that leave at the same point under one arrow, in order', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'first' },
+				{ key: 'b', at: { x: 40, y: 30 }, dir: down, text: 'alone' },
+				{ key: 'c', at: { x: 20 + 1e-9, y: 30 }, dir: down, text: 'second' }
+			],
+			r
+		);
+		expect(groups).toEqual([
+			{
+				key: 'a+c',
+				at: { x: 20, y: 30 },
+				dir: down,
+				edge: 'downrange',
+				lines: ['first', 'second']
+			},
+			{ key: 'b', at: { x: 40, y: 30 }, dir: down, edge: 'downrange', lines: ['alone'] }
+		]);
+	});
+	it('keeps tags apart once their points differ by more than the tolerance', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'one' },
+				{ key: 'b', at: { x: 20.001, y: 30 }, dir: down, text: 'two' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.lines)).toEqual([['one'], ['two']]);
+	});
+	it('shows a repeated line once', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same' },
+				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.lines)).toEqual([['same']]);
+	});
+	it('names the edge each group leaves by, using the direction at a corner', () => {
+		const groups = groupTags(
+			[
+				{ key: 'l', at: { x: 0, y: 10 }, dir: { x: -1, y: 0 }, text: 'l' },
+				{ key: 'r', at: { x: 60, y: 10 }, dir: { x: 1, y: 0 }, text: 'r' },
+				{ key: 'u', at: { x: 30, y: 0 }, dir: { x: 0, y: -1 }, text: 'u' },
+				{ key: 'c', at: { x: 60, y: 30 }, dir: { x: 0.8, y: 0.6 }, text: 'c' }
+			],
+			r
+		);
+		expect(groups.map((g) => g.edge)).toEqual(['left', 'right', 'uprange', 'right']);
+	});
+	it('merges the 9mm and 5.56 dispersion edges, which leave at the same points', () => {
+		const f = { id: 'f', x: 30, y: 2 };
+		const t = { id: 't', x: 30, y: 25 };
+		const fans = [fanZone(f, t, FAN_SOURCES['fan-9mm'])!, fanZone(f, t, FAN_SOURCES['fan-556'])!];
+		const groups = groupTags(zoneTags({ splash: [], fans }, r, 'yd'), r);
+		const disp = groups.filter((g) => g.lines.some((l) => l.startsWith('X ')));
+		expect(disp).toHaveLength(2);
+		for (const g of disp) {
+			expect(g.edge).toBe('downrange');
+			expect(g.lines).toEqual([
+				'X 1,969 yd (1,800 m) · 1,959 yd past bay',
+				'X 3,390 yd (3,100 m) · 3,381 yd past bay'
+			]);
+		}
 	});
 });

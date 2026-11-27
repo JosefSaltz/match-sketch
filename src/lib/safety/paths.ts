@@ -243,3 +243,44 @@ export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 	}
 	return tags;
 }
+
+/** The bay edge a line leaves by: left/right in x, uprange (y = 0) or downrange (y = depth). */
+export type BayEdge = 'left' | 'right' | 'uprange' | 'downrange';
+
+/** Tags that leave at one point, drawn as one arrow with stacked lines. */
+export type TagGroup = { key: string; at: Point; dir: Point; edge: BayEdge; lines: string[] };
+
+/** Of the edges p lies on, the one dir leaves through most directly (decides corners). */
+function edgeOf(p: Point, dir: Point, r: Rect, eps: number): BayEdge {
+	const edges: { edge: BayEdge; on: boolean; out: number }[] = [
+		{ edge: 'left', on: Math.abs(p.x - r.minX) <= eps, out: -dir.x },
+		{ edge: 'right', on: Math.abs(p.x - r.maxX) <= eps, out: dir.x },
+		{ edge: 'uprange', on: Math.abs(p.y - r.minY) <= eps, out: -dir.y },
+		{ edge: 'downrange', on: Math.abs(p.y - r.maxY) <= eps, out: dir.y }
+	];
+	const on = edges.filter((e) => e.on);
+	return (on.length > 0 ? on : edges).reduce((a, b) => (b.out > a.out ? b : a)).edge;
+}
+
+/** Groups tags whose exit points lie within eps feet of each other, so they never overprint. */
+export function groupTags(tags: EdgeTag[], r: Rect, eps = 1e-6): TagGroup[] {
+	const groups: TagGroup[] = [];
+	for (const t of tags) {
+		const g = groups.find(
+			(g) => Math.abs(g.at.x - t.at.x) <= eps && Math.abs(g.at.y - t.at.y) <= eps
+		);
+		if (!g) {
+			groups.push({
+				key: t.key,
+				at: t.at,
+				dir: t.dir,
+				edge: edgeOf(t.at, t.dir, r, eps),
+				lines: [t.text]
+			});
+		} else {
+			g.key += `+${t.key}`;
+			if (!g.lines.includes(t.text)) g.lines.push(t.text);
+		}
+	}
+	return groups;
+}

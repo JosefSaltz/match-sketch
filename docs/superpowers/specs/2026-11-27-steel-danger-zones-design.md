@@ -97,12 +97,14 @@ A plate faces straight uprange (its face normal points to −y) and turns with t
 - Geometry is computed in true feet (meters × 3.28084), in plan coordinates (x right, y downrange).
 - Shapes are clipped to the bay rectangle.
 - **Where a line leaves the bay** (added at the user's request, 2026-11-27), it ends in an outward arrowhead at the bay edge. Its edge tag shows the published number, plus how far the line goes past the edge.
-  - The published number is in the plan's unit with the source's meters in parentheses.
-  - The past-the-edge distance is derived and labeled "past bay", in the plan's unit only, rounded to whole units. Leaving off the meters keeps it visibly separate from published values.
-  - **A splash ray leaving the bay:** its reach plus the remainder, e.g. "50 yd (45.72 m) · 12 yd past bay". The remainder is the reach minus the distance from the target to the exit point.
-  - **A Pistol NZ ray:** "≥ 27–33 yd (25–30 m) · no stated limit", because the source gives no limit to subtract from.
-  - **A dispersion edge:** "X 1,969 yd (1,800 m) · 1,952 yd past bay". The remainder is X minus the distance from the firing point to the exit point.
-  - **Each ricochet area,** tagged once where it leaves the bay: "W 436 yd (399 m) · Y 1,324 yd (1,211 m) · reaches 1,190 yd past bay". The reach is the largest distance from any outline corner (A, B, C) to the bay rectangle.
+  - **One unit per tag** (user request, 2026-11-27): yards, or meters with kilometers from 1,000 m. The choice is a per-device setting ("Distances" in the Danger zones panel, default yards) and is independent of the plan's ft/yd unit.
+    - In yards, published values are converted and rounded to whole yards.
+    - In meters, published values show as the source gives them (45.72 m, 1.211 km).
+  - The past-the-edge distance is derived and labeled "past bay": whole yards, or whole meters and 0.01 km. The "past bay" label, and the legend line saying these figures are computed, keep it separate from published values.
+  - **A splash ray leaving the bay:** its reach plus the remainder, e.g. "50 yd · 12 yd past bay". The remainder is the reach minus the distance from the target to the exit point.
+  - **A Pistol NZ ray:** "≥ 27–33 yd · no stated limit", because the source gives no limit to subtract from.
+  - **A dispersion edge:** "X 1,969 yd · 1,952 yd past bay" (in meters: "X 1.8 km · 1.79 km past bay"). The remainder is X minus the distance from the firing point to the exit point.
+  - **Each ricochet area,** tagged once where it leaves the bay: "W 436 yd · Y 1,324 yd · reaches 1,190 yd past bay". The reach is the largest distance from any outline corner (A, B, C) to the bay rectangle.
   - The F→A edge gets no tag of its own.
 - With a scale break on, every edge is subdivided and each point passes through `toDrawn` (`src/lib/geometry/depth-map.ts`), like everything else drawn in the far strip.
 - The layer sits under objects and annotations and ignores pointer events.

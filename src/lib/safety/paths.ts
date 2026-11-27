@@ -2,7 +2,7 @@
 import { fromFeet, type LengthUnit } from '../geometry/units';
 import type { CanvasSize, Point } from '../geometry/types';
 import { worldToScreen, type Viewport } from '../geometry/viewport';
-import { FT_PER_M, FAN_SOURCES, SPLASH_SOURCES } from './sources';
+import { FT_PER_M, FAN_SOURCES, SPLASH_SOURCES, type LayerId } from './sources';
 import type { ZoneSet } from './zones';
 
 export type Rect = { minX: number; minY: number; maxX: number; maxY: number };
@@ -169,7 +169,7 @@ export function formatPast(ft: number, unit: LengthUnit): string {
 }
 
 /** dir is the unit direction (world feet) of the segment crossing the bay edge at `at`, pointing outward. */
-export type EdgeTag = { key: string; at: Point; text: string; dir: Point };
+export type EdgeTag = { key: string; at: Point; text: string; dir: Point; layer: LayerId };
 
 type Exit = { at: Point; dir: Point };
 
@@ -210,7 +210,8 @@ export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 				key: `${z.key}:${part}-ray`,
 				at: ex.at,
 				dir: ex.dir,
-				text: `${published} · ${tail}`
+				text: `${published} · ${tail}`,
+				layer: z.sourceId
 			});
 		}
 	}
@@ -224,6 +225,7 @@ export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 					key: `${z.key}:${part}-dispersion`,
 					at: disp.at,
 					dir: disp.dir,
+					layer: z.sourceId,
 					text: `X ${formatPublished(src.xM, unit)} · ${formatPast(
 						src.xM * FT_PER_M - Math.hypot(disp.at.x - z.origin.x, disp.at.y - z.origin.y),
 						unit
@@ -236,6 +238,7 @@ export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 					key: `${z.key}:${part}-ricochet`,
 					at: ric.at,
 					dir: ric.dir,
+					layer: z.sourceId,
 					text: `W ${formatPublished(src.wM, unit)} · Y ${formatPublished(src.yM, unit)} · reaches ${formatPast(reach, unit)}`
 				});
 			}
@@ -247,8 +250,11 @@ export function zoneTags(zones: ZoneSet, r: Rect, unit: LengthUnit): EdgeTag[] {
 /** The bay edge a line leaves by: left/right in x, uprange (y = 0) or downrange (y = depth). */
 export type BayEdge = 'left' | 'right' | 'uprange' | 'downrange';
 
+/** One line of a tag group, drawn in its layer's color. */
+export type TagLine = { text: string; layer: LayerId };
+
 /** Tags that leave at one point, drawn as one arrow with stacked lines. */
-export type TagGroup = { key: string; at: Point; dir: Point; edge: BayEdge; lines: string[] };
+export type TagGroup = { key: string; at: Point; dir: Point; edge: BayEdge; lines: TagLine[] };
 
 /** Of the edges p lies on, the one dir leaves through most directly (decides corners). */
 function edgeOf(p: Point, dir: Point, r: Rect, eps: number): BayEdge {
@@ -275,11 +281,12 @@ export function groupTags(tags: EdgeTag[], r: Rect, eps = 1e-6): TagGroup[] {
 				at: t.at,
 				dir: t.dir,
 				edge: edgeOf(t.at, t.dir, r, eps),
-				lines: [t.text]
+				lines: [{ text: t.text, layer: t.layer }]
 			});
 		} else {
 			g.key += `+${t.key}`;
-			if (!g.lines.includes(t.text)) g.lines.push(t.text);
+			if (!g.lines.some((l) => l.text === t.text && l.layer === t.layer))
+				g.lines.push({ text: t.text, layer: t.layer });
 		}
 	}
 	return groups;

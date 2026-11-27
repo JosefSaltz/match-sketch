@@ -314,9 +314,9 @@ describe('groupTags', () => {
 	it('stacks tags that leave at the same point under one arrow, in order', () => {
 		const groups = groupTags(
 			[
-				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'first' },
-				{ key: 'b', at: { x: 40, y: 30 }, dir: down, text: 'alone' },
-				{ key: 'c', at: { x: 20 + 1e-9, y: 30 }, dir: down, text: 'second' }
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'first', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 40, y: 30 }, dir: down, text: 'alone', layer: 'fan-9mm' },
+				{ key: 'c', at: { x: 20 + 1e-9, y: 30 }, dir: down, text: 'second', layer: 'fan-9mm' }
 			],
 			r
 		);
@@ -326,55 +326,87 @@ describe('groupTags', () => {
 				at: { x: 20, y: 30 },
 				dir: down,
 				edge: 'downrange',
-				lines: ['first', 'second']
+				lines: [
+					{ text: 'first', layer: 'fan-9mm' },
+					{ text: 'second', layer: 'fan-9mm' }
+				]
 			},
-			{ key: 'b', at: { x: 40, y: 30 }, dir: down, edge: 'downrange', lines: ['alone'] }
+			{
+				key: 'b',
+				at: { x: 40, y: 30 },
+				dir: down,
+				edge: 'downrange',
+				lines: [{ text: 'alone', layer: 'fan-9mm' }]
+			}
 		]);
 	});
 	it('keeps tags apart once their points differ by more than the tolerance', () => {
 		const groups = groupTags(
 			[
-				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'one' },
-				{ key: 'b', at: { x: 20.001, y: 30 }, dir: down, text: 'two' }
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'one', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20.001, y: 30 }, dir: down, text: 'two', layer: 'fan-9mm' }
 			],
 			r
 		);
-		expect(groups.map((g) => g.lines)).toEqual([['one'], ['two']]);
+		expect(groups.map((g) => g.lines.map((l) => l.text))).toEqual([['one'], ['two']]);
 	});
 	it('shows a repeated line once', () => {
 		const groups = groupTags(
 			[
-				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same' },
-				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same' }
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' }
 			],
 			r
 		);
-		expect(groups.map((g) => g.lines)).toEqual([['same']]);
+		expect(groups.map((g) => g.lines.map((l) => l.text))).toEqual([['same']]);
 	});
 	it('names the edge each group leaves by, using the direction at a corner', () => {
 		const groups = groupTags(
 			[
-				{ key: 'l', at: { x: 0, y: 10 }, dir: { x: -1, y: 0 }, text: 'l' },
-				{ key: 'r', at: { x: 60, y: 10 }, dir: { x: 1, y: 0 }, text: 'r' },
-				{ key: 'u', at: { x: 30, y: 0 }, dir: { x: 0, y: -1 }, text: 'u' },
-				{ key: 'c', at: { x: 60, y: 30 }, dir: { x: 0.8, y: 0.6 }, text: 'c' }
+				{ key: 'l', at: { x: 0, y: 10 }, dir: { x: -1, y: 0 }, text: 'l', layer: 'fan-9mm' },
+				{ key: 'r', at: { x: 60, y: 10 }, dir: { x: 1, y: 0 }, text: 'r', layer: 'fan-9mm' },
+				{ key: 'u', at: { x: 30, y: 0 }, dir: { x: 0, y: -1 }, text: 'u', layer: 'fan-9mm' },
+				{ key: 'c', at: { x: 60, y: 30 }, dir: { x: 0.8, y: 0.6 }, text: 'c', layer: 'fan-9mm' }
 			],
 			r
 		);
 		expect(groups.map((g) => g.edge)).toEqual(['left', 'right', 'uprange', 'right']);
+	});
+	it('tags each line with the layer it belongs to', () => {
+		const f = { id: 'f', x: 30, y: 2 };
+		const t = { id: 't', x: 30, y: 25 };
+		const fan = fanZone(f, t, FAN_SOURCES['fan-556'])!;
+		const plate = splashZone({ id: 'p', x: 10, y: 25, rotation: 0 }, SPLASH_SOURCES['pnz-splash']);
+		const tags = zoneTags({ splash: [plate], fans: [fan] }, r, 'yd');
+		expect(new Set(tags.filter((t) => t.key.startsWith('fan-556')).map((t) => t.layer))).toEqual(
+			new Set(['fan-556'])
+		);
+		expect(new Set(tags.filter((t) => t.key.startsWith('pnz-splash')).map((t) => t.layer))).toEqual(
+			new Set(['pnz-splash'])
+		);
+	});
+	it('keeps the same text from two layers as two lines', () => {
+		const groups = groupTags(
+			[
+				{ key: 'a', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-9mm' },
+				{ key: 'b', at: { x: 20, y: 30 }, dir: down, text: 'same', layer: 'fan-556' }
+			],
+			r
+		);
+		expect(groups[0].lines).toHaveLength(2);
 	});
 	it('merges the 9mm and 5.56 dispersion edges, which leave at the same points', () => {
 		const f = { id: 'f', x: 30, y: 2 };
 		const t = { id: 't', x: 30, y: 25 };
 		const fans = [fanZone(f, t, FAN_SOURCES['fan-9mm'])!, fanZone(f, t, FAN_SOURCES['fan-556'])!];
 		const groups = groupTags(zoneTags({ splash: [], fans }, r, 'yd'), r);
-		const disp = groups.filter((g) => g.lines.some((l) => l.startsWith('X ')));
+		const disp = groups.filter((g) => g.lines.some((l) => l.text.startsWith('X ')));
 		expect(disp).toHaveLength(2);
 		for (const g of disp) {
 			expect(g.edge).toBe('downrange');
 			expect(g.lines).toEqual([
-				'X 1,969 yd (1,800 m) · 1,959 yd past bay',
-				'X 3,390 yd (3,100 m) · 3,381 yd past bay'
+				{ text: 'X 1,969 yd (1,800 m) · 1,959 yd past bay', layer: 'fan-9mm' },
+				{ text: 'X 3,390 yd (3,100 m) · 3,381 yd past bay', layer: 'fan-556' }
 			]);
 		}
 	});

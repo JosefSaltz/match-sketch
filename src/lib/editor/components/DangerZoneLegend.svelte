@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DASH } from '#lib/safety/dash.js';
+	import { COLOR, DASH } from '#lib/safety/layer-style.js';
 	import {
 		FAN_SOURCES,
 		LAYER_IDS,
@@ -64,7 +64,7 @@
 								y1="5"
 								x2="28"
 								y2="5"
-								stroke="var(--color-danger)"
+								stroke={COLOR[id]}
 								stroke-width="2"
 								stroke-dasharray={DASH[id]}
 							/>

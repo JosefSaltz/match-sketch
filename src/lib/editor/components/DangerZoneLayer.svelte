@@ -11,7 +11,7 @@
 		zoneTags,
 		type BayEdge
 	} from '#lib/safety/paths.js';
-	import { DASH } from '#lib/safety/dash.js';
+	import { COLOR, DASH } from '#lib/safety/layer-style.js';
 	import { SPLASH_SOURCES } from '#lib/safety/sources.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
@@ -90,7 +90,12 @@
 <g data-testid="danger-zones" class="zones">
 	{#each editor.zones.splash as z (z.key)}
 		{@const dash = DASH[z.sourceId]}
-		<g data-testid="danger-splash" data-source={z.sourceId} data-object-id-ref={z.objectId}>
+		<g
+			data-testid="danger-splash"
+			data-source={z.sourceId}
+			data-object-id-ref={z.objectId}
+			style:--zone={COLOR[z.sourceId]}
+		>
 			{#each [z.left, z.right] as side, i (i)}
 				{@const f = fill(side.wedge)}
 				{#if f}<path class="fill" d={f} />{/if}
@@ -107,7 +112,7 @@
 	{/each}
 	{#each editor.zones.fans as z (z.key)}
 		{@const dash = DASH[z.sourceId]}
-		<g data-testid="danger-fan" data-source={z.sourceId}>
+		<g data-testid="danger-fan" data-source={z.sourceId} style:--zone={COLOR[z.sourceId]}>
 			{#each z.dispersion as end, i (i)}
 				{#each lines([z.origin, end]) as d, j (j)}
 					<path class="line light" {d} />
@@ -121,10 +126,15 @@
 		</g>
 	{/each}
 	{#each tags as t (t.key)}
-		<polygon data-testid="danger-exit" class="exit" points={t.arrow} />
+		<polygon
+			data-testid="danger-exit"
+			class="exit"
+			points={t.arrow}
+			fill={COLOR[t.lines[0].layer]}
+		/>
 		<text data-testid="danger-tag" class="tag" text-anchor={t.anchor} font-size={FONT_PX}>
 			{#each t.lines as line, i (i)}
-				<tspan x={t.x} y={t.y + i * LINE_PX}>{line}</tspan>
+				<tspan x={t.x} y={t.y + i * LINE_PX} fill={COLOR[line.layer]}>{line.text}</tspan>
 			{/each}
 		</text>
 	{/each}
@@ -135,13 +145,13 @@
 		pointer-events: none;
 	}
 	.fill {
-		fill: var(--color-danger);
+		fill: var(--zone, var(--color-danger));
 		fill-opacity: 0.1;
 		stroke: none;
 	}
 	.line {
 		fill: none;
-		stroke: var(--color-danger);
+		stroke: var(--zone, var(--color-danger));
 		stroke-width: 2;
 	}
 	.line.light {
@@ -149,11 +159,9 @@
 		stroke-opacity: 0.45;
 	}
 	.exit {
-		fill: var(--color-danger);
 		stroke: none;
 	}
 	.tag {
-		fill: var(--color-danger);
 		font-weight: 700;
 		paint-order: stroke;
 		stroke: #fff;

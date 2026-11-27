@@ -112,7 +112,7 @@ export const LEGEND_MARKS = {
 		'Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3).',
 	/** While a fan is on. */
 	fanLetters:
-		'X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
+		'X = maximum range (Distance X, AR 385-63 Fig. 5-3); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
 	/** While Pistol NZ splash is on. */
 	noLimit: 'Dotted continuation: Pistol NZ gives no outer limit.',
 	/** While any layer is on. */

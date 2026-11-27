@@ -102,7 +102,7 @@ describe('danger zone sources', () => {
 			dispersion:
 				'Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3).',
 			fanLetters:
-				'X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
+				'X = maximum range (Distance X, AR 385-63 Fig. 5-3); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b).',
 			noLimit: 'Dotted continuation: Pistol NZ gives no outer limit.',
 			pastBay: '“past bay” distances are computed by Match Sketch from this plan, not published.'
 		});

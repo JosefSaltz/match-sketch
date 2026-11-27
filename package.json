@@ -9,6 +9,7 @@
 	},
 	"scripts": {
 		"dev": "node scripts/local-env.ts vite dev",
+		"dev:no-auth": "DEV_SKIP_AUTH=true node scripts/local-env.ts vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",

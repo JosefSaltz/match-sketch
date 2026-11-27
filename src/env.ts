@@ -25,6 +25,13 @@ export const variables = defineEnvVars({
 		description:
 			'Feature flag for Draft from text: `true` shows it and opens POST /api/drafts (default off).'
 	},
+	DEV_SKIP_AUTH: {
+		public: true,
+		static: true,
+		schema: (value) => flag(value),
+		description:
+			'Local dev only: `true` opens app pages without signing in and keeps sync off (`pnpm dev:no-auth`). Ignored outside `vite dev`.'
+	},
 	SUPABASE_SECRET_KEY: {
 		schema: required,
 		description: 'Supabase secret key (`sb_secret_…`); server only, bypasses RLS.'

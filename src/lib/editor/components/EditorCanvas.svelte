@@ -7,6 +7,7 @@
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
 	import DangerZoneLayer from './DangerZoneLayer.svelte';
+	import DangerZoneLegend from './DangerZoneLegend.svelte';
 	import ObjectView from './ObjectView.svelte';
 	import ScaleBar from './ScaleBar.svelte';
 	import SelectionOverlay from './SelectionOverlay.svelte';
@@ -251,6 +252,7 @@
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>
+	<DangerZoneLegend {editor} />
 </div>
 
 <style>

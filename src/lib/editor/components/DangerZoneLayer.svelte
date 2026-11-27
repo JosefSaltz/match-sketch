@@ -9,18 +9,12 @@
 		toPathData,
 		zoneTags
 	} from '#lib/safety/paths.js';
+	import { DASH } from '#lib/safety/dash.js';
 	import { SPLASH_SOURCES } from '#lib/safety/sources.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
 	let { editor }: { editor: EditorState } = $props();
 
-	/** Stroke dash per layer (grayscale-readable): AR solid, Pistol NZ, 9mm, 5.56. */
-	const DASH = {
-		'ar385-splash': undefined,
-		'pnz-splash': '6 4',
-		'fan-9mm': '14 6',
-		'fan-556': '10 4 2 4'
-	} as const;
 	/** The carried-on part of a minimum reach: visibly different from the layer's own pattern. */
 	const BEYOND_DASH = '2 4';
 	const STEP_FT = 2;

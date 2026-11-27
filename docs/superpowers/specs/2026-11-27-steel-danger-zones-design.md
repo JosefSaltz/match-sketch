@@ -115,8 +115,16 @@ A plate faces straight uprange (its face normal points to −y) and turns with t
   - **AR 385-63 splash:** "bullet splatter will angle off the target up to 20 degrees… and travel up to 45 m. The majority of all bullet fragments will exit the target within the 20-degree backsplash area" (¶2-17a(2)).
   - **Pistol NZ splash:** "splatter sideways at least 25-30 metres… you must assume that the side splatter can cause injury at any distance within the splatter zone" (Pistol New Zealand, Steel Target Safe Use Guide 2025 V4 (28 May 2025), §8 "What happens when a projectile hits Steel? The Splatter Pattern", p. 6, Fig. 1).
   - **9mm and 5.56 fans:** "Danger zone = 1 in 1,000,000 escape envelope (AR 385-63 ¶3-1b), not where rounds usually go." This line appears only while a fan toggle is on.
+  - **Notes under a citation:** AR 385-63 splash: "Drawn to Fig. 2-5’s 50 yd (45.72 m)." 5.56 NATO: "M193 is the only 5.56 ball load AR 385-63 gives steel-impact data for (Table 5-11); M855 (Table 5-12) lists only earth and armor."
+  - **Marks**, only the lines that apply to the active layers:
+    - fans on: "Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3)."
+    - fans on: "X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b)." ¶5-2b defines W, Y, P and Q but not X; ¶9-2d is where the regulation glosses Distance X as maximum range.
+    - Pistol NZ on: "Dotted continuation: Pistol NZ gives no outer limit."
+    - any layer on: "“past bay” distances are computed by Match Sketch from this plan, not published."
+  - **Hints:** "No steel targets on the plan." while any layer is on and the plan has none; "Add a shooting position or shooting box to see the ricochet fan." while a fan is on and the plan has no firing point.
   - **Always:** "Berms and baffles are not modeled."
-- **Labels:** labels live in the legend. On the canvas the only text is the end tags (§4.4).
+  - The card collapses from a Legend button in its header and scrolls when taller than the stage.
+- **Labels:** labels live in the legend. On the canvas the only text is the end tags (§4.4). Tags that leave the bay at the same point (the 9mm and 5.56 dispersion edges share a direction) share one arrowhead with their lines stacked, and each tag is anchored inward from its edge so it stays inside the bay.
 
 ## 5. Code shape
 

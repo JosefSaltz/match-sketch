@@ -126,7 +126,7 @@ describe('dangerZones', () => {
 		objects: [
 			obj('s1', 'steel-static', 10, 40),
 			obj('s2', 'popper', 30, 50, { count: 4 }),
-			obj('p1', 'paper-target', 20, 45),
+			obj('p1', 'paper', 20, 45),
 			obj('f1', 'shooting-position', 5, 5),
 			obj('f2', 'shooting-box', 25, 5),
 			obj('f3', 'shooting-position', 10, 40)

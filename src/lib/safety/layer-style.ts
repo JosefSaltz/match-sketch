@@ -13,10 +13,16 @@ export const DASH: Record<LayerId, string | undefined> = {
 	'fan-556': '10 4 2 4'
 };
 
-/** Okabe–Ito colors, distinguishable with the common color vision deficiencies. */
+/**
+ * The Army splash is olive drab, after its military source. The others are Okabe–Ito colors,
+ * distinguishable with the common color vision deficiencies.
+ */
 export const COLOR: Record<LayerId, string> = {
-	'ar385-splash': '#D55E00',
+	'ar385-splash': '#4B5320',
 	'pnz-splash': '#CC79A7',
 	'fan-9mm': '#0072B2',
 	'fan-556': '#009E73'
 };
+
+/** Zone fill per layer: the line color, except the Army splash wedge, which stays red. */
+export const FILL: Record<LayerId, string> = { ...COLOR, 'ar385-splash': '#D55E00' };

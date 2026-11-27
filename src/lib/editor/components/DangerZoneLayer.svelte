@@ -11,7 +11,7 @@
 		zoneTags,
 		type BayEdge
 	} from '#lib/safety/paths.js';
-	import { COLOR, DASH } from '#lib/safety/layer-style.js';
+	import { COLOR, DASH, FILL } from '#lib/safety/layer-style.js';
 	import { SPLASH_SOURCES } from '#lib/safety/sources.js';
 	import type { EditorState } from '../editor-state.svelte.js';
 
@@ -95,6 +95,7 @@
 			data-source={z.sourceId}
 			data-object-id-ref={z.objectId}
 			style:--zone={COLOR[z.sourceId]}
+			style:--zone-fill={FILL[z.sourceId]}
 		>
 			{#each [z.left, z.right] as side, i (i)}
 				{@const f = fill(side.wedge)}
@@ -145,7 +146,7 @@
 		pointer-events: none;
 	}
 	.fill {
-		fill: var(--zone, var(--color-danger));
+		fill: var(--zone-fill, var(--zone, var(--color-danger)));
 		fill-opacity: 0.1;
 		stroke: none;
 	}

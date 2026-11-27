@@ -17,6 +17,8 @@ type BaseEntry = {
 	keepCase?: boolean;
 	/** Targets: one object can stand for several (e.g. "KD ×4"). */
 	countable: boolean;
+	/** Steel the shooter hits: draws ricochet danger zones (danger-zones spec §4.1). */
+	steel?: boolean;
 	autoLabel?: AutoLabel;
 };
 

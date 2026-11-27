@@ -168,4 +168,31 @@ describe('paletteGroups', () => {
 		expect(steel.kind === 'family' && steel.entries.map((e) => e.id)).toEqual(['steel-static']);
 		expect(paletteGroups('zzz')).toEqual([]);
 	});
+
+	it('marks exactly the steel targets as steel', () => {
+		expect(
+			CATALOG.filter((e) => e.steel)
+				.map((e) => e.id)
+				.sort()
+		).toEqual(
+			[
+				'bottle',
+				'ducks',
+				'plate-kd',
+				'plate-rack',
+				'plate-stop',
+				'popper',
+				'popper-auto-reset',
+				'popper-static',
+				'popper-trigger',
+				'spinner',
+				'steel-static',
+				'texas-star',
+				'whirly-gig'
+			].sort()
+		);
+		for (const e of CATALOG) {
+			if (e.family === 'poppers' || e.family === 'steel') expect(e.steel, e.id).toBe(true);
+		}
+	});
 });

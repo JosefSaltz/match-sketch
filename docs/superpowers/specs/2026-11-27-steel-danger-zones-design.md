@@ -118,7 +118,7 @@ A plate faces straight uprange (its face normal points to −y) and turns with t
   - **Notes under a citation:** AR 385-63 splash: "Drawn to Fig. 2-5’s 50 yd (45.72 m)." 5.56 NATO: "M193 is the only 5.56 ball load AR 385-63 gives steel-impact data for (Table 5-11); M855 (Table 5-12) lists only earth and armor."
   - **Marks**, only the lines that apply to the active layers:
     - fans on: "Thin lines: dispersion area, 5° each side of the line of fire (AR 385-63 ¶5-1d, Fig. 5-3)."
-    - fans on: "X = maximum range (AR 385-63 ¶9-2d); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b)." ¶5-2b defines W, Y, P and Q but not X; ¶9-2d is where the regulation glosses Distance X as maximum range.
+    - fans on: "X = maximum range (Distance X, AR 385-63 Fig. 5-3); W = ricochet width beyond the dispersion edge; Y = farthest downrange point of a lateral ricochet (¶5-2b)." ¶5-2b defines W, Y, P and Q but not X; Fig. 5-3 draws Distance X for the small-arms batwing. (¶9-2d glosses it as "maximum range", but that paragraph is about fighting vehicles, so it is not cited.)
     - Pistol NZ on: "Dotted continuation: Pistol NZ gives no outer limit."
     - any layer on: "“past bay” distances are computed by Match Sketch from this plan, not published."
   - **Hints:** "No steel targets on the plan." while any layer is on and the plan has none; "Add a shooting position or shooting box to see the ricochet fan." while a fan is on and the plan has no firing point.

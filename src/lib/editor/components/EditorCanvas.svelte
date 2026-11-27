@@ -3,7 +3,7 @@
 	import type { Corner } from '#lib/geometry/transform.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
-	import { movedBeyond, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
+	import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
 	import DangerZoneLayer from './DangerZoneLayer.svelte';
@@ -31,6 +31,12 @@
 	let linkAt: Point = { x: 0, y: 0 };
 	/** Something is being dragged (objects, or the view when panning): the closed hand shows. */
 	let grabbing = $state(false);
+	/** Where the pointer is (page px) while a drag is off the stage, for the "Release to remove" tag. */
+	let offAt = $state({ x: 0, y: 0 });
+	/** A red trash can, outlined in white so it reads on any background. */
+	const REMOVE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+		"<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'><g fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6' stroke='white' stroke-width='4.5'/><path d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6' stroke='#b91c1c' stroke-width='2.2'/></g></svg>"
+	)}") 14 14`;
 	/** A press on one object of a multi-selection: a tap (no move) narrows the selection to it. */
 	let narrowTo: string | null = null;
 
@@ -163,8 +169,12 @@
 			return;
 		}
 		if (moving === e.pointerId) {
-			editor.updateMove(local(e));
+			const p = local(e);
+			editor.updateMove(p);
 			grabbing = editor.preview !== null;
+			// Pulled off the stage: releasing removes it, so say so before the release.
+			editor.dragOff = grabbing && offStage(p, editor.screen);
+			offAt = { x: e.clientX, y: e.clientY };
 			return;
 		}
 		const action = gestures.move(e.pointerId, local(e));
@@ -225,7 +235,12 @@
 <div class="stage" bind:clientWidth={editor.screenWidth} bind:clientHeight={editor.screenHeight}>
 	<svg
 		{@attach wheelZoom}
-		class={{ armed: editor.armedSymbolId !== null || editor.tool !== null, grabbing }}
+		class={{
+			armed: editor.armedSymbolId !== null || editor.tool !== null,
+			grabbing,
+			removing: editor.dragOff
+		}}
+		style:--remove-cursor={REMOVE_CURSOR}
 		data-stage
 		width={editor.screenWidth}
 		height={editor.screenHeight}
@@ -260,6 +275,17 @@
 	</svg>
 	<DangerZoneLegend {editor} />
 </div>
+{#if editor.dragOff}
+	<div
+		data-testid="remove-hint"
+		class="remove-hint"
+		role="status"
+		style:left="{offAt.x + 18}px"
+		style:top="{offAt.y + 18}px"
+	>
+		Release to remove
+	</div>
+{/if}
 
 <style>
 	.stage {
@@ -286,5 +312,23 @@
 	.grabbing,
 	.grabbing :global(*) {
 		cursor: grabbing !important;
+	}
+	/* Off the stage, the trash can replaces the hand: releasing now removes what is dragged. */
+	.removing,
+	.removing :global(*) {
+		cursor: var(--remove-cursor), no-drop !important;
+	}
+	.remove-hint {
+		position: fixed;
+		z-index: 50;
+		pointer-events: none;
+		padding: 2px 8px;
+		border: 2px solid var(--color-danger);
+		border-radius: 6px;
+		background: #fff;
+		color: var(--color-danger);
+		font-size: 0.8125rem;
+		font-weight: 700;
+		white-space: nowrap;
 	}
 </style>

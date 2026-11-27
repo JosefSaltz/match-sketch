@@ -39,3 +39,38 @@ test('panning the view shows a closed hand', async ({ page }) => {
 	await page.mouse.up();
 	expect(await cursorOf(page.locator('svg[data-stage]'))).not.toBe('grabbing');
 });
+
+test('pulling an object off the canvas warns before release, then removes it', async ({ page }) => {
+	const object = page.getByTestId('object');
+	const stage = page.locator('svg[data-stage]');
+	const o = (await object.boundingBox())!;
+	const s = (await stage.boundingBox())!;
+	await page.mouse.move(o.x + o.width / 2, o.y + o.height / 2);
+	await page.mouse.down();
+	// Out past the stage's left edge, over the symbol palette.
+	await page.mouse.move(s.x - 60, o.y + o.height / 2, { steps: 12 });
+	await expect(page.getByTestId('remove-hint')).toHaveText('Release to remove');
+	expect(await cursorOf(stage)).toContain('url(');
+	await expect(stage).toHaveClass(/removing/);
+	await page.mouse.up();
+	await expect(object).toHaveCount(0);
+	await expect(page.getByTestId('remove-hint')).toHaveCount(0);
+	// One undo brings it back.
+	await page.getByRole('button', { name: 'Undo' }).click();
+	await expect(object).toHaveCount(1);
+});
+
+test('dragging back onto the canvas before release keeps the object', async ({ page }) => {
+	const object = page.getByTestId('object');
+	const stage = page.locator('svg[data-stage]');
+	const o = (await object.boundingBox())!;
+	const s = (await stage.boundingBox())!;
+	await page.mouse.move(o.x + o.width / 2, o.y + o.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(s.x - 60, o.y + o.height / 2, { steps: 12 });
+	await expect(page.getByTestId('remove-hint')).toBeVisible();
+	await page.mouse.move(s.x + s.width / 2, s.y + s.height / 2, { steps: 12 });
+	await expect(page.getByTestId('remove-hint')).toHaveCount(0);
+	await page.mouse.up();
+	await expect(object).toHaveCount(1);
+});

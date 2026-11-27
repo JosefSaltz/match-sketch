@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { movedBeyond, PointerGestures, TAP_SLOP_PX } from './gestures';
+import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from './gestures';
 
 describe('PointerGestures', () => {
 	it('pans with one pointer', () => {
@@ -38,5 +38,20 @@ describe('movedBeyond', () => {
 		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 3 })).toBe(true);
 		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 0 }, 2)).toBe(true);
 		expect(TAP_SLOP_PX).toBe(4);
+	});
+});
+
+describe('offStage', () => {
+	const size = { width: 800, height: 600 };
+	it('is false anywhere on the stage, edges included', () => {
+		expect(offStage({ x: 0, y: 0 }, size)).toBe(false);
+		expect(offStage({ x: 400, y: 300 }, size)).toBe(false);
+		expect(offStage({ x: 800, y: 600 }, size)).toBe(false);
+	});
+	it('is true once the pointer leaves the stage on any side', () => {
+		expect(offStage({ x: -1, y: 300 }, size)).toBe(true);
+		expect(offStage({ x: 801, y: 300 }, size)).toBe(true);
+		expect(offStage({ x: 400, y: -1 }, size)).toBe(true);
+		expect(offStage({ x: 400, y: 601 }, size)).toBe(true);
 	});
 });

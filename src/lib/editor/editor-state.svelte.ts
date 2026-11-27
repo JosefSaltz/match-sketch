@@ -286,6 +286,7 @@ export class EditorState {
 
 	#endDrags(): void {
 		this.#move = null;
+		this.dragOff = false;
 		this.#handle = null;
 		this.#link = null;
 		this.preview = null;
@@ -571,6 +572,8 @@ export class EditorState {
 	}
 
 	#move: MoveDrag | null = null;
+	/** A drag has left the stage: releasing now removes what is dragged (like pulling off a dock). */
+	dragOff = $state(false);
 
 	/**
 	 * Starts dragging the current selection, grabbed by object `id` at a screen point. Nothing
@@ -717,14 +720,28 @@ export class EditorState {
 	cancelMove(): void {
 		this.swing.stop();
 		this.#move = null;
+		this.dragOff = false;
 		this.preview = null;
 	}
 
-	/** Commits the previewed move once; a press without movement changes nothing. */
+	/**
+	 * Commits the previewed move once; a press without movement changes nothing. Released off the
+	 * stage (`dragOff`), the dragged items are removed instead, as one undoable step.
+	 */
 	endMove(): void {
-		this.swing.release();
+		const m = this.#move;
 		const preview = this.preview;
 		this.#move = null;
+		if (this.dragOff && m?.started) {
+			this.dragOff = false;
+			this.swing.stop();
+			this.preview = null;
+			// #show drops the removed ids from the selection.
+			this.commit(deleteItems(this.#current, m.ids));
+			return;
+		}
+		this.dragOff = false;
+		this.swing.release();
 		if (preview) this.commit(preview);
 		else this.preview = null;
 	}

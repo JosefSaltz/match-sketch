@@ -113,7 +113,7 @@ Each theme sets `--theme-base`, `--theme-accent`, `--theme-tile` (a `url()`), an
 
 - A **Theme** button in the top bar opens a picker: swatches grouped Solid / Plaid / Camo, each a small tile preview with its name; the current one is marked. Choosing applies it at once.
 - The choice is a **per-user setting** that applies app-wide, stored on the device (IndexedDB, alongside the existing stores) and later synced with the account (Plan 5). `data-theme` is set before first paint so there is no flash of the default theme.
-- **Default theme:** M81 Woodland once cleared (§8); DPM until then.
+- **Default theme:** Blackout, a plain dark solid. (Woodland DPM was the default until 2026-11-27; the user preferred a neutral bar to a camo pattern.)
 
 ### 6.3 Themed surfaces
 
@@ -189,7 +189,7 @@ Still open: **Flecktarn** has no usable reference yet.
 
 - **Solids:** Coyote `#81613c`, Ranger Green `#4a5240`, Wolf Grey `#5e6366`, Blackout `#1f1f1f`, Blaze `#e8590c`.
 - **Plaids:** Buffalo Check (red/black), Hunter (green/navy with a yellow line), Range Day (tan/olive with an orange line), all original setts.
-- Default theme **Woodland DPM** (spec §6.2 said M81 once cleared; kept DPM since it is the cleanest-licensed and already the default). Theme stored per device until accounts exist.
+- Default theme **Woodland DPM** (spec §6.2 said M81 once cleared; kept DPM since it is the cleanest-licensed and already the default). **Corrected 2026-11-27:** the user chose **Blackout** as the default (§6.2). Theme stored per device until accounts exist.
 - ERDL ships as its own theme from the same artwork at the original scale with ERDL's calibrated palette.
 - Tile display scale per theme is tuned so a 64 px bar shows a recognizable slice of the pattern (M81 about 1500 px wide per tile).
 

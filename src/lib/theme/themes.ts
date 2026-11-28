@@ -50,7 +50,8 @@ export const THEMES: readonly Theme[] = [
 	solid('ranger-green', 'Ranger Green', '#4a5240'),
 	solid('wolf-grey', 'Wolf Grey', '#5e6366'),
 	solid('blackout', 'Blackout', '#1f1f1f'),
-	solid('blaze', 'Blaze', '#e8590c'),
+	// Was "Blaze"; the id stays so devices that saved it keep it.
+	solid('blaze', 'Fudd Orange', '#e8590c'),
 	tiled('plaid', 'buffalo-check', 'Buffalo Check', '#b3141b', '#b3141b', 128, 128),
 	tiled('plaid', 'hunter', 'Hunter', '#1e4d2b', '#1e4d2b', 200, 200),
 	tiled('plaid', 'range-day', 'Range Day', '#c9a66b', '#4a5240', 152, 152),

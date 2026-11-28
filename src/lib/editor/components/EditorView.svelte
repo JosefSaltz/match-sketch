@@ -168,7 +168,10 @@
 	<div
 		id={panelDomId(panel)}
 		class={[
-			'flex min-h-0 max-lg:fixed max-lg:inset-y-0 max-lg:z-40 max-lg:transition-transform max-lg:duration-250 max-lg:ease-drawer lg:overflow-hidden motion-reduce:transition-none',
+			// Visibility flips after the slide out (and before the slide in), so a closed panel leaves
+			// the accessibility tree and tab order without cutting the animation short.
+			'flex min-h-0 transition-[translate,visibility] duration-250 ease-drawer max-lg:fixed max-lg:inset-y-0 max-lg:z-40 lg:overflow-hidden motion-reduce:transition-none',
+			!open && 'invisible',
 			side === 'left'
 				? 'max-lg:left-0 max-lg:w-[min(20rem,88vw)] lg:justify-end'
 				: 'max-lg:right-0 max-lg:w-[min(22rem,calc(100vw-1rem))] lg:justify-start',

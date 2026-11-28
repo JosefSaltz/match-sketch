@@ -173,8 +173,9 @@
 		class={[
 			'lg:contents',
 			'max-lg:fixed max-lg:inset-y-0 max-lg:right-0 max-lg:z-40 max-lg:flex max-lg:w-[min(20rem,88vw)] max-lg:flex-col max-lg:overflow-y-auto max-lg:border-l-[3px] max-lg:border-black max-lg:bg-white max-lg:text-text',
-			'max-lg:transition-transform max-lg:duration-250 max-lg:ease-drawer motion-reduce:transition-none',
-			menuOpen ? 'max-lg:shadow-[-6px_0_0_#000]' : 'max-lg:translate-x-full'
+			'max-lg:transition-[translate,visibility] max-lg:duration-250 max-lg:ease-drawer motion-reduce:transition-none',
+			// Hidden once slid away, so the closed menu leaves the accessibility tree and tab order.
+			menuOpen ? 'max-lg:shadow-[-6px_0_0_#000]' : 'max-lg:invisible max-lg:translate-x-full'
 		]}
 		role={panels.wide ? undefined : 'group'}
 		aria-label={panels.wide ? undefined : 'Menu'}

@@ -4,12 +4,16 @@ import { sounds } from '#lib/audio/sounds.svelte.js';
 import {
 	CLICK_SOUND_SETTING,
 	getSetting,
+	PANEL_INSPECTOR_SETTING,
+	PANEL_SYMBOLS_SETTING,
 	SOUNDS_SETTING,
 	THEME_SETTING,
 	ZONE_UNIT_SETTING
 } from '#lib/store/settings.js';
 import { parseZoneUnit } from '#lib/safety/paths.js';
 import { zoneUnit } from '#lib/safety/zone-unit.svelte.js';
+import { parsePanelSetting } from '#lib/editor/panels.js';
+import { panels } from '#lib/editor/panels.svelte.js';
 import { applyTheme } from '#lib/theme/apply.js';
 import { currentTheme } from '#lib/theme/current.svelte.js';
 import { getTheme } from '#lib/theme/themes.js';
@@ -28,5 +32,7 @@ export const load: LayoutLoad = async () => {
 	sounds.on = (await getSetting(getDb(), SOUNDS_SETTING)) !== 'off';
 	sounds.click = parseClickParams(await getSetting(getDb(), CLICK_SOUND_SETTING));
 	zoneUnit.value = parseZoneUnit(await getSetting(getDb(), ZONE_UNIT_SETTING));
+	panels.desktopSymbols = parsePanelSetting(await getSetting(getDb(), PANEL_SYMBOLS_SETTING));
+	panels.desktopInspector = parsePanelSetting(await getSetting(getDb(), PANEL_INSPECTOR_SETTING));
 	return { themeId: theme.id };
 };

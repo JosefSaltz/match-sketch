@@ -8,6 +8,8 @@
 	import FootprintShape from '#lib/ui/FootprintShape.svelte';
 	import { movedBeyond } from '../gestures.js';
 	import { DragSwing } from '../swing.svelte.js';
+	import { panels } from '../panels.svelte.js';
+	import PanelToggle from './PanelToggle.svelte';
 
 	let { editor }: { editor: EditorState } = $props();
 
@@ -69,7 +71,11 @@
 	function onItemMove(e: PointerEvent) {
 		if (press?.pointerId !== e.pointerId) return;
 		const p = { x: e.clientX, y: e.clientY };
-		if (!press.dragging && movedBeyond(press.start, p)) press.dragging = true;
+		if (!press.dragging && movedBeyond(press.start, p)) {
+			press.dragging = true;
+			// Clear the drawer so the drop lands on the stage, not on the panel it came from.
+			panels.closeDrawer(false);
+		}
 		if (press.dragging) {
 			ghost = { entry: press.entry, ...p };
 			ghostSwing.move(['ghost'], p);
@@ -100,7 +106,10 @@
 			justDragged = false;
 			return;
 		}
-		editor.arm(editor.armedSymbolId === entry.id ? null : entry.id);
+		const arming = editor.armedSymbolId !== entry.id;
+		editor.arm(arming ? entry.id : null);
+		// Armed on a narrow screen: the next tap places it, so get the drawer out of the way.
+		if (arming) panels.closeDrawer(false);
 	}
 
 	function onKeydown(e: KeyboardEvent) {
@@ -202,8 +211,13 @@
 	</li>
 {/snippet}
 
-<aside class="flex min-h-0 flex-col border-r-[3px] border-black bg-white" aria-label="Symbols">
-	<PanelHeader title="Symbols" />
+<aside
+	class="flex min-h-0 w-full flex-none flex-col border-r-[3px] border-black bg-white lg:w-64"
+	aria-label="Symbols"
+>
+	<PanelHeader title="Symbols">
+		{#snippet actions()}<PanelToggle panel="symbols" />{/snippet}
+	</PanelHeader>
 	<div class="border-b-2 border-border p-2">
 		<input
 			type="search"
@@ -233,7 +247,11 @@
 							]}
 							data-testid="tool-{t.id}"
 							aria-pressed={editor.tool === t.id}
-							onclick={() => editor.armTool(editor.tool === t.id ? null : t.id)}
+							onclick={() => {
+								const arming = editor.tool !== t.id;
+								editor.armTool(arming ? t.id : null);
+								if (arming) panels.closeDrawer(false);
+							}}
 						>
 							{@render toolIcon(t.id)}
 							<span>{t.name}</span>

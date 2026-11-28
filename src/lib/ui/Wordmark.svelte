@@ -14,6 +14,8 @@
 	const HEIGHT = 45;
 	const scale = $derived(size === 'full' ? 1 : 2 / 3);
 	const fudd = $derived(currentTheme.id === 'blaze');
+	// The lettering (with its shadow) ends near x = 258; the badge tucks in over the last letter.
+	const TEXT_END = 258;
 </script>
 
 {#snippet word(color: string, strokeWidth: number, offset: number)}
@@ -51,6 +53,7 @@
 		alt=""
 		width={HEIGHT * scale}
 		height={HEIGHT * scale}
+		style:margin-left="{(TEXT_END - WIDTH) * scale}px"
 		data-testid="fudd"
 	/>
 {/if}
@@ -62,8 +65,8 @@
 	}
 
 	.fudd {
+		position: relative;
 		display: inline-block;
-		margin-left: 0.5rem;
 		vertical-align: middle;
 		border: 3px solid #000;
 		border-radius: 9999px;

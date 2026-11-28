@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from './gestures';
+import {
+	movedBeyond,
+	offStage,
+	overRemoveBin,
+	PointerGestures,
+	REMOVE_BIN,
+	removeBinCenter,
+	TAP_SLOP_PX
+} from './gestures';
 
 describe('PointerGestures', () => {
 	it('pans with one pointer', () => {
@@ -53,5 +61,24 @@ describe('offStage', () => {
 		expect(offStage({ x: 801, y: 300 }, size)).toBe(true);
 		expect(offStage({ x: 400, y: -1 }, size)).toBe(true);
 		expect(offStage({ x: 400, y: 601 }, size)).toBe(true);
+	});
+});
+
+describe('overRemoveBin', () => {
+	const size = { width: 400, height: 800 };
+	const c = removeBinCenter(size);
+
+	it('sits centred near the bottom of the stage', () => {
+		expect(c).toEqual({ x: 200, y: 800 - REMOVE_BIN.bottom });
+	});
+
+	it('is true over the bin and a little around it, for a finger', () => {
+		expect(overRemoveBin(c, size)).toBe(true);
+		expect(overRemoveBin({ x: c.x + REMOVE_BIN.hit - 1, y: c.y }, size)).toBe(true);
+	});
+
+	it('is false away from the bin', () => {
+		expect(overRemoveBin({ x: c.x + REMOVE_BIN.hit + 1, y: c.y }, size)).toBe(false);
+		expect(overRemoveBin({ x: 200, y: 100 }, size)).toBe(false);
 	});
 });

@@ -52,3 +52,17 @@ test('the picker marks the current theme after moving between screens', async ({
 		page.getByRole('dialog').getByRole('button', { name: 'Fudd Orange' })
 	).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('Fudd Orange brings the Fudd to the top bar', async ({ page }) => {
+	await page.goto('/');
+	const banner = page.getByRole('banner');
+	await expect(banner.getByTestId('fudd')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Theme' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Fudd Orange' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+	await expect(banner.getByTestId('fudd')).toBeVisible();
+	await page.getByRole('button', { name: 'Theme' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Blackout' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+	await expect(banner.getByTestId('fudd')).toHaveCount(0);
+});

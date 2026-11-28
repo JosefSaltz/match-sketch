@@ -7,6 +7,25 @@ export function movedBeyond(a: Point, b: Point, px = TAP_SLOP_PX): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) > px;
 }
 
+/** A fingertip wobbles more than a mouse, so touch and pen get a wider tap slop. */
+export const TOUCH_SLOP_PX = 8;
+
+/**
+ * What a press on an item in a scrolling list has become: still a tap, a drag of the item, or
+ * a scroll of the list. A mouse drags in any direction (the wheel scrolls). A finger swiping
+ * mostly up or down is scrolling, so only a mostly sideways move drags the item out.
+ */
+export function listPressIntent(
+	start: Point,
+	p: Point,
+	pointerType: string
+): 'tap' | 'drag' | 'scroll' {
+	const mouse = pointerType === 'mouse';
+	if (!movedBeyond(start, p, mouse ? TAP_SLOP_PX : TOUCH_SLOP_PX)) return 'tap';
+	if (mouse) return 'drag';
+	return Math.abs(p.y - start.y) > Math.abs(p.x - start.x) ? 'scroll' : 'drag';
+}
+
 /** A pointer (stage px) outside the stage: dropping a dragged item there removes it. */
 export function offStage(p: Point, size: Size): boolean {
 	return p.x < 0 || p.y < 0 || p.x > size.width || p.y > size.height;

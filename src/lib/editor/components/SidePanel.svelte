@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { EditorState } from '../editor-state.svelte.js';
+	import PanelToggle from './PanelToggle.svelte';
 	import BriefPanel from './BriefPanel.svelte';
 	import PropertiesPanel from './PropertiesPanel.svelte';
 	import WalkthroughPanel from './WalkthroughPanel.svelte';
@@ -38,31 +39,40 @@
 	}
 </script>
 
-<aside class="flex min-h-0 flex-col border-l-[3px] border-black bg-white" aria-label="Inspector">
-	<div
-		class="bg-theme flex min-h-12 items-end gap-1 border-b-[3px] border-black px-2 pt-2"
-		role="tablist"
-		aria-label="Inspector"
-	>
-		{#each TABS as t (t.id)}
-			{@const selected = editor.panel === t.id}
-			<button
-				type="button"
-				role="tab"
-				id={tabId(t.id)}
-				aria-selected={selected}
-				aria-controls={panelId(t.id)}
-				tabindex={selected ? 0 : -1}
-				class={[
-					'focus-ring -mb-[3px] min-h-11 rounded-t-lg border-[3px] border-black px-2.5 font-display text-xs tracking-wide uppercase',
-					selected ? 'border-b-white bg-white text-text' : 'bg-white/70 text-muted'
-				]}
-				onclick={() => (editor.panel = t.id)}
-				onkeydown={onTabKeydown}
-			>
-				{t.label}
-			</button>
-		{/each}
+<aside
+	class="flex min-h-0 w-full flex-none flex-col border-l-[3px] border-black bg-white lg:w-[20.75rem] xl:w-[21rem]"
+	aria-label="Inspector"
+>
+	<div class="flex">
+		<div
+			class="bg-theme flex min-h-12 min-w-0 flex-1 items-end gap-1 border-b-[3px] border-black px-2 pt-2"
+			role="tablist"
+			aria-label="Inspector"
+		>
+			{#each TABS as t (t.id)}
+				{@const selected = editor.panel === t.id}
+				<button
+					type="button"
+					role="tab"
+					id={tabId(t.id)}
+					aria-selected={selected}
+					aria-controls={panelId(t.id)}
+					tabindex={selected ? 0 : -1}
+					class={[
+						'focus-ring -mb-[3px] min-h-11 rounded-t-lg border-[3px] border-black px-1.5 font-display text-xs tracking-wide uppercase',
+						selected ? 'border-b-white bg-white text-text' : 'bg-white/70 text-muted'
+					]}
+					onclick={() => (editor.panel = t.id)}
+					onkeydown={onTabKeydown}
+				>
+					{t.label}
+				</button>
+			{/each}
+		</div>
+		<!-- After the tablist, not in it: a tablist holds only tabs. -->
+		<div class="bg-theme flex items-center border-b-[3px] border-black pr-2 pl-1">
+			<PanelToggle panel="inspector" />
+		</div>
 	</div>
 	<div
 		class="min-h-0 flex-1 overflow-y-auto p-3"

@@ -88,3 +88,8 @@ body {
 		box-shadow: 0 0 0 6px #000;
 	}
 }
+
+/* The slide the editor's panels and drawers share: quick start, soft landing. */
+@utility ease-drawer {
+	transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}

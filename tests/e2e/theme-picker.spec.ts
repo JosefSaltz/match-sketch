@@ -44,12 +44,11 @@ test('the picker groups themes by family', async ({ page }) => {
 test('the picker marks the current theme after moving between screens', async ({ page }) => {
 	await page.goto('/');
 	await page.getByRole('button', { name: 'Theme' }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Blaze' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Fudd Orange' }).click();
 	await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
 	await page.getByRole('link', { name: 'New plan' }).click();
 	await page.getByRole('button', { name: 'Theme' }).click();
-	await expect(page.getByRole('dialog').getByRole('button', { name: 'Blaze' })).toHaveAttribute(
-		'aria-pressed',
-		'true'
-	);
+	await expect(
+		page.getByRole('dialog').getByRole('button', { name: 'Fudd Orange' })
+	).toHaveAttribute('aria-pressed', 'true');
 });

@@ -187,7 +187,7 @@ Still open: **Flecktarn** has no usable reference yet.
 
 ## 9. Calls made by the designer (correctable)
 
-- **Solids:** Coyote `#81613c`, Ranger Green `#4a5240`, Wolf Grey `#5e6366`, Blackout `#1f1f1f`, Blaze `#e8590c`.
+- **Solids:** Coyote `#81613c`, Ranger Green `#4a5240`, Wolf Grey `#5e6366`, Blackout `#1f1f1f`, Fudd Orange `#e8590c` (named Blaze until 2026-11-27; the id is still `blaze`).
 - **Plaids:** Buffalo Check (red/black), Hunter (green/navy with a yellow line), Range Day (tan/olive with an orange line), all original setts.
 - Default theme **Woodland DPM** (spec §6.2 said M81 once cleared; kept DPM since it is the cleanest-licensed and already the default). **Corrected 2026-11-27:** the user chose **Blackout** as the default (§6.2). Theme stored per device until accounts exist.
 - ERDL ships as its own theme from the same artwork at the original scale with ERDL's calibrated palette.

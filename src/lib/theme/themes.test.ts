@@ -18,7 +18,7 @@ describe('theme registry', () => {
 			['ranger-green', 'Ranger Green', '#4a5240'],
 			['wolf-grey', 'Wolf Grey', '#5e6366'],
 			['blackout', 'Blackout', '#1f1f1f'],
-			['blaze', 'Blaze', '#e8590c']
+			['blaze', 'Fudd Orange', '#e8590c']
 		]);
 	});
 

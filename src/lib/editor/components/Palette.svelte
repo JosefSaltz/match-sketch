@@ -6,7 +6,7 @@
 	import PanelHeader from '#lib/ui/PanelHeader.svelte';
 	import { controlClass } from '#lib/ui/styles.js';
 	import FootprintShape from '#lib/ui/FootprintShape.svelte';
-	import { movedBeyond } from '../gestures.js';
+	import { listPressIntent } from '../gestures.js';
 	import { DragSwing } from '../swing.svelte.js';
 	import { panels } from '../panels.svelte.js';
 	import PanelToggle from './PanelToggle.svelte';
@@ -44,9 +44,15 @@
 	}
 
 	/** A pointer pressed on a palette item; becomes a drag once it moves past the tap slop. */
-	type Press = { entry: CatalogEntry; pointerId: number; start: Point; dragging: boolean };
+	type Press = {
+		entry: CatalogEntry;
+		pointerId: number;
+		pointerType: string;
+		start: Point;
+		dragging: boolean;
+	};
 	let press: Press | null = null;
-	/** Set when a press ended as a drag, so the click the browser fires afterwards doesn't arm. */
+	/** Set when a press ended as a drag or a scroll, so a click the browser fires after doesn't arm. */
 	let justDragged = false;
 	let ghost = $state<{ entry: CatalogEntry; x: number; y: number } | null>(null);
 	/** The ghost swings from the pointer as it is carried to the stage. */
@@ -58,6 +64,7 @@
 		press = {
 			entry,
 			pointerId: e.pointerId,
+			pointerType: e.pointerType,
 			start: { x: e.clientX, y: e.clientY },
 			dragging: false
 		};
@@ -71,7 +78,14 @@
 	function onItemMove(e: PointerEvent) {
 		if (press?.pointerId !== e.pointerId) return;
 		const p = { x: e.clientX, y: e.clientY };
-		if (!press.dragging && movedBeyond(press.start, p)) {
+		const intent = press.dragging ? 'drag' : listPressIntent(press.start, p, press.pointerType);
+		if (intent === 'scroll') {
+			// A finger swiping up or down the list: let the browser scroll it, and don't arm.
+			justDragged = true;
+			cancelDrag();
+			return;
+		}
+		if (intent === 'drag' && !press.dragging) {
 			press.dragging = true;
 			// Clear the drawer so the drop lands on the stage, not on the panel it came from.
 			panels.closeDrawer(false);

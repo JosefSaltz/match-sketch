@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from './gestures';
+import { listPressIntent, movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from './gestures';
 
 describe('PointerGestures', () => {
 	it('pans with one pointer', () => {
@@ -38,6 +38,29 @@ describe('movedBeyond', () => {
 		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 3 })).toBe(true);
 		expect(movedBeyond({ x: 0, y: 0 }, { x: 3, y: 0 }, 2)).toBe(true);
 		expect(TAP_SLOP_PX).toBe(4);
+	});
+});
+
+describe('listPressIntent', () => {
+	const start = { x: 100, y: 100 };
+
+	it('stays a tap inside the slop', () => {
+		expect(listPressIntent(start, { x: 102, y: 102 }, 'mouse')).toBe('tap');
+		expect(listPressIntent(start, { x: 103, y: 106 }, 'touch')).toBe('tap');
+	});
+
+	it('drags with a mouse in any direction', () => {
+		expect(listPressIntent(start, { x: 100, y: 110 }, 'mouse')).toBe('drag');
+	});
+
+	it('scrolls when a finger moves mostly up or down', () => {
+		expect(listPressIntent(start, { x: 100, y: 125 }, 'touch')).toBe('scroll');
+		expect(listPressIntent(start, { x: 108, y: 80 }, 'pen')).toBe('scroll');
+	});
+
+	it('drags when a finger moves mostly sideways', () => {
+		expect(listPressIntent(start, { x: 125, y: 100 }, 'touch')).toBe('drag');
+		expect(listPressIntent(start, { x: 115, y: 110 }, 'touch')).toBe('drag');
 	});
 });
 

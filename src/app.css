@@ -18,8 +18,8 @@
 :root {
 	--radius: 6px;
 	/* The active theme (written by applyTheme from the registry; these are the defaults). */
-	--theme-base: #81613c;
-	--theme-accent: #81613c;
+	--theme-base: #1f1f1f;
+	--theme-accent: #1f1f1f;
 	--theme-tile: none;
 	--theme-tile-size: auto;
 }

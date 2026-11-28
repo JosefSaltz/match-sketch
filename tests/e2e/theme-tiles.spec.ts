@@ -8,10 +8,11 @@ const pick = async (page: import('@playwright/test').Page, name: string) => {
 	await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
 };
 
-test('the default theme is Woodland DPM', async ({ page }) => {
+test('the default theme is Blackout', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dpm');
-	await expect(page.getByRole('banner')).toHaveCSS('background-image', /\/themes\/dpm\.webp/);
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'blackout');
+	await expect(page.getByRole('banner')).toHaveCSS('background-image', 'none');
+	await expect(page.getByRole('banner')).toHaveCSS('background-color', 'rgb(31, 31, 31)');
 });
 
 test('a camo theme paints its tile on the top bar', async ({ page }) => {

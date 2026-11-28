@@ -42,7 +42,11 @@ describe('theme registry', () => {
 			'desert-night'
 		]);
 		for (const t of camo) expect(t.credit).toBe(t.id);
-		expect(DEFAULT_THEME_ID).toBe('dpm');
+	});
+
+	it('defaults to Blackout', () => {
+		expect(DEFAULT_THEME_ID).toBe('blackout');
+		expect(getTheme(DEFAULT_THEME_ID).family).toBe('solid');
 	});
 
 	it('falls back to the default for unknown or missing ids (Review Focus #2)', () => {

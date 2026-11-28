@@ -63,8 +63,8 @@ export const THEMES: readonly Theme[] = [
 	tiled('camo', 'desert-night', 'Desert Night', '#262a1d', '#4a5040', 768, 480)
 ];
 
-/** Woodland DPM: authentic, cleanly licensed (UK OGL), and readable under the white wordmark. */
-export const DEFAULT_THEME_ID = 'dpm';
+/** Blackout: a plain, neutral dark bar that keeps the white wordmark readable. */
+export const DEFAULT_THEME_ID = 'blackout';
 
 const BY_ID = new Map(THEMES.map((t) => [t.id, t]));
 

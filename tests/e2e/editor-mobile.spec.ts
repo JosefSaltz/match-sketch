@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
-import { createCanvas, createPlanFromCanvas } from './helpers';
+import type { Page } from '@playwright/test';
+import { createCanvas, createPlanFromCanvas, type Point } from './helpers';
 
 test.beforeEach(async ({ page }) => {
 	await page.goto('/');
@@ -43,6 +44,48 @@ test.describe('phone', () => {
 		await page.getByTestId('palette-item-wall').click();
 		await expect(page.getByRole('complementary', { name: 'Symbols' })).toBeHidden();
 		await expect(page.getByTestId('palette-item-wall')).toHaveAttribute('aria-pressed', 'true');
+	});
+
+	test.describe('with a finger', () => {
+		test.use({ hasTouch: true });
+
+		/** A touch swipe through the Chrome DevTools protocol, in small steps like a real finger. */
+		async function swipe(page: Page, from: Point, to: Point) {
+			const cdp = await page.context().newCDPSession(page);
+			const at = (t: number) => [
+				{ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t }
+			];
+			await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(0) });
+			for (let i = 1; i <= 30; i++) {
+				await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(i / 30) });
+			}
+			await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+		}
+
+		test('swiping up the symbol list scrolls it instead of picking a symbol', async ({ page }) => {
+			await page.getByRole('button', { name: 'Symbols', exact: true }).click();
+			const drawer = page.getByRole('complementary', { name: 'Symbols' });
+			const list = drawer.locator('.overflow-y-auto');
+			const box = (await list.boundingBox())!;
+			const x = box.x + box.width / 3;
+			await swipe(page, { x, y: box.y + box.height * 0.8 }, { x, y: box.y + box.height * 0.3 });
+			await expect.poll(() => list.evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
+			await expect(drawer).toBeVisible();
+			await expect(page.locator('[data-testid^="palette-item-"][aria-pressed="true"]')).toHaveCount(
+				0
+			);
+		});
+
+		test('dragging a symbol sideways out of the drawer places it', async ({ page }) => {
+			await page.getByRole('button', { name: 'Symbols', exact: true }).click();
+			const popper = page.getByTestId('palette-item-popper');
+			await popper.scrollIntoViewIfNeeded();
+			const item = (await popper.boundingBox())!;
+			const y = item.y + item.height / 2;
+			await swipe(page, { x: item.x + 40, y }, { x: item.x + 300, y: y + 40 });
+			await expect(page.getByRole('complementary', { name: 'Symbols' })).toBeHidden();
+			await expect(page.getByTestId('object')).toHaveCount(1);
+		});
 	});
 
 	test('the Menu drawer holds the secondary controls', async ({ page }) => {

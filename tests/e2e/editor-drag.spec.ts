@@ -74,3 +74,22 @@ test('dragging back onto the canvas before release keeps the object', async ({ p
 	await page.mouse.up();
 	await expect(object).toHaveCount(1);
 });
+
+test('dropping an object on the remove bin removes it, as on a phone', async ({ page }) => {
+	const object = page.getByTestId('object');
+	const bin = page.getByTestId('remove-bin');
+	// The bin only shows while something is dragged.
+	await expect(bin).toHaveCSS('opacity', '0');
+	await grab(page, object, 30, 30);
+	await expect(bin).toHaveCSS('opacity', '1');
+	await expect(page.getByTestId('remove-hint')).toHaveCount(0);
+	const b = (await bin.boundingBox())!;
+	await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+	await expect(page.getByTestId('remove-hint')).toHaveText('Release to remove');
+	await expect(bin).toHaveClass(/hot/);
+	await page.mouse.up();
+	await expect(object).toHaveCount(0);
+	await expect(bin).toHaveCSS('opacity', '0');
+	await page.getByRole('button', { name: 'Undo' }).click();
+	await expect(object).toHaveCount(1);
+});

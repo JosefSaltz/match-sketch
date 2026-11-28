@@ -3,7 +3,14 @@
 	import type { Corner } from '#lib/geometry/transform.js';
 	import type { Point } from '#lib/geometry/types.js';
 	import type { EditorState } from '../editor-state.svelte.js';
-	import { movedBeyond, offStage, PointerGestures, TAP_SLOP_PX } from '../gestures.js';
+	import {
+		movedBeyond,
+		offStage,
+		overRemoveBin,
+		PointerGestures,
+		REMOVE_BIN,
+		TAP_SLOP_PX
+	} from '../gestures.js';
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import BayLayer from './BayLayer.svelte';
 	import DangerZoneLayer from './DangerZoneLayer.svelte';
@@ -31,6 +38,8 @@
 	let linkAt: Point = { x: 0, y: 0 };
 	/** Something is being dragged (objects, or the view when panning): the closed hand shows. */
 	let grabbing = $state(false);
+	/** Objects are being dragged (not the view, not a handle): the remove bin shows. */
+	let carrying = $state(false);
 	/** Where the pointer is (page px) while a drag is off the stage, for the "Release to remove" tag. */
 	let offAt = $state({ x: 0, y: 0 });
 	/** A red trash can, outlined in white so it reads on any background. */
@@ -172,8 +181,9 @@
 			const p = local(e);
 			editor.updateMove(p);
 			grabbing = editor.preview !== null;
-			// Pulled off the stage: releasing removes it, so say so before the release.
-			editor.dragOff = grabbing && offStage(p, editor.screen);
+			carrying = grabbing;
+			// Pulled off the stage or onto the bin: releasing removes it, so say so before the release.
+			editor.dragOff = carrying && (offStage(p, editor.screen) || overRemoveBin(p, editor.screen));
 			offAt = { x: e.clientX, y: e.clientY };
 			return;
 		}
@@ -199,6 +209,7 @@
 			const moved = editor.preview !== null;
 			moving = null;
 			grabbing = false;
+			carrying = false;
 			editor.endMove();
 			if (!moved && narrowTo) editor.select([narrowTo]);
 			narrowTo = null;
@@ -224,6 +235,7 @@
 		if (moving === e.pointerId) {
 			moving = null;
 			narrowTo = null;
+			carrying = false;
 			editor.cancelMove();
 		}
 		if (tap?.pointerId === e.pointerId) tap = null;
@@ -273,6 +285,19 @@
 		<SelectionOverlay {editor} />
 		<ScaleBar {editor} />
 	</svg>
+	<!-- The drop target for removing: a phone's stage fills the screen, so it has no "off". -->
+	<div
+		class={['remove-bin', { shown: carrying, hot: editor.dragOff }]}
+		style:width="{REMOVE_BIN.radius * 2}px"
+		style:height="{REMOVE_BIN.radius * 2}px"
+		style:bottom="{REMOVE_BIN.bottom - REMOVE_BIN.radius}px"
+		data-testid="remove-bin"
+		aria-hidden="true"
+	>
+		<svg viewBox="0 0 24 24" width="28" height="28">
+			<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+		</svg>
+	</div>
 	<DangerZoneLegend {editor} />
 </div>
 {#if editor.dragOff}
@@ -317,6 +342,50 @@
 	.removing,
 	.removing :global(*) {
 		cursor: var(--remove-cursor), no-drop !important;
+	}
+	.remove-bin {
+		position: absolute;
+		left: 50%;
+		display: grid;
+		place-items: center;
+		border: 3px solid var(--color-danger);
+		border-radius: 9999px;
+		background: #fff;
+		color: var(--color-danger);
+		box-shadow: 3px 3px 0 #000;
+		pointer-events: none;
+		opacity: 0;
+		translate: -50% 1rem;
+		scale: 0.8;
+		transition:
+			opacity 150ms ease-out,
+			translate 150ms ease-out,
+			scale 150ms ease-out,
+			background-color 100ms,
+			color 100ms;
+	}
+	.remove-bin svg {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.remove-bin.shown {
+		opacity: 1;
+		translate: -50% 0;
+		scale: 1;
+	}
+	/* Releasing now removes what is dragged. */
+	.remove-bin.hot {
+		background: var(--color-danger);
+		color: #fff;
+		scale: 1.15;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.remove-bin {
+			transition: none;
+		}
 	}
 	.remove-hint {
 		position: fixed;

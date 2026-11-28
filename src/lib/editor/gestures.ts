@@ -12,6 +12,23 @@ export function offStage(p: Point, size: Size): boolean {
 	return p.x < 0 || p.y < 0 || p.x > size.width || p.y > size.height;
 }
 
+/**
+ * The remove bin shown at the bottom of the stage during a drag (stage px). On a phone the stage
+ * fills the screen, so there is no "off the stage" to drag to; the bin is the target instead.
+ * `hit` is wider than the drawn `radius` so a finger needn't land exactly.
+ */
+export const REMOVE_BIN = { radius: 32, hit: 52, bottom: 72 } as const;
+
+export function removeBinCenter(size: Size): Point {
+	return { x: size.width / 2, y: size.height - REMOVE_BIN.bottom };
+}
+
+/** A pointer (stage px) over the remove bin: dropping a dragged item there removes it. */
+export function overRemoveBin(p: Point, size: Size): boolean {
+	const c = removeBinCenter(size);
+	return Math.hypot(p.x - c.x, p.y - c.y) < REMOVE_BIN.hit;
+}
+
 export type GestureAction =
 	| { kind: 'pan'; dx: number; dy: number }
 	| { kind: 'pinch'; factor: number; at: Point; dx: number; dy: number };
